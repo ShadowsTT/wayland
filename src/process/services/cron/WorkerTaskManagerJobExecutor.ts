@@ -288,9 +288,11 @@ export class WorkerTaskManagerJobExecutor implements ICronJobExecutor {
     switch (backend) {
       case 'gemini':
         return 'gemini';
-      case 'wcore':
       case 'aionrs':
-        // Dual-read: 'wcore' (new) and 'aionrs' (legacy) both map to the same backend.
+        // `backend` is the internal AgentRegistry id, locked to 'aionrs' per
+        // BLACKBOARD (it never holds 'wcore'). No dual-case needed here —
+        // the conversation `type` written downstream gets dual-written separately
+        // by the factory in initAgent.ts.
         return 'aionrs';
       case 'openclaw-gateway':
       case 'openclaw' as AgentBackend:
