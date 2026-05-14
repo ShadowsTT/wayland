@@ -58,12 +58,36 @@ const SiderItem: React.FC<SiderItemProps> = ({
           'h-40px rd-8px flex items-center gap-8px px-10px cursor-pointer relative overflow-hidden shrink-0 group min-w-0 transition-colors',
           {
             'hover:bg-[rgba(var(--primary-6),0.14)]': true,
-            '!bg-active': selected,
           }
         )}
+        style={
+          selected
+            ? {
+                background:
+                  'linear-gradient(90deg, rgba(255, 107, 53, 0.08), rgba(255, 107, 53, 0.02) 70%, transparent)',
+              }
+            : undefined
+        }
         onClick={onClick}
         onContextMenu={onContextMenu}
       >
+        {/* Active-rail: 2px brand orange with subtle glow, only when selected */}
+        {selected && (
+          <span
+            aria-hidden='true'
+            style={{
+              position: 'absolute',
+              left: 0,
+              top: 6,
+              bottom: 6,
+              width: 2,
+              background: '#ff6b35',
+              borderRadius: 2,
+              boxShadow: '0 0 12px rgba(255, 107, 53, 0.7)',
+              pointerEvents: 'none',
+            }}
+          />
+        )}
         {/* Leading icon — fixed 28px column to align with other sidebar rows */}
         <span className='w-28px h-28px flex items-center justify-center shrink-0 line-height-0'>{icon}</span>
 

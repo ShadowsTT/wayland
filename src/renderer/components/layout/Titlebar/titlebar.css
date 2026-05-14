@@ -107,6 +107,38 @@
   max-width: 42vw;
 }
 
+/* Desktop brand cluster: orbit mark + "Wayland" + Perceives·Reasons·Acts tagline */
+.app-titlebar__brand-desktop {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+}
+
+.app-titlebar--desktop .app-titlebar__brand-desktop .app-titlebar__brand-text {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.app-titlebar__brand-tagline {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  padding-left: 10px;
+  border-left: 1px solid var(--border-bright);
+  white-space: nowrap;
+}
+
+/* Don't draw the tagline divider on very narrow desktop windows */
+@media (max-width: 900px) {
+  .app-titlebar__brand-tagline {
+    display: none;
+  }
+}
+
 .app-titlebar__menu {
   -webkit-app-region: no-drag;
   display: flex;

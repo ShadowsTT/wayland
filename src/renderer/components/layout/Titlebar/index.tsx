@@ -355,7 +355,11 @@ const Titlebar: React.FC<TitlebarProps> = ({ workspaceAvailable }) => {
             <span className='app-titlebar__brand-text'>{mobileCenterTitle}</span>
           </span>
         ) : (
-          appTitle
+          <span className='app-titlebar__brand-desktop'>
+            <WaylandLogoMark />
+            <span className='app-titlebar__brand-text'>{appTitle}</span>
+            <span className='app-titlebar__brand-tagline'>Perceives · Reasons · Acts</span>
+          </span>
         )}
       </div>
       <div ref={toolbarRef} className='app-titlebar__toolbar'>
