@@ -594,6 +594,14 @@ export class GeminiAgent {
             compactToolResponsesInHistory(this.geminiClient);
           }
         }
+        // If the user aborted while the stream was draining, the core layer
+        // may have pushed a user turn at the start of sendMessageStream
+        // (geminiChat.ts) but skipped the trailing model turn. Repair it so
+        // the next sendMessage doesn't fail with a 400 user/model alternation
+        // error. See H10 (upstream issue #982).
+        if (abortController.signal.aborted) {
+          this.repairAbortedHistory();
+        }
       })
       .catch((e: unknown) => {
         const rawMessage = e instanceof Error ? e.message : JSON.stringify(e);
@@ -602,6 +610,10 @@ export class GeminiAgent {
         for (const req of toolCallRequests) {
           globalToolCallGuard.unprotect(req.callId);
         }
+        // Repair user/model alternation if the stream threw before the model
+        // turn was committed (covers abort-via-thrown-AbortError and other
+        // mid-stream failures). H10 / upstream #982.
+        this.repairAbortedHistory();
         // Use a fresh msg_id so the error message does not replace
         // already-streamed content that shares the same msg_id.
         this.onStreamEvent({
@@ -610,6 +622,36 @@ export class GeminiAgent {
           msg_id: uuid(),
         });
       });
+  }
+
+  /**
+   * Ensure chat history ends with a model turn after a stream abort or error.
+   *
+   * Background: aioncli-core's GeminiChat.sendMessageStream pushes the user
+   * turn into history *before* the stream starts, and only pushes the model
+   * turn after the stream fully consolidates. If the stream is aborted or
+   * fails in between, history is left ending on a user turn — the Gemini API
+   * then rejects the next request with a user/model alternation 400.
+   *
+   * We synthesize a minimal model turn ("[aborted]") only when the last
+   * entry is a user turn. Adding this is idempotent: callers can invoke it
+   * from both the success-after-abort and catch paths without risk of
+   * double-inserting model turns.
+   */
+  private repairAbortedHistory(): void {
+    try {
+      if (!this.geminiClient || !this.geminiClient.isInitialized()) return;
+      const history = this.geminiClient.getHistory();
+      if (history.length === 0) return;
+      const last = history[history.length - 1];
+      if (last?.role !== 'user') return;
+      void this.geminiClient.addHistory({
+        role: 'model',
+        parts: [{ text: '[aborted]' }],
+      });
+    } catch {
+      // Best-effort: never throw out of repair logic.
+    }
   }
 
   /**
