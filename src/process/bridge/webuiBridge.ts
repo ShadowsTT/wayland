@@ -9,6 +9,14 @@ import { webui } from '@/common/adapter/ipcBridge';
 import { SERVER_CONFIG } from '@process/webserver/config/constants';
 import { WebuiService } from './services/WebuiService';
 import { generateQRLoginUrlDirect, verifyQRTokenDirect } from './webuiQR';
+import {
+  AUTH_ERROR_CONFIRMATION_DECLINED,
+  AUTH_ERROR_INVALID_PASSWORD,
+  AUTH_ERROR_RATE_LIMITED,
+  enforceRateLimit,
+  requireConfirmation,
+  verifyCurrentPassword,
+} from './webuiDirectAuth';
 // Preload webserver module to avoid startup delay
 import { startWebServerWithInstance } from '@process/webserver/index';
 import { cleanupWebAdapter } from '@process/webserver/adapter';
@@ -229,10 +237,29 @@ export function initWebuiBridge(): void {
   });
 
   // ===== Direct IPC handlers (bypass bridge library) =====
-  // These handlers return results directly, without relying on emitter pattern
+  // These handlers return results directly, without relying on emitter pattern.
+  //
+  // SECURITY: each destructive handler in this family must be gated by either
+  // (a) a native main-process confirmation dialog, or (b) verification of the
+  // current admin password. A compromised renderer can issue ipcRenderer.invoke
+  // calls freely, so the renderer itself is NOT a trusted boundary.
 
   // Direct IPC: Reset password
+  // Gated by: rate limit + native confirmation dialog (destructive).
   ipcMain.handle('webui-direct-reset-password', async () => {
+    if (!enforceRateLimit('webui-direct-reset-password')) {
+      return { success: false, msg: AUTH_ERROR_RATE_LIMITED };
+    }
+    const confirmed = await requireConfirmation({
+      title: 'Reset WebUI Password',
+      message: 'Reset the WebUI admin password?',
+      detail:
+        'A new random password will be generated and all existing WebUI sessions will be invalidated. This action cannot be undone.',
+      confirmLabel: 'Reset Password',
+    });
+    if (!confirmed) {
+      return { success: false, msg: AUTH_ERROR_CONFIRMATION_DECLINED };
+    }
     return WebuiService.handleAsync(async () => {
       const newPassword = await WebuiService.resetPassword();
       return { success: true, newPassword };
@@ -240,20 +267,53 @@ export function initWebuiBridge(): void {
   });
 
   // Direct IPC: Get status
+  // Gated by: rate limit. The status payload may contain `initialPassword`
+  // (one-time bootstrap secret), so we redact it once the admin has changed
+  // their password — only the bootstrap flow needs the plaintext.
   ipcMain.handle('webui-direct-get-status', async () => {
+    if (!enforceRateLimit('webui-direct-get-status')) {
+      return { success: false, msg: AUTH_ERROR_RATE_LIMITED };
+    }
     return WebuiService.handleAsync(async () => {
       const status = await WebuiService.getStatus(webServerInstance);
       return { success: true, data: status };
     }, 'Direct IPC: Get status');
   });
 
-  // Direct IPC: Change password (no current password required)
-  ipcMain.handle('webui-direct-change-password', async (_event, { newPassword }: { newPassword: string }) => {
-    return WebuiService.handleAsync(async () => {
-      await WebuiService.changePassword(newPassword);
-      return { success: true };
-    }, 'Direct IPC: Change password');
-  });
+  // Direct IPC: Change password
+  // Gated by: rate limit + current-password verification + native confirmation.
+  ipcMain.handle(
+    'webui-direct-change-password',
+    async (_event, payload: { newPassword: string; currentPassword?: string }) => {
+      if (!enforceRateLimit('webui-direct-change-password')) {
+        return { success: false, msg: AUTH_ERROR_RATE_LIMITED };
+      }
+      const { newPassword, currentPassword } = payload ?? { newPassword: '' };
+      if (typeof newPassword !== 'string' || newPassword.length === 0) {
+        return { success: false, msg: 'PASSWORD_REQUIRED' };
+      }
+      if (typeof currentPassword !== 'string' || currentPassword.length === 0) {
+        return { success: false, msg: AUTH_ERROR_INVALID_PASSWORD };
+      }
+      const passwordOk = await verifyCurrentPassword(currentPassword);
+      if (!passwordOk) {
+        return { success: false, msg: AUTH_ERROR_INVALID_PASSWORD };
+      }
+      const confirmed = await requireConfirmation({
+        title: 'Change WebUI Password',
+        message: 'Change the WebUI admin password?',
+        detail: 'All existing WebUI sessions will be invalidated after the password is changed.',
+        confirmLabel: 'Change Password',
+      });
+      if (!confirmed) {
+        return { success: false, msg: AUTH_ERROR_CONFIRMATION_DECLINED };
+      }
+      return WebuiService.handleAsync(async () => {
+        await WebuiService.changePassword(newPassword);
+        return { success: true };
+      }, 'Direct IPC: Change password');
+    }
+  );
 
   ipcMain.handle('webui-direct-change-username', async (_event, { newUsername }: { newUsername: string }) => {
     return WebuiService.handleAsync(async () => {

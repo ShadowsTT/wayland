@@ -55,8 +55,8 @@ export interface ElectronBridgeAPI {
   // 直接 IPC 调用（绕过 bridge 库）/ Direct IPC calls (bypass bridge library)
   webuiResetPassword?: () => Promise<WebUIResetPasswordResult>;
   webuiGetStatus?: () => Promise<WebUIGetStatusResult>;
-  // 修改密码（不需要当前密码）/ Change password (no current password required)
-  webuiChangePassword?: (newPassword: string) => Promise<WebUIChangePasswordResult>;
+  // 修改密码（需要当前密码 + 主进程确认）/ Change password (requires current password + main-process confirmation)
+  webuiChangePassword?: (newPassword: string, currentPassword: string) => Promise<WebUIChangePasswordResult>;
   webuiChangeUsername?: (newUsername: string) => Promise<WebUIChangeUsernameResult>;
   // 生成二维��� token / Generate QR token
   webuiGenerateQRToken?: () => Promise<WebUIGenerateQRTokenResult>;

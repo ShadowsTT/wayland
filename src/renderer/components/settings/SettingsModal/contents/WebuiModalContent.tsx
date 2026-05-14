@@ -455,9 +455,11 @@ const WebuiModalContent: React.FC = () => {
 
       let result: { success: boolean; msg?: string };
 
-      // Prefer direct IPC (Electron environment)
+      // Prefer direct IPC (Electron environment). The direct IPC handler
+      // requires the current password and shows a native main-process
+      // confirmation dialog before applying the change.
       if (window.electronAPI?.webuiChangePassword) {
-        result = await window.electronAPI.webuiChangePassword(values.newPassword);
+        result = await window.electronAPI.webuiChangePassword(values.newPassword, values.currentPassword);
       } else {
         // Fallback: use bridge
         result = await webui.changePassword.invoke({
@@ -984,6 +986,13 @@ const WebuiModalContent: React.FC = () => {
         size='small'
       >
         <Form form={form} layout='vertical' className='pt-16px'>
+          <Form.Item
+            label={t('settings.webui.currentPassword')}
+            field='currentPassword'
+            rules={[{ required: true, message: t('settings.webui.currentPasswordRequired') }]}
+          >
+            <Input.Password placeholder={t('settings.webui.currentPasswordPlaceholder')} />
+          </Form.Item>
           <Form.Item
             label={t('settings.webui.newPassword')}
             field='newPassword'

@@ -39,8 +39,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // 直接 IPC 调用（绕过 bridge 库）/ Direct IPC calls (bypass bridge library)
   webuiResetPassword: () => ipcRenderer.invoke('webui-direct-reset-password'),
   webuiGetStatus: () => ipcRenderer.invoke('webui-direct-get-status'),
-  // 修改密码不需要当前密码 / Change password without current password
-  webuiChangePassword: (newPassword: string) => ipcRenderer.invoke('webui-direct-change-password', { newPassword }),
+  // 修改密码需要当前密码 + 主进程确认 / Change password requires current password + main-process confirmation
+  webuiChangePassword: (newPassword: string, currentPassword: string) =>
+    ipcRenderer.invoke('webui-direct-change-password', { newPassword, currentPassword }),
   webuiChangeUsername: (newUsername: string) => ipcRenderer.invoke('webui-direct-change-username', { newUsername }),
   // Feedback: collect and compress recent log files
   collectFeedbackLogs: () => ipcRenderer.invoke('feedback:collect-logs'),
