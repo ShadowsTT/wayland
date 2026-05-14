@@ -46,10 +46,8 @@ import { useTranslation } from 'react-i18next';
 import './preview.css';
 
 /**
- * 预览面板主组件
  * Main preview panel component
  *
- * 支持多 Tab 切换，每个 Tab 可以显示不同类型的内容
  * Supports multiple tabs, each tab can display different types of content
  */
 const PreviewPanel: React.FC = () => {
@@ -68,25 +66,25 @@ const PreviewPanel: React.FC = () => {
   } = usePreviewContext();
   const layout = useLayoutContext();
 
-  // 视图状态 / View states
+  // View states
   const [viewMode, setViewMode] = useState<'source' | 'preview'>('preview');
   const [isSplitScreenEnabled, setIsSplitScreenEnabled] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [inspectMode, setInspectMode] = useState(false);
   const [toolbarExtras, setToolbarExtras] = useState<PreviewToolbarExtras | null>(null);
 
-  // 确认对话框状态 / Confirmation dialog states
+  // Confirmation dialog states
   const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [closeTabConfirm, setCloseTabConfirm] = useState<CloseTabConfirmState>({ show: false, tabId: null });
 
-  // 右键菜单状态 / Context menu state
+  // Context menu state
   const [contextMenu, setContextMenu] = useState<ContextMenuState>({ show: false, x: 0, y: 0, tabId: null });
 
-  // 容器引用 / Container refs
+  // Container refs
   const editorContainerRef = useRef<HTMLDivElement>(null);
   const previewContainerRef = useRef<HTMLDivElement>(null);
 
-  // 使用自定义 Hooks / Use custom hooks
+  // Use custom hooks
   const currentTheme = useThemeDetection();
   const { tabsContainerRef, tabFadeState } = useTabOverflow([tabs, activeTabId]);
   const { handleEditorScroll, handlePreviewScroll } = useScrollSync({
@@ -121,7 +119,7 @@ const PreviewPanel: React.FC = () => {
     setToolbarExtras(extras);
   }, []);
 
-  // 处理 HTML 审核模式元素选中 / Handle HTML inspect mode element selection
+  // Handle HTML inspect mode element selection
   const handleElementSelected = useCallback(
     (element: { html: string; tag: string }) => {
       addDomSnippet(element.tag, element.html);
@@ -136,7 +134,6 @@ const PreviewPanel: React.FC = () => {
     [setToolbarExtrasCallback]
   );
 
-  // 内层分割：编辑器和预览的分割比例（默认 50/50）
   // Inner split: Split ratio between editor and preview (default 50/50)
   const { splitRatio, createDragHandle } = useResizableSplit({
     defaultWidth: DEFAULT_SPLIT_RATIO,
@@ -145,10 +142,10 @@ const PreviewPanel: React.FC = () => {
     storageKey: 'preview-panel-split-ratio',
   });
 
-  // 使用 useCallback 包装 updateContent，确保引用稳定 / Wrap updateContent with useCallback for stable reference
+  // Wrap updateContent with useCallback for stable reference
   const handleContentChange = useCallback(
     (newContent: string) => {
-      // 严格的类型检查，防止 Event 对象被错误传递 / Strict type checking to prevent Event object from being passed incorrectly
+      // Strict type checking to prevent Event object from being passed incorrectly
       if (typeof newContent !== 'string') {
         return;
       }
@@ -161,44 +158,44 @@ const PreviewPanel: React.FC = () => {
     [updateContent]
   );
 
-  // 处理退出编辑模式 / Handle exit edit mode
+  // Handle exit edit mode
   const handleExitEdit = useCallback(() => {
-    // 如果有未保存的修改，弹出确认对话框 / If there are unsaved changes, show confirmation dialog
+    // If there are unsaved changes, show confirmation dialog
     if (activeTab?.isDirty) {
       setShowExitConfirm(true);
     } else {
-      // 没有未保存的修改，直接退出 / No unsaved changes, exit directly
+      // No unsaved changes, exit directly
       setIsEditMode(false);
     }
   }, [activeTab?.isDirty]);
 
-  // 确认退出编辑 / Confirm exit edit
+  // Confirm exit edit
   const handleConfirmExit = useCallback(() => {
     setIsEditMode(false);
     setShowExitConfirm(false);
   }, []);
 
-  // 取消退出编辑 / Cancel exit edit
+  // Cancel exit edit
   const handleCancelExit = useCallback(() => {
     setShowExitConfirm(false);
   }, []);
 
-  // 处理关闭tab / Handle close tab
+  // Handle close tab
   const handleCloseTab = useCallback(
     (tabId: string) => {
       const tab = tabs.find((t) => t.id === tabId);
-      // 如果tab有未保存的修改，显示确认对话框 / If tab has unsaved changes, show confirmation dialog
+      // If tab has unsaved changes, show confirmation dialog
       if (tab?.isDirty) {
         setCloseTabConfirm({ show: true, tabId });
       } else {
-        // 没有未保存的修改，直接关闭 / No unsaved changes, close directly
+        // No unsaved changes, close directly
         closeTab(tabId);
       }
     },
     [tabs, closeTab]
   );
 
-  // 保存并关闭tab / Save and close tab
+  // Save and close tab
   const handleSaveAndCloseTab = useCallback(async () => {
     if (!closeTabConfirm.tabId) return;
 
@@ -215,19 +212,19 @@ const PreviewPanel: React.FC = () => {
     }
   }, [closeTabConfirm.tabId, saveContent, closeTab, messageApi, t]);
 
-  // 不保存直接关闭tab / Close tab without saving
+  // Close tab without saving
   const handleCloseWithoutSave = useCallback(() => {
     if (!closeTabConfirm.tabId) return;
     closeTab(closeTabConfirm.tabId);
     setCloseTabConfirm({ show: false, tabId: null });
   }, [closeTabConfirm.tabId, closeTab]);
 
-  // 取消关闭tab / Cancel close tab
+  // Cancel close tab
   const handleCancelCloseTab = useCallback(() => {
     setCloseTabConfirm({ show: false, tabId: null });
   }, []);
 
-  // 处理 tab 右键菜单 / Handle tab context menu
+  // Handle tab context menu
   const handleTabContextMenu = useCallback((e: React.MouseEvent, tabId: string) => {
     e.preventDefault();
     e.stopPropagation();
@@ -239,7 +236,7 @@ const PreviewPanel: React.FC = () => {
     });
   }, []);
 
-  // 关闭左侧 tabs / Close tabs to the left
+  // Close tabs to the left
   const handleCloseLeft = useCallback(
     (tabId: string) => {
       const currentIndex = tabs.findIndex((t) => t.id === tabId);
@@ -252,7 +249,7 @@ const PreviewPanel: React.FC = () => {
     [tabs, closeTab]
   );
 
-  // 关闭右侧 tabs / Close tabs to the right
+  // Close tabs to the right
   const handleCloseRight = useCallback(
     (tabId: string) => {
       const currentIndex = tabs.findIndex((t) => t.id === tabId);
@@ -265,7 +262,7 @@ const PreviewPanel: React.FC = () => {
     [tabs, closeTab]
   );
 
-  // 关闭其他 tabs / Close other tabs
+  // Close other tabs
   const handleCloseOthers = useCallback(
     (tabId: string) => {
       const tabsToClose = tabs.filter((t) => t.id !== tabId);
@@ -275,30 +272,28 @@ const PreviewPanel: React.FC = () => {
     [tabs, closeTab]
   );
 
-  // 关闭全部 tabs / Close all tabs
+  // Close all tabs
   const handleCloseAll = useCallback(() => {
     tabs.forEach((tab) => closeTab(tab.id));
     setContextMenu({ show: false, x: 0, y: 0, tabId: null });
   }, [tabs, closeTab]);
 
-  // 如果预览面板未打开，不渲染 / Don't render if preview panel is not open
+  // Don't render if preview panel is not open
   if (!isOpen || !activeTab) return null;
 
   const { content, contentType, metadata } = activeTab;
   const isMarkdown = contentType === 'markdown';
   const isHTML = contentType === 'html';
-  const isEditable = metadata?.editable !== false; // 默认可编辑 / Default editable
+  const isEditable = metadata?.editable !== false; // Default editable
 
-  // 检查文件类型是否已有内置的打开按钮（Word、PPT、PDF、Excel 组件内部已提供）
   // Check if file type already has built-in open button
   // (Word, PPT, PDF, Excel components provide their own)
   const hasBuiltInOpenButton = (FILE_TYPES_WITH_BUILTIN_OPEN as readonly string[]).includes(contentType);
 
-  // 对所有有 filePath 的文件显示"在系统中打开"按钮（统一在工具栏显示）
   // Show "Open in System" button for all files with filePath (unified in toolbar)
   const showOpenInSystemButton = Boolean(metadata?.filePath);
 
-  // 下载文件到本地 / Download file to local system
+  // Download file to local system
   const handleDownload = useCallback(async () => {
     try {
       const rawFileName = metadata?.fileName || `${contentType}-${Date.now()}`;
@@ -369,7 +364,7 @@ const PreviewPanel: React.FC = () => {
     }
   }, [content, contentType, metadata?.fileName, metadata?.filePath, metadata?.language, messageApi, t]);
 
-  // 在系统默认应用中打开文件 / Open file in system default application
+  // Open file in system default application
   const handleOpenInSystem = useCallback(async () => {
     if (!metadata?.filePath) {
       try {
@@ -381,7 +376,7 @@ const PreviewPanel: React.FC = () => {
     }
 
     try {
-      // 使用系统默认应用打开文件 / Open file with system default application
+      // Open file with system default application
       await ipcBridge.shell.openFile.invoke(metadata.filePath);
       try {
         messageApi.success(t('preview.openInSystemSuccess'));
@@ -397,7 +392,7 @@ const PreviewPanel: React.FC = () => {
     }
   }, [metadata?.filePath, messageApi, t]);
 
-  // 渲染历史下拉菜单 / Render history dropdown
+  // Render history dropdown
   const renderHistoryDropdown = () => {
     // eslint-disable-next-line max-len
     return (
@@ -412,13 +407,13 @@ const PreviewPanel: React.FC = () => {
     );
   };
 
-  // 渲染预览内容 / Render preview content
+  // Render preview content
   const renderContent = () => {
-    // Markdown 模式 / Markdown mode
+    // Markdown mode
     if (isMarkdown) {
-      // 分屏模式：左右分割（编辑器 + 预览）/ Split-screen mode: Editor + Preview
+      // Split-screen mode: Editor + Preview
       if (isSplitScreenEnabled) {
-        // 移动端：全屏显示预览，隐藏编辑器 / Mobile: Full-screen preview, hide editor
+        // Mobile: Full-screen preview, hide editor
         if (layout?.isMobile) {
           return (
             <div className='flex-1 overflow-hidden'>
@@ -427,10 +422,10 @@ const PreviewPanel: React.FC = () => {
           );
         }
 
-        // 桌面端：左右分割布局 / Desktop: Split layout
+        // Desktop: Split layout
         return (
           <div className='flex flex-1 relative overflow-hidden'>
-            {/* 左侧：编辑器 / Left: Editor */}
+            {/* Left: Editor */}
             <div className='flex flex-col relative' style={{ width: `${splitRatio}%` }}>
               <div className='h-40px flex items-center px-12px bg-bg-2'>
                 <span className='text-12px text-t-secondary'>{t('preview.editor')}</span>
@@ -444,11 +439,11 @@ const PreviewPanel: React.FC = () => {
                   onScroll={handleEditorScroll}
                 />
               </div>
-              {/* 拖动分割线 / Drag handle */}
+              {/* Drag handle */}
               {createDragHandle({ className: 'absolute right-0 top-0 bottom-0' })}
             </div>
 
-            {/* 右侧：预览 / Right: Preview */}
+            {/* Right: Preview */}
             <div className='flex flex-col' style={{ width: `${100 - splitRatio}%`, minWidth: 0 }}>
               <div className='h-40px flex items-center px-12px bg-bg-2'>
                 <span className='text-12px text-t-secondary'>{t('preview.preview')}</span>
@@ -467,7 +462,7 @@ const PreviewPanel: React.FC = () => {
         );
       }
 
-      // 非分屏模式：单栏（原文或预览）/ Non-split mode: Single panel (source or preview)
+      // Non-split mode: Single panel (source or preview)
       return (
         <MarkdownPreview
           content={content}
@@ -480,11 +475,11 @@ const PreviewPanel: React.FC = () => {
       );
     }
 
-    // HTML 模式 / HTML mode
+    // HTML mode
     if (isHTML) {
-      // 分屏模式：左右分割（编辑器 + 预览）/ Split-screen mode: Editor + Preview
+      // Split-screen mode: Editor + Preview
       if (isSplitScreenEnabled) {
-        // 移动端：全屏显示预览，隐藏编辑器 / Mobile: Full-screen preview, hide editor
+        // Mobile: Full-screen preview, hide editor
         if (layout?.isMobile) {
           return (
             <div className='flex-1 overflow-hidden'>
@@ -499,10 +494,10 @@ const PreviewPanel: React.FC = () => {
           );
         }
 
-        // 桌面端：左右分割布局 / Desktop: Split layout
+        // Desktop: Split layout
         return (
           <div className='flex flex-1 relative overflow-hidden'>
-            {/* 左侧：编辑器 / Left: Editor */}
+            {/* Left: Editor */}
             <div className='flex flex-col relative' style={{ width: `${splitRatio}%` }}>
               <div className='h-40px flex items-center px-12px bg-bg-2'>
                 <span className='text-12px text-t-secondary'>{t('preview.editor')}</span>
@@ -517,11 +512,11 @@ const PreviewPanel: React.FC = () => {
                   filePath={metadata?.filePath}
                 />
               </div>
-              {/* 拖动分割线 / Drag handle */}
+              {/* Drag handle */}
               {createDragHandle({ className: 'absolute right-0 top-0 bottom-0' })}
             </div>
 
-            {/* 右侧：预览 / Right: Preview */}
+            {/* Right: Preview */}
             <div className='flex flex-col' style={{ width: `${100 - splitRatio}%`, minWidth: 0 }}>
               <div className='h-40px flex items-center justify-between px-12px bg-bg-2'>
                 <span className='text-12px text-t-secondary'>{t('preview.preview')}</span>
@@ -544,7 +539,7 @@ const PreviewPanel: React.FC = () => {
         );
       }
 
-      // 非分屏模式：单栏（原文或预览）/ Non-split mode: Single panel (source or preview)
+      // Non-split mode: Single panel (source or preview)
       if (viewMode === 'source') {
         return (
           <div className='flex-1 overflow-hidden'>
@@ -557,7 +552,7 @@ const PreviewPanel: React.FC = () => {
           </div>
         );
       } else {
-        // 预览模式 / Preview mode
+        // Preview mode
         return (
           <div className='flex-1 overflow-hidden'>
             <HTMLRenderer
@@ -572,7 +567,7 @@ const PreviewPanel: React.FC = () => {
       }
     }
 
-    // 其他类型：全屏预览 / Other types: Full-screen preview
+    // Other types: Full-screen preview
     if (contentType === 'diff') {
       return (
         <DiffPreview
@@ -584,11 +579,11 @@ const PreviewPanel: React.FC = () => {
         />
       );
     } else if (contentType === 'code') {
-      // 分屏模式：左右分割（编辑器 + 预览）/ Split-screen mode: Editor + Preview
+      // Split-screen mode: Editor + Preview
       if (isSplitScreenEnabled && isEditMode && isEditable) {
         return (
           <div className='flex flex-1 relative overflow-hidden'>
-            {/* 左侧：编辑器 / Left: Editor */}
+            {/* Left: Editor */}
             <div className='flex flex-col relative' style={{ width: `${splitRatio}%` }}>
               <div className='h-40px flex items-center px-12px bg-bg-2'>
                 <span className='text-12px text-t-secondary'>{t('preview.editor')}</span>
@@ -596,11 +591,11 @@ const PreviewPanel: React.FC = () => {
               <div className='flex-1 overflow-hidden'>
                 <TextEditor key={activeTabId ?? undefined} value={content} onChange={updateContent} />
               </div>
-              {/* 拖动分割线 / Drag handle */}
+              {/* Drag handle */}
               {createDragHandle({ className: 'absolute right-0 top-0 bottom-0' })}
             </div>
 
-            {/* 右侧：预览 / Right: Preview */}
+            {/* Right: Preview */}
             <div className='flex flex-col' style={{ width: `${100 - splitRatio}%`, minWidth: 0 }}>
               <div className='h-40px flex items-center px-12px bg-bg-2'>
                 <span className='text-12px text-t-secondary'>{t('preview.preview')}</span>
@@ -613,7 +608,7 @@ const PreviewPanel: React.FC = () => {
         );
       }
 
-      // 非分屏模式：如果处于编辑模式且可编辑，显示文本编辑器 / Non-split mode: If in edit mode and editable, show text editor
+      // Non-split mode: If in edit mode and editable, show text editor
       if (isEditMode && isEditable) {
         return (
           <div className='flex-1 overflow-hidden'>
@@ -621,7 +616,7 @@ const PreviewPanel: React.FC = () => {
           </div>
         );
       }
-      // 否则显示代码预览 / Otherwise show code preview
+      // Otherwise show code preview
       return (
         <CodePreview
           content={content}
@@ -648,14 +643,14 @@ const PreviewPanel: React.FC = () => {
         />
       );
     } else if (contentType === 'url') {
-      // URL 预览模式 / URL preview mode
+      // URL preview mode
       return <URLViewer url={content} title={metadata?.title} />;
     }
 
     return null;
   };
 
-  // 将 tabs 转换为 PreviewTab 类型 / Convert tabs to PreviewTab type
+  // Convert tabs to PreviewTab type
   const previewTabs: PreviewTab[] = tabs.map((tab) => ({
     id: tab.id,
     title: tab.title,
@@ -667,7 +662,7 @@ const PreviewPanel: React.FC = () => {
       <div className='h-full flex flex-col bg-1 rounded-[16px]'>
         {messageContextHolder}
 
-        {/* 确认对话框 / Confirmation modals */}
+        {/* Confirmation modals */}
         {/* eslint-disable-next-line max-len */}
         <PreviewConfirmModals
           showExitConfirm={showExitConfirm}
@@ -679,7 +674,7 @@ const PreviewPanel: React.FC = () => {
           onCancelCloseTab={handleCancelCloseTab}
         />
 
-        {/* Tab 栏 / Tab bar */}
+        {/* Tab bar */}
         {/* eslint-disable-next-line max-len */}
         <PreviewTabs
           tabs={previewTabs}
@@ -692,7 +687,7 @@ const PreviewPanel: React.FC = () => {
           onClosePanel={closePreview}
         />
 
-        {/* 工具栏（URL 类型不显示工具栏，因为不需要下载/编辑等功能）/ Toolbar (hidden for URL type as it doesn't need download/edit features) */}
+        {/* Toolbar (hidden for URL type as it doesn't need download/edit features) */}
         {contentType !== 'url' && (
           <PreviewToolbar
             contentType={contentType}
@@ -708,12 +703,12 @@ const PreviewPanel: React.FC = () => {
             snapshotSaving={snapshotSaving}
             onViewModeChange={(mode) => {
               setViewMode(mode);
-              setIsSplitScreenEnabled(false); // 切换视图模式时关闭分屏 / Disable split when switching view mode
+              setIsSplitScreenEnabled(false); // Disable split when switching view mode
             }}
             onSplitScreenToggle={() => setIsSplitScreenEnabled(!isSplitScreenEnabled)}
             onEditClick={() => {
               setIsEditMode(true);
-              // Code/TXT 类型进入编辑模式时自动开启分屏 / Auto enable split screen for Code/TXT when entering edit mode
+              // Auto enable split screen for Code/TXT when entering edit mode
               if (contentType === 'code') {
                 setIsSplitScreenEnabled(true);
               }
@@ -732,10 +727,10 @@ const PreviewPanel: React.FC = () => {
           />
         )}
 
-        {/* 预览内容 / Preview content */}
+        {/* Preview content */}
         {renderContent()}
 
-        {/* Tab 右键菜单 / Tab context menu */}
+        {/* Tab context menu */}
         {/* eslint-disable-next-line max-len */}
         <PreviewContextMenu
           contextMenu={contextMenu}

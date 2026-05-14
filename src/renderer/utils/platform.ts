@@ -6,12 +6,10 @@
 
 /**
  * Platform detection utilities
- * 平台检测工具函数
  */
 
 /**
  * Check if running in Electron desktop environment
- * 检测是否运行在 Electron 桌面环境
  */
 export const isElectronDesktop = (): boolean => {
   return typeof window !== 'undefined' && Boolean(window.electronAPI);
@@ -19,7 +17,6 @@ export const isElectronDesktop = (): boolean => {
 
 /**
  * Check if running on macOS
- * 检测是否运行在 macOS
  */
 export const isMacOS = (): boolean => {
   return typeof navigator !== 'undefined' && /mac/i.test(navigator.userAgent);
@@ -27,7 +24,6 @@ export const isMacOS = (): boolean => {
 
 /**
  * Check if running on Windows
- * 检测是否运行在 Windows
  */
 export const isWindows = (): boolean => {
   return typeof navigator !== 'undefined' && /win/i.test(navigator.userAgent);
@@ -35,7 +31,6 @@ export const isWindows = (): boolean => {
 
 /**
  * Check if running on Linux
- * 检测是否运行在 Linux
  */
 export const isLinux = (): boolean => {
   return typeof navigator !== 'undefined' && /linux/i.test(navigator.userAgent);
@@ -72,8 +67,6 @@ const toFileUrl = (absPath: string): string => {
  * - In Electron dev / any HTTP(S)-served renderer: keep `wayland-asset://` because direct `file://` is blocked.
  * - In Electron packaged / local-protocol renderers: convert `wayland-asset://asset/{path}` to `file://` for reliable image loading.
  * - In a regular browser (WebUI): convert `wayland-asset://asset/{path}` to `/api/ext-asset?path={encodedPath}`.
- *
- * 将扩展资源 URL 转换为当前环境可用的地址
  */
 export const resolveExtensionAssetUrl = (url: string | undefined): string | undefined => {
   if (!url) return url;
@@ -108,10 +101,6 @@ export const resolveExtensionAssetUrl = (url: string | undefined): string | unde
  * Open external URL in the appropriate context
  * - Electron: uses shell.openExternal via IPC (opens on local machine)
  * - WebUI: uses window.open in client browser (opens on remote client)
- *
- * 在适当的环境中打开外部链接
- * - Electron: 通过 IPC 调用 shell.openExternal（在本地机器打开）
- * - WebUI: 使用 window.open 在客户端浏览器打开（在远程客户端打开）
  */
 export const openExternalUrl = async (url: string): Promise<void> => {
   if (!url) return;

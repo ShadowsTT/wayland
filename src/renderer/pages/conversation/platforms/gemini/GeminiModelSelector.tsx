@@ -25,10 +25,10 @@ const GeminiModelSelector: React.FC<{
   const isMobileHeaderCompact = variant === 'header' && Boolean(layout?.isMobile);
   const defaultModelLabel = t('common.defaultModel');
 
-  // 获取模型配置数据（包含健康状态）
+  // Fetch model configuration data (including health status)
   const { data: modelConfig } = useSWR<IProvider[]>('model.config', () => ipcBridge.mode.getModelConfig.invoke());
 
-  // 获取当前模型的健康状态 (must be called before any early return to keep hooks count stable)
+  // Get current model's health status (must be called before any early return to keep hooks count stable)
   const currentModel = selection?.currentModel;
   const currentModelHealth = React.useMemo(() => {
     if (!currentModel || !modelConfig) return { status: 'unknown', color: 'bg-gray-400' };
@@ -161,7 +161,7 @@ const GeminiModelSelector: React.FC<{
                       onClick={() => void handleSelectModel(provider, modelName)}
                     >
                       {(() => {
-                        // 获取模型健康状态
+                        // Get model health status
                         const matchedProvider = modelConfig?.find((p) => p.id === provider.id);
                         const healthStatus = matchedProvider?.modelHealth?.[modelName]?.status || 'unknown';
                         const healthColor =

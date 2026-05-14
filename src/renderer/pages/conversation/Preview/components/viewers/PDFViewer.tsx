@@ -13,18 +13,16 @@ import { useTranslation } from 'react-i18next';
 interface PDFPreviewProps {
   /**
    * PDF file path (absolute path on disk)
-   * PDF 文件路径（磁盘上的绝对路径）
    */
   filePath?: string;
   /**
    * PDF content as base64 or blob URL
-   * PDF 内容（base64 或 blob URL）
    */
   content?: string;
   hideToolbar?: boolean;
 }
 
-// Electron webview 元素的类型定义 / Type definition for Electron webview element
+// Type definition for Electron webview element
 interface ElectronWebView extends HTMLElement {
   src: string;
 }
@@ -63,7 +61,6 @@ const PDFPreview: React.FC<PDFPreviewProps> = ({ filePath, content, hideToolbar 
         return;
       }
 
-      // webview 加载成功后隐藏 loading
       // Hide loading after webview finishes loading
       const webview = webviewRef.current;
       if (webview) {
@@ -91,7 +88,6 @@ const PDFPreview: React.FC<PDFPreviewProps> = ({ filePath, content, hideToolbar 
     }
   }, [filePath, content, t]);
 
-  // 设置工具栏扩展（必须在所有条件返回之前调用）
   // Set toolbar extras (must be called before any conditional returns)
   useEffect(() => {
     if (!usePortalToolbar || !toolbarExtrasContext || loading || error) return;
@@ -107,7 +103,6 @@ const PDFPreview: React.FC<PDFPreviewProps> = ({ filePath, content, hideToolbar 
     return () => toolbarExtrasContext.setExtras(null);
   }, [usePortalToolbar, toolbarExtrasContext, t, loading, error]);
 
-  // 使用 Electron webview 加载本地 PDF 文件
   // Use Electron webview to load local PDF files
   const pdfSrc = filePath ? `file://${filePath}` : content || '';
 
@@ -153,9 +148,9 @@ const PDFPreview: React.FC<PDFPreviewProps> = ({ filePath, content, hideToolbar 
           )}
         </div>
       )}
-      {/* PDF 内容区域 / PDF content area */}
+      {/* PDF content area */}
       <div className='flex-1 overflow-hidden bg-bg-1'>
-        {/* key 确保文件路径改变时 webview 重新挂载 / key ensures webview remounts when file path changes */}
+        {/* key ensures webview remounts when file path changes */}
         <webview
           key={pdfSrc}
           ref={webviewRef}

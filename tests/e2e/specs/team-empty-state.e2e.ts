@@ -71,7 +71,7 @@ for (const leaderType of TEAM_SUPPORTED_BACKENDS) {
     await page.waitForURL(new RegExp(`/team/${teamId}`), { timeout: 10000 });
 
     // Scope every assertion to the empty-state container. Without this, a leftover
-    // sidebar conversation with the same name ("组织一场辩论赛…") will match
+    // sidebar conversation with the same name ("Organize a debate...") will match
     // text-based locators first and the click will navigate away from the team.
     const emptyState = page.locator('[data-testid="team-chat-empty-state"]').first();
     await expect(emptyState).toBeVisible({ timeout: 15000 });
@@ -94,7 +94,7 @@ for (const leaderType of TEAM_SUPPORTED_BACKENDS) {
     await suggestion.scrollIntoViewIfNeeded();
     await suggestion.click();
 
-    // The chat send-box textarea placeholder starts with "Send message to" / "发送消息到".
+    // The chat send-box textarea placeholder starts with "Send message to".
     // We scope via this placeholder so the sidebar search textarea never matches first.
     const chatInput = page.locator('textarea[placeholder^="Send message"], textarea[placeholder^="发送消息"]').first();
     await expect(chatInput).toBeVisible({ timeout: 5000 });

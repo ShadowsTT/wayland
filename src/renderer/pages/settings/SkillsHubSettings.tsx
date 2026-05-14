@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 import SettingsPageWrapper from './components/SettingsPageWrapper';
 
-// Skill 信息类型 / Skill info type
+// Skill info type
 interface SkillInfo {
   name: string;
   description: string;
@@ -15,7 +15,7 @@ interface SkillInfo {
   source?: 'builtin' | 'custom' | 'extension';
 }
 
-// 外部来源类型 / External source type
+// External source type
 interface ExternalSource {
   name: string;
   path: string;
@@ -245,7 +245,7 @@ const SkillsHubSettings: React.FC<SkillsHubSettingsProps> = ({ withWrapper = tru
   const mainContent = (
     <div className='flex flex-col h-full w-full'>
       <div className='space-y-16px pb-24px'>
-        {/* ======== 发现外部技能 / Discovered External Skills ======== */}
+        {/* ======== Discovered External Skills ======== */}
         {totalExternal > 0 && (
           <div className='px-[16px] md:px-[32px] py-32px bg-base rd-16px md:rd-24px mb-16px shadow-sm border border-b-base relative overflow-hidden transition-all'>
             {/* Section Header with Search Bar */}
@@ -388,7 +388,7 @@ const SkillsHubSettings: React.FC<SkillsHubSettingsProps> = ({ withWrapper = tru
           </div>
         )}
 
-        {/* ======== 我的技能 / My Skills ======== */}
+        {/* ======== My Skills ======== */}
         <div className='px-[16px] md:px-[32px] py-32px bg-base rd-16px md:rd-24px shadow-sm border border-b-base relative overflow-hidden transition-all'>
           {/* Toolbar for My Skills */}
           <div className='flex flex-col lg:flex-row lg:items-center justify-between gap-16px mb-24px relative z-10'>

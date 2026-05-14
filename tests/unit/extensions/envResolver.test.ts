@@ -89,7 +89,7 @@ describe('extensions/envResolver', () => {
     expect(isGlobalStrictMode()).toBe(true);
 
     process.env[WAYLAND_STRICT_ENV_ENV] = '0';
-    // 仍使用缓存值
+    // still uses cached value
     expect(isGlobalStrictMode()).toBe(true);
 
     clearStrictModeCache();

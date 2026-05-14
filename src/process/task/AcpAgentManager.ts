@@ -51,25 +51,25 @@ interface AcpAgentManagerData {
   cliPath?: string;
   customWorkspace?: boolean;
   conversation_id: string;
-  customAgentId?: string; // 用于标识特定自定义代理的 UUID / UUID for identifying specific custom agent
-  /** Preset assistant id (builtin or custom) shown in the conversation header / 预设助手 ID */
+  customAgentId?: string; // UUID for identifying specific custom agent
+  /** Preset assistant id (builtin or custom) shown in the conversation header */
   presetAssistantId?: string;
-  /** Display name for the agent (from extension or custom config) / Agent 显示名称（来自扩展或自定义配置） */
+  /** Display name for the agent (from extension or custom config) */
   agentName?: string;
-  presetContext?: string; // 智能助手的预设规则/提示词 / Preset context from smart assistant
-  /** 启用的 skills 列表，用于过滤 SkillManager 加载的 skills / Enabled skills list for filtering SkillManager skills */
+  presetContext?: string; // Preset context from smart assistant
+  /** Enabled skills list for filtering SkillManager skills */
   enabledSkills?: string[];
-  /** 排除的内置自动注入 skills / Builtin auto-injected skills to exclude */
+  /** Builtin auto-injected skills to exclude */
   excludeBuiltinSkills?: string[];
   /** Force yolo mode (auto-approve) - used by CronService for scheduled tasks */
   yoloMode?: boolean;
-  /** ACP session ID for resume support / ACP session ID 用于会话恢复 */
+  /** ACP session ID for resume support */
   acpSessionId?: string;
-  /** Last update time of ACP session / ACP session 最后更新时间 */
+  /** Last update time of ACP session */
   acpSessionUpdatedAt?: number;
-  /** Persisted session mode for resume support / 持久化的会话模式，用于恢复 */
+  /** Persisted session mode for resume support */
   sessionMode?: string;
-  /** Persisted model ID for resume support / 持久化的模型 ID，用于恢复 */
+  /** Persisted model ID for resume support */
   currentModelId?: string;
   sandboxMode?: CodexSandboxMode;
   /** Pending config option selections from Guid page (applied after session creation) */
@@ -923,7 +923,6 @@ ${collectedResponses.join('\n')}`;
         },
         onSessionIdUpdate: (sessionId: string) => {
           // Save ACP session ID to database for resume support
-          // 保存 ACP session ID 到数据库以支持会话恢复
           this.saveAcpSessionId(sessionId);
         },
         onAvailableCommandsUpdate: (commands: Array<{ name: string; description?: string; hint?: string }>) => {
@@ -1013,12 +1012,9 @@ ${collectedResponses.join('\n')}`;
           contentToSend = contentToSend.split(WAYLAND_FILES_MARKER)[0].trimEnd();
         }
 
-        // 首条消息时注入预设规则和 skills
         // Inject preset rules and skills on first message
         //
-        // Symlinks 仅在临时工作空间创建；自定义工作空间跳过 symlink 以避免污染用户目录。
         // Symlinks are only created for temp workspaces; custom workspaces skip symlinks.
-        // 因此自定义工作空间或不支持原生 skill 发现的 backend 都需要通过 prompt 注入 skills。
         // So custom workspaces or backends without native skill discovery need prompt injection.
         if (this.isFirstMessage) {
           const isInTeam = Boolean((this.options as unknown as Record<string, unknown>).teamMcpStdioConfig);
@@ -1060,7 +1056,7 @@ ${collectedResponses.join('\n')}`;
           ...data,
           content: contentToSend,
         });
-        // 首条消息发送后标记，无论是否有 presetContext
+        // Mark after first message is sent, regardless of presetContext
         if (this.isFirstMessage) {
           this.isFirstMessage = false;
         }
@@ -1274,7 +1270,6 @@ ${collectedResponses.join('\n')}`;
 
   /**
    * Get the current session mode for this agent.
-   * 获取此代理的当前会话模式。
    *
    * @returns Object with current mode and whether agent is initialized
    */
@@ -1360,7 +1355,6 @@ ${collectedResponses.join('\n')}`;
 
   /**
    * Set the session mode for this agent (e.g., plan, default, bypassPermissions, yolo).
-   * 设置此代理的会话模式（如 plan、default、bypassPermissions、yolo）。
    *
    * Note: Agent must be initialized (user must have sent at least one message)
    * before mode switching is possible, as we need an active ACP session.
@@ -1402,7 +1396,6 @@ ${collectedResponses.join('\n')}`;
     }
 
     // If agent is not initialized, try to initialize it first
-    // 如果 agent 未初始化，先尝试初始化
     if (!this.agent) {
       try {
         await this.initAgent(this.options);
@@ -1467,7 +1460,6 @@ ${collectedResponses.join('\n')}`;
 
   /**
    * Save model ID to database for resume support.
-   * 保存模型 ID 到数据库以支持恢复。
    */
   private async saveModelId(modelId: string): Promise<void> {
     try {
@@ -1490,7 +1482,6 @@ ${collectedResponses.join('\n')}`;
 
   /**
    * Save context usage to database for restore on page switch.
-   * 保存上下文使用量到数据库，以便在页面切换时恢复。
    */
   private clearBusyState(): void {
     cronBusyGuard.setProcessing(this.conversation_id, false);
@@ -1519,7 +1510,6 @@ ${collectedResponses.join('\n')}`;
 
   /**
    * Save session mode to database for resume support.
-   * 保存会话模式到数据库以支持恢复。
    */
   private async saveSessionMode(mode: string): Promise<void> {
     try {
@@ -1584,7 +1574,6 @@ ${collectedResponses.join('\n')}`;
     const HARD_TIMEOUT_MS = 1500; // Force kill if agent.kill() hangs
 
     // Clear pending slash command waiters to prevent memory leaks
-    // 清除待处理的斜杠命令等待者，防止内存泄漏
     const waiters = this.acpAvailableSlashWaiters.splice(0, this.acpAvailableSlashWaiters.length);
     for (const resolve of waiters) {
       resolve([]);
@@ -1637,7 +1626,6 @@ ${collectedResponses.join('\n')}`;
 
   /**
    * Save ACP session ID to database for resume support.
-   * 保存 ACP session ID 到数据库以支持会话恢复。
    */
   private async saveAcpSessionId(sessionId: string): Promise<void> {
     try {

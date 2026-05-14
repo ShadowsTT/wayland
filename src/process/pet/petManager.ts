@@ -513,7 +513,7 @@ function unregisterIpcHandlers(): void {
  * but does not always reflow the rendered content area. The user sees the pet
  * staying its original size while the hit-region (and the WM's idea of the
  * window) shrinks/grows underneath. This is the root cause of the
- * "win11 改大小后实际显示不变" report — see electron/electron#20729.
+ * "win11: actual rendered size unchanged after resize" report — see electron/electron#20729.
  *
  * Workaround: hide → setBounds → show. Hiding releases the DWM composition
  * cache for the window so the next show() rebuilds it at the new size. This is

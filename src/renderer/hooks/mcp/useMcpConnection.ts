@@ -5,7 +5,6 @@ import type { IMcpServer } from '@/common/config/storage';
 import { globalMessageQueue } from './messageQueue';
 
 /**
- * 截断过长的错误消息，保持可读性
  * Truncate long error messages to keep them readable
  */
 const truncateErrorMessage = (message: string, maxLength: number = 150): string => {
@@ -16,24 +15,24 @@ const truncateErrorMessage = (message: string, maxLength: number = 150): string 
 };
 
 /**
- * MCP连接测试管理Hook
- * 处理MCP服务器的连接测试和状态更新
+ * MCP connection-test management hook.
+ * Handles MCP server connection tests and status updates.
  */
 export const useMcpConnection = (
   mcpServers: IMcpServer[],
   saveMcpServers: (serversOrUpdater: IMcpServer[] | ((prev: IMcpServer[]) => IMcpServer[])) => Promise<void>,
   message: ReturnType<typeof import('@arco-design/web-react').Message.useMessage>[0],
-  onAuthRequired?: (server: IMcpServer) => void // 新增：当需要认证时的回调
+  onAuthRequired?: (server: IMcpServer) => void // Added: callback fired when authentication is required
 ) => {
   const { t } = useTranslation();
   const [testingServers, setTestingServers] = useState<Record<string, boolean>>({});
 
-  // 连接测试函数
+  // Connection test function
   const handleTestMcpConnection = useCallback(
     async (server: IMcpServer) => {
       setTestingServers((prev) => ({ ...prev, [server.id]: true }));
 
-      // 更新服务器状态 - 使用统一的保存函数，避免竞态条件
+      // Update server status — use the unified save function to avoid race conditions
       const updateServerStatus = async (status: IMcpServer['status'], additionalData?: Partial<IMcpServer>) => {
         try {
           await saveMcpServers((prevServers) =>
@@ -54,14 +53,14 @@ export const useMcpConnection = (
         if (response.success && response.data) {
           const result = response.data;
 
-          // 检查是否需要认证
+          // Check whether authentication is required
           if (result.needsAuth) {
             await updateServerStatus('disconnected');
             await globalMessageQueue.add(() => {
               message.warning(`${server.name}: ${t('settings.mcpAuthRequired') || 'Authentication required'}`);
             });
 
-            // 触发认证回调
+            // Fire authentication callback
             if (onAuthRequired) {
               onAuthRequired(server);
             }
@@ -69,8 +68,8 @@ export const useMcpConnection = (
           }
 
           if (result.success) {
-            // 更新服务器状态为已连接，并保存获取到的工具信息
-            // 连接成功时不修改 enabled 字段，让用户决定是否安装
+            // Update server status to connected and save fetched tool info.
+            // On success, do not modify the enabled field — let the user decide whether to install
             await updateServerStatus('connected', {
               tools: result.tools?.map((tool) => ({
                 name: tool.name,
@@ -83,10 +82,10 @@ export const useMcpConnection = (
               message.success(`${server.name}: ${t('settings.mcpTestConnectionSuccess')}`);
             });
 
-            // 连接测试成功，不执行额外操作
+            // Connection test succeeded; no extra actions to perform
           } else {
-            // 更新服务器状态为错误，并禁用安装
-            // 连接失败时自动设置 enabled=false，避免安装失败的服务
+            // Update server status to error and disable install.
+            // On failure, automatically set enabled=false to avoid installing a broken service
             await updateServerStatus('error', {
               enabled: false,
             });
@@ -96,7 +95,7 @@ export const useMcpConnection = (
             });
           }
         } else {
-          // IPC调用失败，禁用安装
+          // IPC call failed; disable install
           await updateServerStatus('error', {
             enabled: false,
           });
@@ -106,7 +105,7 @@ export const useMcpConnection = (
           });
         }
       } catch (error) {
-        // 更新服务器状态为错误，禁用安装
+        // Update server status to error and disable install
         await updateServerStatus('error', {
           enabled: false,
         });

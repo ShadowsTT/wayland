@@ -90,6 +90,6 @@ test.describe('F-SESSION-05 空闲会话自动释放', () => {
   });
 
   test.skip('实际 5 分钟空闲触发验证（E2E 等待成本过高）', async () => {
-    // skip 白名单：F-SESSION-05 的实际 5 分钟空闲触发验证
+    // skip whitelist: actual 5-minute idle trigger verification for F-SESSION-05
   });
 });

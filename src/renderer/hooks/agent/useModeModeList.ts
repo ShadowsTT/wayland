@@ -7,17 +7,17 @@ import { getGeminiModeList } from '@/common/utils/geminiModes';
 
 export const geminiModeList = getGeminiModeList();
 
-// Gemini 模型排序函数：Pro 优先，版本号降序
+// Gemini model sorting function: Pro first, version descending
 const sortGeminiModels = (models: { label: string; value: string }[]) => {
   return models.toSorted((a, b) => {
     const aPro = a.value.toLowerCase().includes('pro');
     const bPro = b.value.toLowerCase().includes('pro');
 
-    // Pro 模型排在前面
+    // Pro models go first
     if (aPro && !bPro) return -1;
     if (!aPro && bPro) return 1;
 
-    // 提取版本号进行比较
+    // Extract version number for comparison
     const extractVersion = (name: string) => {
       const match = name.match(/(\d+\.?\d*)/);
       return match ? parseFloat(match[1]) : 0;
@@ -26,12 +26,12 @@ const sortGeminiModels = (models: { label: string; value: string }[]) => {
     const aVersion = extractVersion(a.value);
     const bVersion = extractVersion(b.value);
 
-    // 版本号大的排在前面
+    // Higher version numbers go first
     if (aVersion !== bVersion) {
       return bVersion - aVersion;
     }
 
-    // 版本号相同时按字母顺序排序
+    // Sort alphabetically when versions are equal
     return a.value.localeCompare(b.value);
   });
 };
@@ -55,7 +55,7 @@ const useModeModeList = (
       models: { label: string; value: string }[];
       fix_base_url?: string;
     }> => {
-      // 如果有 API key、base_url 或 bedrockConfig，尝试通过 API 获取模型列表
+      // If API key, base_url, or bedrockConfig is set, try fetching the model list via API
       if (api_key || base_url || bedrockConfig) {
         const res = await ipcBridge.mode.fetchModelList.invoke({ base_url, api_key, try_fix, platform, bedrockConfig });
         if (res.success) {
@@ -69,12 +69,12 @@ const useModeModeList = (
               }
             }) || [];
 
-          // 如果是 Gemini 平台，优化排序
+          // Optimize ordering for Gemini platform
           if (platform?.includes('gemini')) {
             modelList = sortGeminiModels(modelList);
           }
 
-          // 如果返回了修复的 base_url，将其添加到结果中
+          // If a fixed base_url was returned, add it to the result
           if (res.data?.fix_base_url) {
             return {
               models: modelList,
@@ -84,11 +84,11 @@ const useModeModeList = (
 
           return { models: modelList };
         }
-        // 后端已经处理了回退逻辑，这里直接抛出错误
+        // Backend already handles fallback logic; just throw the error here
         return Promise.reject(res.msg);
       }
 
-      // 既没有 API key 也没有 base_url 也没有 bedrockConfig 时，返回空列表
+      // Return an empty list when none of API key, base_url, or bedrockConfig is set
       return { models: [] };
     }
   );

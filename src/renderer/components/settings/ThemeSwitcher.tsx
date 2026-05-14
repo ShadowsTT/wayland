@@ -10,9 +10,8 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 
 /**
- * 主题切换器组件 / Theme switcher component
+ * Theme switcher component
  *
- * 提供明暗模式切换功能
  * Provides light/dark mode switching functionality
  */
 export const ThemeSwitcher = () => {

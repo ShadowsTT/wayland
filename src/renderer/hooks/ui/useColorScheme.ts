@@ -4,19 +4,18 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-// hooks/useColorScheme.ts - Color Scheme Management Hook 配色方案管理
+// hooks/useColorScheme.ts - Color Scheme Management Hook
 import { ConfigStorage } from '@/common/config/storage';
 import { useCallback, useEffect, useState } from 'react';
 
-// Supported color schemes 支持的配色方案类型
+// Supported color schemes
 export type ColorScheme = 'default';
 
 const DEFAULT_COLOR_SCHEME: ColorScheme = 'default';
 const COLOR_SCHEME_CACHE_KEY = '__wayland_colorScheme';
 
 /**
- * Initialize color scheme immediately when module loads
- * 在模块加载时立即初始化配色方案，避免页面闪烁
+ * Initialize color scheme immediately when module loads to avoid flashing
  */
 const initColorScheme = async () => {
   try {
@@ -36,22 +35,22 @@ const initColorScheme = async () => {
   }
 };
 
-// Run color scheme initialization immediately 立即运行配色方案初始化
+// Run color scheme initialization immediately
 let initialColorSchemePromise: Promise<ColorScheme> | null = null;
 if (typeof window !== 'undefined') {
   initialColorSchemePromise = initColorScheme();
 }
 
 /**
- * Color scheme management hook 配色方案管理 Hook
- * @returns [colorScheme, setColorScheme] - Current color scheme and setter function 当前配色方案和设置函数
+ * Color scheme management hook
+ * @returns [colorScheme, setColorScheme] - Current color scheme and setter function
  */
 const useColorScheme = (): [ColorScheme, (scheme: ColorScheme) => Promise<void>] => {
   const [colorScheme, setColorSchemeState] = useState<ColorScheme>(DEFAULT_COLOR_SCHEME);
 
   /**
-   * Apply color scheme to DOM 应用配色方案到 DOM
-   * Switch CSS variables by setting data-color-scheme attribute 通过设置 data-color-scheme 属性切换 CSS 变量
+   * Apply color scheme to DOM
+   * Switch CSS variables by setting data-color-scheme attribute
    */
   const applyColorScheme = useCallback((newScheme: ColorScheme) => {
     document.documentElement.setAttribute('data-color-scheme', newScheme);
@@ -63,8 +62,8 @@ const useColorScheme = (): [ColorScheme, (scheme: ColorScheme) => Promise<void>]
   }, []);
 
   /**
-   * Set color scheme with persistence 设置配色方案并持久化
-   * Updates state, DOM attribute and local storage 同时更新状态、DOM 属性和本地存储
+   * Set color scheme with persistence
+   * Updates state, DOM attribute and local storage
    */
   const setColorScheme = useCallback(
     async (newScheme: ColorScheme) => {
@@ -74,7 +73,7 @@ const useColorScheme = (): [ColorScheme, (scheme: ColorScheme) => Promise<void>]
         await ConfigStorage.set('colorScheme', newScheme);
       } catch (error) {
         console.error('Failed to save color scheme:', error);
-        // Revert on error 保存失败时回滚
+        // Revert on error
         setColorSchemeState(colorScheme);
         applyColorScheme(colorScheme);
       }
@@ -83,8 +82,8 @@ const useColorScheme = (): [ColorScheme, (scheme: ColorScheme) => Promise<void>]
   );
 
   /**
-   * Initialize color scheme state from early initialization
-   * 从早期初始化中读取配色方案状态，确保组件挂载时获取正确的值
+   * Initialize color scheme state from early initialization to ensure
+   * the component reads the correct value on mount
    */
   useEffect(() => {
     if (initialColorSchemePromise) {

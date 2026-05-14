@@ -19,7 +19,7 @@ const availableModelsCache = new Map<string, string[]>();
  * @returns Array of available primary model names
  */
 export const getAvailableModels = (provider: IProvider): string[] => {
-  // 包含 modelEnabled 状态到缓存 key 中
+  // Include modelEnabled state in the cache key
   const modelEnabledKey = provider.modelEnabled ? JSON.stringify(provider.modelEnabled) : 'all-enabled';
   const cacheKey = `${provider.id}-${(provider.model || []).join(',')}-${modelEnabledKey}`;
 
@@ -29,7 +29,7 @@ export const getAvailableModels = (provider: IProvider): string[] => {
 
   const result: string[] = [];
   for (const modelName of provider.model || []) {
-    // 检查模型是否被禁用（默认为启用）
+    // Check whether the model is disabled (default is enabled)
     const isModelEnabled = provider.modelEnabled?.[modelName] !== false;
     if (!isModelEnabled) continue;
 

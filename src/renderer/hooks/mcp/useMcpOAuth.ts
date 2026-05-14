@@ -10,16 +10,16 @@ export interface McpOAuthStatus {
 }
 
 /**
- * MCP OAuth 管理 Hook
- * 处理 MCP 服务器的 OAuth 认证状态检查和登录流程
+ * MCP OAuth management hook.
+ * Handles OAuth status checks and login flow for MCP servers.
  */
 export const useMcpOAuth = () => {
   const [oauthStatus, setOAuthStatus] = useState<Record<string, McpOAuthStatus>>({});
   const [loggingIn, setLoggingIn] = useState<Record<string, boolean>>({});
 
-  // 检查 OAuth 状态
+  // Check OAuth status
   const checkOAuthStatus = useCallback(async (server: IMcpServer) => {
-    // 只检查 HTTP/SSE 类型的服务器
+    // Only check HTTP/SSE servers
     if (server.transport.type !== 'http' && server.transport.type !== 'sse') {
       return;
     }
@@ -71,18 +71,18 @@ export const useMcpOAuth = () => {
     }
   }, []);
 
-  // 执行 OAuth 登录
+  // Perform OAuth login
   const login = useCallback(async (server: IMcpServer): Promise<{ success: boolean; error?: string }> => {
     setLoggingIn((prev) => ({ ...prev, [server.id]: true }));
 
     try {
       const response = await mcpService.loginMcpOAuth.invoke({
         server,
-        config: undefined, // 使用自动发现
+        config: undefined, // Use auto discovery
       });
 
       if (response.success && response.data?.success) {
-        // 登录成功，更新状态
+        // Login succeeded; update status
         setOAuthStatus((prev) => ({
           ...prev,
           [server.id]: {
@@ -108,14 +108,14 @@ export const useMcpOAuth = () => {
     }
   }, []);
 
-  // 登出
+  // Logout
   const logout = useCallback(
     async (serverName: string, serverId: string): Promise<{ success: boolean; error?: string }> => {
       try {
         const response = await mcpService.logoutMcpOAuth.invoke(serverName);
 
         if (response.success) {
-          // 登出成功，更新状态
+          // Logout succeeded; update status
           setOAuthStatus((prev) => ({
             ...prev,
             [serverId]: {
@@ -141,7 +141,7 @@ export const useMcpOAuth = () => {
     []
   );
 
-  // 批量检查多个服务器的 OAuth 状态
+  // Batch-check OAuth status for multiple servers
   const checkMultipleServers = useCallback(
     async (servers: IMcpServer[]) => {
       const httpServers = servers.filter((s) => s.transport.type === 'http' || s.transport.type === 'sse');

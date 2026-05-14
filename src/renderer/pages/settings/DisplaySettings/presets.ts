@@ -26,14 +26,14 @@ import discourseHorizonCss from './presets/discourse-horizon.css?raw';
 import glitteringInputFieldCss from './presets/glittering-input-field.css?raw';
 
 /**
- * 默认主题 ID / Default theme ID
- * 用于标识默认主题（无自定义 CSS）/ Used to identify the default theme (no custom CSS)
+ * Default theme ID
+ * Used to identify the default theme (no custom CSS)
  */
 export const DEFAULT_THEME_ID = 'default-theme';
 
 /**
- * 预设 CSS 主题列表 / Preset CSS themes list
- * 这些主题是内置的，用户可以直接选择使用 / These themes are built-in and can be directly used by users
+ * Preset CSS themes list
+ * These themes are built-in and can be directly used by users
  */
 export const PRESET_THEMES: ICssTheme[] = [
   {

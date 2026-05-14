@@ -70,7 +70,7 @@ const ExecCommandDisplay: React.FC<{ content: ExecCommandUpdate }> = ({ content 
       icon='🔧'
       additionalTags={getAdditionalTags()}
     >
-      {/* Display command if available 显示命令 */}
+      {/* Display command if available */}
       {subtype === 'exec_command_begin' &&
         'command' in data &&
         data.command &&
@@ -90,7 +90,7 @@ const ExecCommandDisplay: React.FC<{ content: ExecCommandUpdate }> = ({ content 
           </div>
         )}
 
-      {/* Display output content 显示输出内容 */}
+      {/* Display output content */}
       {contentArray && contentArray.length > 0 && (
         <div>
           {contentArray.map((content, index) => (

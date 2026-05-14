@@ -39,8 +39,8 @@ interface BaseToolCallDisplayProps {
   status: string;
   description?: string | ReactNode;
   icon: string;
-  additionalTags?: ReactNode; // 额外的标签，如 exit code、duration 等
-  children?: ReactNode; // 特定工具的详细信息内容
+  additionalTags?: ReactNode; // Additional tags, e.g. exit code, duration
+  children?: ReactNode; // Tool-specific detail content
 }
 
 const BaseToolCallDisplay: React.FC<BaseToolCallDisplayProps> = ({
@@ -65,7 +65,7 @@ const BaseToolCallDisplay: React.FC<BaseToolCallDisplayProps> = ({
 
           {description && <div className='text-sm text-t-secondary mb-2 overflow-hidden'>{description}</div>}
 
-          {/* 特定工具的详细信息 */}
+          {/* Tool-specific details */}
           {children}
 
           <div className='text-xs text-t-secondary mt-2'>Tool Call ID: {toolCallId}</div>

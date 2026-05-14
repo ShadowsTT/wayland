@@ -163,7 +163,7 @@ const GuidPage: React.FC = () => {
     (value: string) => {
       guidInput.setInput(value);
       const match = value.match(mention.mentionMatchRegex);
-      // 首页不根据输入 @ 呼起 mention 列表，占位符里的 @agent 仅为提示，选 agent 用顶部栏或下拉手动选
+      // The home page does not trigger the mention list from typing @; the @agent in the placeholder is just a hint, agent selection is done manually via the top bar or dropdown
       if (match) {
         mention.setMentionQuery(match[1]);
         mention.setMentionOpen(false);

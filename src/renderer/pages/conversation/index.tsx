@@ -21,7 +21,6 @@ const ChatConversationIndex: React.FC = () => {
   useEffect(() => {
     if (!id) return;
 
-    // 切换会话时自动关闭预览面板，避免跨会话残留
     // Close preview on every conversation change, including initial mount
     // (component may remount via React Router, resetting the ref to undefined)
     if (previousConversationIdRef.current !== id) {
@@ -55,7 +54,6 @@ const ChatConversationIndex: React.FC = () => {
     void syncTitleFromHistory(data.id);
   }, [data, defaultConversationTitle, syncTitleFromHistory]);
 
-  // 当会话数据加载完成后，自动打开 tab
   // Automatically open tab when conversation data is loaded
   useEffect(() => {
     if (data) {

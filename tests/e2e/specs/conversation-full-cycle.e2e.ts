@@ -631,7 +631,7 @@ test.describe('Conversation Full Cycle', () => {
     // Verify detail page
     await expect(page.locator('h1').filter({ hasText: taskName }).first()).toBeVisible({ timeout: 5_000 });
 
-    // Click "Run now" — it's the primary button with text "Run now" / "立即执行"
+    // Click "Run now" — it's the primary button with text "Run now"
     const runNowBtn = page
       .locator('button.arco-btn-primary')
       .filter({ hasText: /Run now|立即执行/ })

@@ -55,7 +55,6 @@ export type TrackedToolCall =
   | TrackedCompletedToolCall
   | TrackedCancelledToolCall;
 
-// aioncli-core v0.18.4: onEditorClose 回调已从 CoreToolSchedulerOptions 中移除
 // aioncli-core v0.18.4: onEditorClose callback was removed from CoreToolSchedulerOptions
 export function useReactToolScheduler(
   onComplete: (tools: CompletedToolCall[]) => Promise<void>,
@@ -125,7 +124,6 @@ export function useReactToolScheduler(
         onAllToolCallsComplete: allToolCallsCompleteHandler,
         onToolCallsUpdate: toolCallsUpdateHandler,
         getPreferredEditor,
-        // onEditorClose 在 aioncli-core v0.18.4 中已移除
         // onEditorClose was removed in aioncli-core v0.18.4
       }),
     [config, outputUpdateHandler, allToolCallsCompleteHandler, toolCallsUpdateHandler, getPreferredEditor]
@@ -189,7 +187,6 @@ export function mapToDisplay(toolOrTools: TrackedToolCall[] | TrackedToolCall): 
     if (trackedCall.status === 'error') {
       displayName = trackedCall.tool === undefined ? trackedCall.request.name : trackedCall.tool.displayName;
       // Include error message in description for better debugging visibility
-      // 在描述中包含错误信息，便于调试
       const errorMsg = trackedCall.response.error?.message;
       const argsStr = JSON.stringify(trackedCall.request.args);
       description = errorMsg ? `${errorMsg}\n${argsStr}` : argsStr;
@@ -216,7 +213,6 @@ export function mapToDisplay(toolOrTools: TrackedToolCall[] | TrackedToolCall): 
         };
       case 'error': {
         // Fallback: when resultDisplay is empty, construct from error info
-        // 兜底：当 resultDisplay 为空时，从错误信息中构造显示内容
         let errorResultDisplay = trackedCall.response.resultDisplay;
         if (!errorResultDisplay) {
           const errMsg = trackedCall.response.error?.message;

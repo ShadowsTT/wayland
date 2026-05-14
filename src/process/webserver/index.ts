@@ -20,12 +20,11 @@ import { registerApiRoutes } from './routes/apiRoutes';
 import { registerStaticRoutes, resolveRendererPath, VITE_DEV_PORT } from './routes/staticRoutes';
 import { generateQRLoginUrlDirect } from '@process/bridge/webuiQR';
 
-// Express Request 类型扩展定义在 src/webserver/types/express.d.ts
 // Express Request type extension is defined in src/webserver/types/express.d.ts
 
 const DEFAULT_ADMIN_USERNAME = AUTH_CONFIG.DEFAULT_USER.USERNAME;
 
-// 存储初始密码（内存中，用于首次显示）/ Store initial password (in memory, for first-time display)
+// Store initial password (in memory, for first-time display)
 let initialAdminPassword: string | null = null;
 
 type QRCodeTerminal = {
@@ -43,7 +42,6 @@ function loadQRCodeTerminal(): QRCodeTerminal | null {
 }
 
 /**
- * 获取初始管理员密码（仅用于首次显示）
  * Get initial admin password (only for first-time display)
  */
 export function getInitialAdminPassword(): string | null {
@@ -51,7 +49,6 @@ export function getInitialAdminPassword(): string | null {
 }
 
 /**
- * 清除初始管理员密码（用户修改密码后调用）
  * Clear initial admin password (called after user changes password)
  */
 export function clearInitialAdminPassword(): void {
@@ -59,7 +56,6 @@ export function clearInitialAdminPassword(): void {
 }
 
 /**
- * 获取局域网 IP 地址
  * Get LAN IP address using os.networkInterfaces()
  */
 function getLanIP(): string | null {
@@ -69,7 +65,6 @@ function getLanIP(): string | null {
     if (!netInfo) continue;
 
     for (const iface of netInfo) {
-      // 跳过内部地址（127.0.0.1）和 IPv6
       // Skip internal addresses (127.0.0.1) and IPv6
       const isIPv4 = iface.family === 'IPv4';
       const isNotInternal = !iface.internal;
@@ -82,11 +77,9 @@ function getLanIP(): string | null {
 }
 
 /**
- * 获取公网 IP 地址（仅 Linux 无桌面环境）
  * Get public IP address (Linux headless only)
  */
 function getPublicIP(): string | null {
-  // 只在 Linux 无桌面环境下尝试获取公网 IP
   // Only try to get public IP on Linux headless environment
   const isLinuxHeadless = process.platform === 'linux' && !process.env.DISPLAY;
   if (!isLinuxHeadless) {
@@ -94,14 +87,12 @@ function getPublicIP(): string | null {
   }
 
   try {
-    // 使用 curl 获取公网 IP（有 2 秒超时）
     // Use curl to get public IP (with 2 second timeout)
     const publicIP = execSync('curl -s --max-time 2 ifconfig.me || curl -s --max-time 2 api.ipify.org', {
       encoding: 'utf8',
       timeout: 3000,
     }).trim();
 
-    // 验证是否为有效的 IPv4 地址
     // Validate IPv4 address format
     if (publicIP && /^(\d{1,3}\.){3}\d{1,3}$/.test(publicIP)) {
       return publicIP;
@@ -114,27 +105,23 @@ function getPublicIP(): string | null {
 }
 
 /**
- * 获取服务器 IP 地址（优先公网 IP，其次局域网 IP）
  * Get server IP address (prefer public IP, fallback to LAN IP)
  */
 function getServerIP(): string | null {
-  // 1. Linux 无桌面环境：尝试获取公网 IP
   // Linux headless: try to get public IP
   const publicIP = getPublicIP();
   if (publicIP) {
     return publicIP;
   }
 
-  // 2. 所有平台：获取局域网 IP（包括 Windows/Mac/Linux）
   // All platforms: get LAN IP (Windows/Mac/Linux)
   return getLanIP();
 }
 
 /**
- * 初始化默认管理员账户（如果不存在）
  * Initialize default admin account if no users exist
  *
- * @returns 初始凭证（仅首次创建时）/ Initial credentials (only on first creation)
+ * @returns Initial credentials (only on first creation)
  */
 async function initializeDefaultAdmin(): Promise<{
   username: string;
@@ -161,18 +148,18 @@ async function initializeDefaultAdmin(): Promise<{
       const nextUsername =
         systemUser.username && systemUser.username !== systemUser.id ? systemUser.username : username;
       await UserRepository.setSystemUserCredentials(nextUsername, hashedPassword);
-      initialAdminPassword = password; // 存储初始密码 / Store initial password
+      initialAdminPassword = password; // Store initial password
       return { username: nextUsername, password };
     }
 
     if (existingAdmin) {
       await UserRepository.updatePassword(existingAdmin.id, hashedPassword);
-      initialAdminPassword = password; // 存储初始密码 / Store initial password
+      initialAdminPassword = password; // Store initial password
       return { username, password };
     }
 
     await UserRepository.createUser(username, hashedPassword);
-    initialAdminPassword = password; // 存储初始密码 / Store initial password
+    initialAdminPassword = password; // Store initial password
     return { username, password };
   } catch (error) {
     console.error('❌ Failed to initialize default admin account:', error);
@@ -182,7 +169,6 @@ async function initializeDefaultAdmin(): Promise<{
 }
 
 /**
- * 在控制台显示初始凭证信息
  * Display initial credentials in console
  */
 function displayInitialCredentials(
@@ -203,7 +189,7 @@ function displayInitialCredentials(
     console.log(`📍 Network URL / 网络地址:  ${networkUrl}`);
   }
 
-  // 显示二维码 / Display QR Code
+  // Display QR Code
   console.log('\n📱 Scan QR Code to Login (expires in 5 mins) / 扫描二维码登录 (5分钟内有效)');
   const qrcode = loadQRCodeTerminal();
   if (qrcode) {
@@ -215,7 +201,7 @@ function displayInitialCredentials(
   }
   console.log(`   QR URL: ${qrUrl}`);
 
-  // 显示传统凭证作为备用 / Display traditional credentials as fallback
+  // Display traditional credentials as fallback
   console.log('\n🔐 Or Use Initial Admin Credentials / 或使用初始管理员凭证:');
   console.log(`   Username / 用户名: ${credentials.username}`);
   console.log(`   Password / 密码:   ${credentials.password}`);
@@ -226,7 +212,6 @@ function displayInitialCredentials(
 }
 
 /**
- * WebUI 服务器实例类型
  * WebUI server instance type
  */
 export interface WebServerInstance {
@@ -237,18 +222,17 @@ export interface WebServerInstance {
 }
 
 /**
- * 启动 Web 服务器并返回实例（供 IPC 调用）
  * Start web server and return instance (for IPC calls)
  *
- * @param port 服务器端口 / Server port
- * @param allowRemote 是否允许远程访问 / Allow remote access
- * @returns 服务器实例 / Server instance
+ * @param port Server port
+ * @param allowRemote Allow remote access
+ * @returns Server instance
  */
 export async function startWebServerWithInstance(port: number, allowRemote = false): Promise<WebServerInstance> {
-  // 设置服务器配置 / Set server configuration
+  // Set server configuration
   SERVER_CONFIG.setServerConfig(port, allowRemote);
 
-  // 创建 Express 应用和服务器 / Create Express app and server
+  // Create Express app and server
   const app = express();
   const server = createServer(app);
   // Use noServer mode so we can route WebSocket upgrades manually.
@@ -300,23 +284,22 @@ export async function startWebServerWithInstance(port: number, allowRemote = fal
     });
   });
 
-  // 初始化默认管理员账户 / Initialize default admin account
+  // Initialize default admin account
   const initialCredentials = await initializeDefaultAdmin();
 
-  // 配置中间件 / Configure middleware
+  // Configure middleware
   setupBasicMiddleware(app);
   setupCors(app, port, allowRemote);
 
-  // 注册路由 / Register routes
+  // Register routes
   registerAuthRoutes(app);
   registerApiRoutes(app);
   registerStaticRoutes(app);
 
-  // 配置错误处理（必须最后）/ Setup error handler (must be last)
+  // Setup error handler (must be last)
   setupErrorHandler(app);
 
-  // 启动服务器 / Start server
-  // 根据 allowRemote 决定监听地址：0.0.0.0 (所有接口) 或 127.0.0.1 (仅本地)
+  // Start server
   // Listen on 0.0.0.0 (all interfaces) or 127.0.0.1 (local only) based on allowRemote
   const host = allowRemote ? SERVER_CONFIG.REMOTE_HOST : SERVER_CONFIG.DEFAULT_HOST;
   return new Promise((resolve, reject) => {
@@ -325,7 +308,7 @@ export async function startWebServerWithInstance(port: number, allowRemote = fal
       const serverIP = getServerIP();
       const displayUrl = serverIP ? `http://${serverIP}:${port}` : localUrl;
 
-      // 显示初始凭证（如果是首次启动）/ Display initial credentials (if first startup)
+      // Display initial credentials (if first startup)
       if (initialCredentials) {
         displayInitialCredentials(initialCredentials, localUrl, allowRemote, displayUrl);
       } else {
@@ -337,7 +320,7 @@ export async function startWebServerWithInstance(port: number, allowRemote = fal
         }
       }
 
-      // 初始化 WebSocket 适配器 / Initialize WebSocket adapter
+      // Initialize WebSocket adapter
       initWebAdapter(wss);
 
       resolve({
@@ -369,17 +352,14 @@ export async function startWebServerWithInstance(port: number, allowRemote = fal
 }
 
 /**
- * 启动 Web 服务器（CLI 模式，会自动打开浏览器）
  * Start web server (CLI mode, auto-opens browser)
  *
- * @param port 服务器端口 / Server port
- * @param allowRemote 是否允许远程访问 / Allow remote access
+ * @param port Server port
+ * @param allowRemote Allow remote access
  */
 export async function startWebServer(port: number, allowRemote = false): Promise<void> {
-  // 复用 startWebServerWithInstance
   // Reuse startWebServerWithInstance
   await startWebServerWithInstance(port, allowRemote);
 
-  // 不再自动打开浏览器，用户可手动访问控制台输出的 URL
   // No longer auto-open browser, user can manually visit the URL printed in console
 }

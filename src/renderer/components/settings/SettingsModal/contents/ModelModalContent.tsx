@@ -24,7 +24,6 @@ import { classifyHealthCheckMessage } from './healthCheckUtils';
 import '../model-provider.css';
 
 /**
- * 获取协议显示标签颜色
  * Get protocol badge color
  */
 const getProtocolColor = (protocol: string): string => {
@@ -40,7 +39,6 @@ const getProtocolColor = (protocol: string): string => {
 };
 
 /**
- * 获取协议显示名称
  * Get protocol display name
  */
 const getProtocolLabel = (protocol: string): string => {
@@ -48,7 +46,6 @@ const getProtocolLabel = (protocol: string): string => {
 };
 
 /**
- * 获取下一个协议（循环切换）
  * Get next protocol (cycle through options)
  */
 const getNextProtocol = (current: string): string => {
@@ -64,12 +61,11 @@ const getApiKeyCount = (apiKey: string): number => {
 };
 
 /**
- * 获取供应商的启用状态（全选/半选/全不选）
  * Get provider enable state (all/partial/none)
  */
 const getProviderState = (platform: IProvider): { checked: boolean; indeterminate: boolean } => {
   if (!platform.modelEnabled) {
-    // 没有 modelEnabled 记录，默认全部启用
+    // No modelEnabled record; treat as all enabled by default
     return { checked: true, indeterminate: false };
   }
 
@@ -78,20 +74,19 @@ const getProviderState = (platform: IProvider): { checked: boolean; indeterminat
   const totalCount = models.length;
 
   if (enabledCount === 0) {
-    return { checked: false, indeterminate: false }; // 全不选
+    return { checked: false, indeterminate: false }; // none selected
   } else if (enabledCount === totalCount) {
-    return { checked: true, indeterminate: false }; // 全选
+    return { checked: true, indeterminate: false }; // all selected
   } else {
-    return { checked: true, indeterminate: true }; // 半选（有模型开启，显示为开启状态）
+    return { checked: true, indeterminate: true }; // partial (some models enabled; shown as enabled)
   }
 };
 
 /**
- * 检查模型是否启用
  * Check if model is enabled
  */
 const isModelEnabled = (platform: IProvider, model: string): boolean => {
-  if (!platform.modelEnabled) return true; // 默认启用
+  if (!platform.modelEnabled) return true; // enabled by default
   return platform.modelEnabled[model] !== false;
 };
 
@@ -112,24 +107,24 @@ const ModelModalContent: React.FC = () => {
   const [message, messageContext] = Message.useMessage();
 
   const saveModelConfig = (newData: IProvider[], success?: () => void) => {
-    // 乐观更新：立即更新 UI
+    // Optimistic update: refresh UI immediately
     void mutate(newData, false);
 
     ipcBridge.mode.saveModelConfig
       .invoke(newData)
       .then((data) => {
         if (data.success) {
-          // 保存成功后重新验证数据
+          // Revalidate data after a successful save
           void mutate();
           success?.();
         } else {
-          // 保存失败，回滚到服务器数据
+          // Save failed; roll back to server data
           void mutate();
           message.error(data.msg);
         }
       })
       .catch((error) => {
-        // 保存失败，回滚到服务器数据
+        // Save failed; roll back to server data
         void mutate();
         console.error('Failed to save model config:', error);
         message.error(t('settings.saveModelConfigFailed'));
@@ -138,7 +133,7 @@ const ModelModalContent: React.FC = () => {
 
   const updatePlatform = (platform: IProvider, success: () => void) => {
     const newData = (data || []).map((item) => (item.id === platform.id ? { ...item, ...platform } : item));
-    // 如果是新平台，添加到列表
+    // If it's a new platform, append it to the list
     if (!newData.find((item) => item.id === platform.id)) {
       newData.push(platform);
     }
@@ -150,12 +145,12 @@ const ModelModalContent: React.FC = () => {
     saveModelConfig(newData);
   };
 
-  // 切换供应商启用状态（全选 ↔ 全不选）
+  // Toggle provider enabled state (all-on <-> all-off)
   const toggleProviderEnabled = (platform: IProvider) => {
     const { checked } = getProviderState(platform);
-    const newState = !checked; // 切换状态
+    const newState = !checked; // toggled state
 
-    // 批量更新所有模型状态
+    // Batch update state for all models
     const modelEnabled: Record<string, boolean> = {};
     (platform.model ?? []).forEach((model) => {
       modelEnabled[model] = newState;
@@ -168,7 +163,7 @@ const ModelModalContent: React.FC = () => {
     updatePlatform(updated, () => {});
   };
 
-  // 切换模型启用状态
+  // Toggle model enabled state
   const toggleModelEnabled = (platform: IProvider, model: string, enabled: boolean) => {
     const modelEnabled = { ...platform.modelEnabled };
     modelEnabled[model] = enabled;
@@ -181,7 +176,7 @@ const ModelModalContent: React.FC = () => {
     updatePlatform(updated, () => {});
   };
 
-  // 执行健康检测（复用现有对话请求逻辑）
+  // Run a health check (reusing the existing conversation request flow)
   const performHealthCheck = async (platform: IProvider, modelName: string) => {
     const loadingKey = `${platform.id}-${modelName}`;
     setHealthCheckLoading((prev) => ({ ...prev, [loadingKey]: true }));
@@ -192,10 +187,10 @@ const ModelModalContent: React.FC = () => {
     let unsubscribe: (() => void) | null = null;
 
     try {
-      // 测活走统一对话链路，与常规请求路径保持一致
+      // Health checks go through the unified conversation pipeline, matching the normal request path
       const responseStream = ipcBridge.conversation.responseStream;
 
-      // 1. 创建临时对话
+      // 1. Create a temporary conversation
       const conversation = await ipcBridge.conversation.create.invoke({
         type: 'gemini',
         name: `[Health Check] ${platform.name} - ${modelName}`,
@@ -211,7 +206,7 @@ const ModelModalContent: React.FC = () => {
 
       tempConversationId = conversation.id;
 
-      // 2. 设置响应监听器
+      // 2. Set up response listener
       const responsePromise = new Promise<{ success: boolean; error?: string; latency: number }>((resolve, reject) => {
         let hasResolved = false;
         let requestTraceData: { backend?: string; modelId?: string; provider?: string } | null = null;
@@ -225,7 +220,7 @@ const ModelModalContent: React.FC = () => {
         const responseListener = (msg: IResponseMessage) => {
           if (msg.conversation_id !== tempConversationId) return;
 
-          // 输出 request_trace 到 console（使用与对话相同的格式）
+          // Emit request_trace to the console (same format as conversations)
           if (msg.type === 'request_trace') {
             const trace = msg.data as Record<string, unknown>;
             requestTraceData = {
@@ -250,7 +245,7 @@ const ModelModalContent: React.FC = () => {
 
           if (action === 'error') {
             const duration = Date.now() - startTime;
-            // 输出错误链路到 console
+            // Emit error trace to console
             if (requestTraceData) {
               const displayName = requestTraceData.backend || requestTraceData.provider || 'unknown';
               console.log(
@@ -268,7 +263,7 @@ const ModelModalContent: React.FC = () => {
             return;
           }
 
-          // 以”首个响应包到达时间”作为健康判定，避免流式完成时间过长影响检测
+          // Use "first response packet arrival time" as the health signal to avoid long streaming completion times affecting detection
           const duration = Date.now() - startTime;
           if (requestTraceData) {
             const displayName = requestTraceData.backend || requestTraceData.provider || 'unknown';
@@ -283,7 +278,7 @@ const ModelModalContent: React.FC = () => {
 
         unsubscribe = responseStream.on(responseListener);
 
-        // 首个响应超时（默认 30s）
+        // First-response timeout (default 30s)
         timeoutId = setTimeout(() => {
           if (!hasResolved) {
             hasResolved = true;
@@ -307,22 +302,22 @@ const ModelModalContent: React.FC = () => {
       // The actual error is still caught by `await responsePromise` below.
       responsePromise.catch(() => {});
 
-      // 3. 发送测试消息
+      // 3. Send test message
       await ipcBridge.conversation.sendMessage.invoke({
         conversation_id: tempConversationId,
         input: 'ping',
         msg_id: uuid(),
       });
 
-      // 4. 等待响应
+      // 4. Wait for response
       const result = await responsePromise;
 
-      // 5. 更新健康状态
+      // 5. Update health status
       const latency = result.latency;
 
-      // 直接保存，不使用乐观更新，避免并发时互相覆盖
+      // Save directly without optimistic update to avoid concurrent overwrites
       try {
-        // 先获取最新的数据，确保不会覆盖其他并发的更新
+        // Fetch the latest data first to avoid overwriting other concurrent updates
         const latestData = await ipcBridge.mode.getModelConfig.invoke();
         const newData = (latestData || []).map((item) => {
           if (item.id === platform.id) {
@@ -340,7 +335,7 @@ const ModelModalContent: React.FC = () => {
 
         const saveResult = await ipcBridge.mode.saveModelConfig.invoke(newData);
         if (saveResult.success) {
-          // 保存成功后重新验证数据
+          // Revalidate data after a successful save
           await mutate();
           if (result.success) {
             Message.success({
@@ -374,9 +369,9 @@ const ModelModalContent: React.FC = () => {
         duration: 5000,
       });
 
-      // 直接保存，不使用乐观更新
+      // Save directly without optimistic update
       try {
-        // 先获取最新的数据，确保不会覆盖其他并发的更新
+        // Fetch the latest data first to avoid overwriting other concurrent updates
         const latestData = await ipcBridge.mode.getModelConfig.invoke();
         const newData = (latestData || []).map((item) => {
           if (item.id === platform.id) {
@@ -400,13 +395,13 @@ const ModelModalContent: React.FC = () => {
         console.error('Failed to save health check result:', saveError);
       }
     } finally {
-      // 清理
+      // Cleanup
       if (timeoutId) clearTimeout(timeoutId);
       if (unsubscribe) {
         unsubscribe();
       }
       if (tempConversationId) {
-        // 删除临时对话
+        // Delete the temporary conversation
         ipcBridge.conversation.remove.invoke({ id: tempConversationId }).catch(() => {});
       }
       setHealthCheckLoading((prev) => ({ ...prev, [loadingKey]: false }));
@@ -576,7 +571,7 @@ const ModelModalContent: React.FC = () => {
                           <span className='text-12px text-t-secondary whitespace-nowrap md:hidden'>
                             {(platform.model ?? []).length} / {getApiKeyCount(platform.apiKey)}
                           </span>
-                          {/* 供应商启用开关 / Provider enable switch */}
+                          {/* Provider enable switch */}
                           <Switch
                             size='small'
                             checked={getProviderState(platform).checked}
@@ -620,7 +615,7 @@ const ModelModalContent: React.FC = () => {
                         <div key={model}>
                           <div className='flex items-center justify-between px-8px py-12px transition-colors hover:bg-[var(--fill-0)]'>
                             <div className='flex items-center gap-8px'>
-                              {/* 健康状态指示器 / Health status indicator */}
+                              {/* Health status indicator */}
                               {healthStatus !== 'unknown' && (
                                 <Tooltip
                                   content={
@@ -655,7 +650,7 @@ const ModelModalContent: React.FC = () => {
 
                               <span className='text-14px text-t-primary'>{model}</span>
 
-                              {/* New API 协议标签（点击循环切换）/ New API protocol badge (click to cycle) */}
+                              {/* New API protocol badge (click to cycle) */}
                               {isNewApiProvider && (
                                 <Tag
                                   size='small'
@@ -672,7 +667,7 @@ const ModelModalContent: React.FC = () => {
                                 </Tag>
                               )}
 
-                              {/* 模型启用开关 / Model enable switch */}
+                              {/* Model enable switch */}
                               <Switch
                                 size='small'
                                 checked={isModelEnabled(platform, model)}
@@ -681,7 +676,7 @@ const ModelModalContent: React.FC = () => {
                             </div>
 
                             <div className='flex items-center gap-6px shrink-0'>
-                              {/* 心跳检测按钮 / Health check button */}
+                              {/* Health check button */}
                               <Tooltip content={t('settings.healthCheck')}>
                                 <Button
                                   size='mini'
@@ -696,7 +691,7 @@ const ModelModalContent: React.FC = () => {
                                 title={t('settings.deleteModelConfirm')}
                                 onOk={() => {
                                   const newModels = platform.model.filter((item: string) => item !== model);
-                                  // 同时清理模型相关状态，避免删除后重加模型时复用脏状态
+                                  // Also clear model-related state to avoid reusing stale state when models are re-added after deletion
                                   // Clean all per-model state to avoid stale state on re-add.
                                   const newProtocols = { ...platform.modelProtocols };
                                   const newModelEnabled = { ...platform.modelEnabled };

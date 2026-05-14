@@ -10,17 +10,14 @@ import { createAuthMiddleware } from './TokenMiddleware';
 import { SECURITY_CONFIG } from '../../config/constants';
 
 // Express Request type extension is defined in src/types/express.d.ts
-// Express Request 类型扩展定义在 src/types/express.d.ts
 
 /**
- * 认证中间件类
  * Authentication middleware class
  */
 export class AuthMiddleware {
   private static readonly jsonAuthMiddleware = createAuthMiddleware('json');
 
   /**
-   * JWT 认证中间件
    * JWT authentication middleware
    */
   public static authenticateToken(req: Request, res: Response, next: NextFunction): void {
@@ -28,7 +25,6 @@ export class AuthMiddleware {
   }
 
   /**
-   * CORS 中间件（开发环境使用）
    * CORS middleware for development
    */
   public static corsMiddleware(req: Request, res: Response, next: NextFunction): void {
@@ -45,27 +41,21 @@ export class AuthMiddleware {
   }
 
   /**
-   * 安全响应头中间件
    * Security headers middleware
    */
   public static securityHeadersMiddleware(req: Request, res: Response, next: NextFunction): void {
-    // 防止点击劫持
     // Prevent clickjacking
     res.header('X-Frame-Options', SECURITY_CONFIG.HEADERS.FRAME_OPTIONS);
 
-    // 防止 MIME 类型嗅探
     // Prevent MIME type sniffing
     res.header('X-Content-Type-Options', SECURITY_CONFIG.HEADERS.CONTENT_TYPE_OPTIONS);
 
-    // 启用 XSS 保护
     // Enable XSS protection
     res.header('X-XSS-Protection', SECURITY_CONFIG.HEADERS.XSS_PROTECTION);
 
-    // Referrer 策略
     // Referrer policy
     res.header('Referrer-Policy', SECURITY_CONFIG.HEADERS.REFERRER_POLICY);
 
-    // 内容安全策略（开发环境放宽限制以支持 webpack-dev-server）
     // Content Security Policy (relaxed in development for webpack-dev-server)
     const isDevelopment = process.env.NODE_ENV === 'development';
     const cspPolicy = isDevelopment ? SECURITY_CONFIG.HEADERS.CSP_DEV : SECURITY_CONFIG.HEADERS.CSP_PROD;
@@ -76,7 +66,6 @@ export class AuthMiddleware {
   }
 
   /**
-   * 请求日志中间件
    * Request logging middleware
    */
   public static requestLoggingMiddleware(req: Request, res: Response, next: NextFunction): void {
@@ -92,7 +81,6 @@ export class AuthMiddleware {
 
     console.log(`[${new Date().toISOString()}] ${req.method} ${url} - ${ip}`);
 
-    // 记录响应时间
     // Log response time
     res.on('finish', () => {
       const duration = Date.now() - start;
@@ -103,7 +91,6 @@ export class AuthMiddleware {
   }
 
   /**
-   * 登录输入验证中间件
    * Input validation middleware for login
    */
   public static validateLoginInput(req: Request, res: Response, next: NextFunction): void {
@@ -125,7 +112,6 @@ export class AuthMiddleware {
       return;
     }
 
-    // 基本长度检查
     // Basic length checks
     if (username.length > 32 || password.length > 128) {
       res.status(400).json({
@@ -139,7 +125,6 @@ export class AuthMiddleware {
   }
 
   /**
-   * 注册输入验证中间件
    * Input validation middleware for registration
    */
   public static validateRegisterInput(req: Request, res: Response, next: NextFunction): void {
@@ -153,7 +138,6 @@ export class AuthMiddleware {
       return;
     }
 
-    // 验证用户名
     // Validate username
     const usernameValidation = AuthService.validateUsername(username);
     if (!usernameValidation.isValid) {
@@ -165,7 +149,6 @@ export class AuthMiddleware {
       return;
     }
 
-    // 验证密码强度
     // Validate password strength
     const passwordValidation = AuthService.validatePasswordStrength(password);
     if (!passwordValidation.isValid) {

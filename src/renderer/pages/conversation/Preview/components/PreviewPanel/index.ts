@@ -5,7 +5,6 @@
  */
 
 /**
- * 预览面板子组件导出
  * Preview panel sub-components exports
  */
 

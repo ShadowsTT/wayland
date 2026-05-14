@@ -16,7 +16,7 @@ export const useMultiAgentDetection = () => {
       try {
         const response = await ipcBridge.acpConversation.getAvailableAgents.invoke();
         if (response && response.success && response.data) {
-          // 检测是否有多个ACP智能体（不包括内置的Gemini）
+          // Detect whether multiple ACP agents exist (excluding the built-in Gemini)
           const acpAgents = response.data.filter(
             (agent: { backend: string; name: string; cliPath?: string }) => agent.backend !== 'gemini'
           );
@@ -35,7 +35,7 @@ export const useMultiAgentDetection = () => {
           }
         }
       } catch (error) {
-        // 静默处理错误，避免影响应用启动
+        // Silently handle errors to avoid affecting app startup
         console.log('Multi-agent detection failed:', error);
       }
     };
@@ -43,7 +43,7 @@ export const useMultiAgentDetection = () => {
     checkMultiAgentMode().catch((error) => {
       console.error('Multi-agent detection failed:', error);
     });
-  }, []); // 空依赖数组确保只在组件初始化时执行一次
+  }, []); // Empty dependency array ensures this runs only once on component init
 
   return { contextHolder };
 };

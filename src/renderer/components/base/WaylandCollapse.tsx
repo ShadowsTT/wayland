@@ -9,54 +9,54 @@ import type { CSSProperties } from 'react';
 import React, { useMemo, useState } from 'react';
 
 /**
- * 可折叠面板组件属性 / Collapsible panel component props
+ * Collapsible panel component props
  */
 export interface WaylandCollapseProps {
   children: React.ReactNode;
-  /** 额外的类名 / Additional class name */
+  /** Additional class name */
   className?: string;
-  /** 非受控模式下默认展开的面板 key / Default active keys in uncontrolled mode */
+  /** Default active keys in uncontrolled mode */
   defaultActiveKey?: string | string[];
-  /** 受控模式下当前展开的面板 key / Active keys in controlled mode */
+  /** Active keys in controlled mode */
   activeKey?: string | string[];
-  /** 面板状态变化回调 / Callback when panel state changes */
+  /** Callback when panel state changes */
   onChange?: (keys: string[]) => void;
-  /** 手风琴模式，每次只能展开一个面板 / Accordion mode, only one panel can be expanded at a time */
+  /** Accordion mode, only one panel can be expanded at a time */
   accordion?: boolean;
-  /** 自定义展开图标 / Custom expand icon */
+  /** Custom expand icon */
   expandIcon?: (active: boolean) => React.ReactNode;
-  /** 展开图标位置 / Expand icon position */
+  /** Expand icon position */
   expandIconPosition?: 'left' | 'right';
-  /** 是否显示边框 / Whether to show border */
+  /** Whether to show border */
   bordered?: boolean;
 }
 
 /**
- * 可折叠面板子项属性 / Collapsible panel item props
+ * Collapsible panel item props
  */
 export interface WaylandCollapseItemProps {
-  /** 唯一标识符 / Unique identifier */
+  /** Unique identifier */
   name: string;
-  /** 面板标题 / Panel header */
+  /** Panel header */
   header: React.ReactNode;
-  /** 是否禁用 / Whether disabled */
+  /** Whether disabled */
   disabled?: boolean;
-  /** 额外的类名 / Additional class name */
+  /** Additional class name */
   className?: string;
-  /** 标题额外的类名 / Additional header class name */
+  /** Additional header class name */
   headerClassName?: string;
-  /** 内容额外的类名 / Additional content class name */
+  /** Additional content class name */
   contentClassName?: string;
-  /** 内容额外的样式 / Additional content style */
+  /** Additional content style */
   contentStyle?: CSSProperties;
-  /** 子内容 / Children content */
+  /** Children content */
   children?: React.ReactNode;
 }
 
 /**
- * 标准化 keys 参数为数组格式 / Normalize keys parameter to array format
- * @param keys - 单个 key 或 key 数组 / Single key or array of keys
- * @returns 标准化后的 key 数组 / Normalized array of keys
+ * Normalize keys parameter to array format
+ * @param keys - Single key or array of keys
+ * @returns Normalized array of keys
  */
 const normalizeKeys = (keys?: string | string[]): string[] => {
   if (!keys) return [];
@@ -64,7 +64,7 @@ const normalizeKeys = (keys?: string | string[]): string[] => {
 };
 
 /**
- * 默认展开/收起图标 / Default expand/collapse icon
+ * Default expand/collapse icon
  */
 const DefaultIcon: React.FC<{ active: boolean }> = ({ active }) => (
   <span className={classNames('text-xs text-t-secondary transition-transform duration-200', active && 'rotate-180')}>
@@ -73,42 +73,40 @@ const DefaultIcon: React.FC<{ active: boolean }> = ({ active }) => (
 );
 
 /**
- * 折叠面板子项组件（仅用于类型检查和结构化）
  * Collapse item component (used for type checking and structure only)
  */
 const WaylandCollapseItem: React.FC<WaylandCollapseItemProps> = ({ children }) => <>{children}</>;
 WaylandCollapseItem.displayName = 'WaylandCollapseItem';
 
 /**
- * 可折叠面板组件 / Collapsible panel component
+ * Collapsible panel component
  *
- * 支持受控和非受控模式、手风琴模式、自定义图标等
  * Supports controlled/uncontrolled mode, accordion mode, custom icons, etc.
  *
  * @example
  * ```tsx
- * // 基本用法 / Basic usage
+ * // Basic usage
  * <WaylandCollapse defaultActiveKey={['1']}>
- *   <WaylandCollapse.Item name="1" header="面板1">
- *     内容1
+ *   <WaylandCollapse.Item name="1" header="Panel 1">
+ *     Content 1
  *   </WaylandCollapse.Item>
- *   <WaylandCollapse.Item name="2" header="面板2">
- *     内容2
+ *   <WaylandCollapse.Item name="2" header="Panel 2">
+ *     Content 2
  *   </WaylandCollapse.Item>
  * </WaylandCollapse>
  *
- * // 手风琴模式 / Accordion mode
+ * // Accordion mode
  * <WaylandCollapse accordion defaultActiveKey="1">
- *   <WaylandCollapse.Item name="1" header="面板1">内容1</WaylandCollapse.Item>
- *   <WaylandCollapse.Item name="2" header="面板2">内容2</WaylandCollapse.Item>
+ *   <WaylandCollapse.Item name="1" header="Panel 1">Content 1</WaylandCollapse.Item>
+ *   <WaylandCollapse.Item name="2" header="Panel 2">Content 2</WaylandCollapse.Item>
  * </WaylandCollapse>
  *
- * // 自定义图标 / Custom icon
+ * // Custom icon
  * <WaylandCollapse
  *   expandIcon={(active) => <Icon type={active ? 'up' : 'down'} />}
  *   expandIconPosition="right"
  * >
- *   <WaylandCollapse.Item name="1" header="面板1">内容1</WaylandCollapse.Item>
+ *   <WaylandCollapse.Item name="1" header="Panel 1">Content 1</WaylandCollapse.Item>
  * </WaylandCollapse>
  * ```
  */
@@ -123,12 +121,12 @@ const WaylandCollapseComponent: React.FC<WaylandCollapseProps> & { Item: typeof 
   expandIconPosition = 'left',
   bordered = true,
 }) => {
-  // 判断是否为受控模式 / Determine if in controlled mode
+  // Determine if in controlled mode
   const isControlled = activeKey !== undefined;
   const [internalKeys, setInternalKeys] = useState<string[]>(normalizeKeys(defaultActiveKey));
   const currentKeys = isControlled ? normalizeKeys(activeKey) : internalKeys;
 
-  // 提取并过滤有效的子面板项 / Extract and filter valid child panel items
+  // Extract and filter valid child panel items
   const items = useMemo(() => {
     return React.Children.toArray(children).filter((child): child is React.ReactElement<WaylandCollapseItemProps> => {
       return React.isValidElement(child) && child.type === WaylandCollapseItem;
@@ -136,18 +134,18 @@ const WaylandCollapseComponent: React.FC<WaylandCollapseProps> & { Item: typeof 
   }, [children]);
 
   /**
-   * 处理面板切换 / Handle panel toggle
-   * @param name - 面板唯一标识 / Panel unique identifier
-   * @param disabled - 是否禁用 / Whether disabled
+   * Handle panel toggle
+   * @param name - Panel unique identifier
+   * @param disabled - Whether disabled
    */
   const handleToggle = (name: string, disabled?: boolean) => {
     if (disabled) return;
     let nextKeys: string[];
     if (currentKeys.includes(name)) {
-      // 收起面板 / Collapse panel
+      // Collapse panel
       nextKeys = currentKeys.filter((key) => key !== name);
     } else {
-      // 展开面板（手风琴模式只展开一个）/ Expand panel (accordion mode expands only one)
+      // Expand panel (accordion mode expands only one)
       nextKeys = accordion ? [name] : [...currentKeys, name];
     }
     if (!isControlled) {
@@ -156,7 +154,7 @@ const WaylandCollapseComponent: React.FC<WaylandCollapseProps> & { Item: typeof 
     onChange?.(nextKeys);
   };
 
-  // 挂载状态，用于控制动画 / Mount state for animation control
+  // Mount state for animation control
   const [mounted, setMounted] = React.useState(false);
   React.useEffect(() => {
     setMounted(true);
@@ -189,7 +187,7 @@ const WaylandCollapseComponent: React.FC<WaylandCollapseProps> & { Item: typeof 
               disabled && 'opacity-50'
             )}
           >
-            {/* 面板标题 / Panel header */}
+            {/* Panel header */}
             <div
               onClick={() => handleToggle(name, disabled)}
               className={classNames(
@@ -201,7 +199,7 @@ const WaylandCollapseComponent: React.FC<WaylandCollapseProps> & { Item: typeof 
               <div className='flex-1 text-t-primary text-14px leading-22px'>{header}</div>
               {expandIconPosition === 'right' && <span className='flex items-center'>{iconNode}</span>}
             </div>
-            {/* 面板内容（使用 grid 实现平滑动画）/ Panel content (using grid for smooth animation) */}
+            {/* Panel content (using grid for smooth animation) */}
             <div className='transition-all duration-300 ease-in-out'>
               {isActive && (
                 <div

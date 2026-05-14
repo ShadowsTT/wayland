@@ -99,9 +99,9 @@ export function initApplicationBridge(workerTaskManager: IWorkerTaskManager): vo
   initApplicationBridgeCore();
 
   ipcBridge.application.restart.provider(async () => {
-    // 清理所有工作进程，等待子进程退出
+    // Clean up all worker processes and wait for child processes to exit
     await workerTaskManager.clear();
-    // 重启应用 - 使用标准的 Electron 重启方式
+    // Restart the app - using the standard Electron restart approach
     app.relaunch();
     app.exit(0);
   });

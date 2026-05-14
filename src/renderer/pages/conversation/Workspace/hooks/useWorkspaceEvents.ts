@@ -35,8 +35,7 @@ interface UseWorkspaceEventsOptions {
 }
 
 /**
- * useWorkspaceEvents - 管理所有事件监听器
- * Manage all event listeners
+ * useWorkspaceEvents - Manage all event listeners
  */
 export function useWorkspaceEvents(options: UseWorkspaceEventsOptions) {
   const {
@@ -57,7 +56,6 @@ export function useWorkspaceEvents(options: UseWorkspaceEventsOptions) {
   } = options;
 
   /**
-   * 监听对话切换事件 - 重置所有状态
    * Listen to conversation switch event - reset all states
    */
   useEffect(() => {
@@ -88,7 +86,6 @@ export function useWorkspaceEvents(options: UseWorkspaceEventsOptions) {
   ]);
 
   /**
-   * 节流的刷新函数 - 避免 Agent 连续 tool_call 导致工作空间反复刷新
    * Throttled refresh - prevent rapid workspace refreshes during agent tool calls
    */
   const throttleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -116,7 +113,6 @@ export function useWorkspaceEvents(options: UseWorkspaceEventsOptions) {
   }, []);
 
   /**
-   * 监听 Agent 响应流 - 自动刷新工作空间（节流）
    * Listen to agent response stream - auto refresh workspace (throttled)
    */
   useEffect(() => {
@@ -147,20 +143,17 @@ export function useWorkspaceEvents(options: UseWorkspaceEventsOptions) {
   }, [conversation_id, eventPrefix, throttledRefresh]);
 
   /**
-   * 监听手动刷新工作空间事件
    * Listen to manual refresh workspace event
    */
   useAddEventListener(`${eventPrefix}.workspace.refresh`, () => refreshWorkspace(), [refreshWorkspace]);
 
   /**
-   * 监听清空选中文件事件（发送消息后）
    * Listen to clear selected files event (after sending message)
    */
   useAddEventListener(`${eventPrefix}.selected.file.clear`, () => clearSelection(), [clearSelection]);
 
   /**
-   * 监听选中文件变化事件（sendbox 中关闭标签时同步状态）(#1083)
-   * Listen to selected files change event (sync state when closing tags in sendbox)
+   * Listen to selected files change event (sync state when closing tags in sendbox) (#1083)
    */
   useAddEventListener(
     `${eventPrefix}.selected.file`,
@@ -173,13 +166,11 @@ export function useWorkspaceEvents(options: UseWorkspaceEventsOptions) {
       }>
     ) => {
       // Extract relative paths from items, filter out files (only keep folders in tree selection)
-      // 从 items 中提取相对路径，过滤掉文件（树选中状态只保留文件夹）
       const newKeys = items.filter((item) => !item.isFile && item.relativePath).map((item) => item.relativePath!);
       setSelected(newKeys);
       selectedKeysRef.current = newKeys;
 
       // Update selectedNodeRef based on items
-      // 根据 items 更新 selectedNodeRef
       const folders = items.filter((item) => !item.isFile);
       if (folders.length > 0) {
         const lastFolder = folders[folders.length - 1];
@@ -197,7 +188,6 @@ export function useWorkspaceEvents(options: UseWorkspaceEventsOptions) {
   );
 
   /**
-   * 监听搜索工作空间响应
    * Listen to search workspace response
    */
   useEffect(() => {
@@ -208,7 +198,6 @@ export function useWorkspaceEvents(options: UseWorkspaceEventsOptions) {
   }, [setFiles]);
 
   /**
-   * 监听右键菜单外部点击 - 关闭菜单
    * Listen to clicks outside context menu - close menu
    */
   useEffect(() => {

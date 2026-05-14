@@ -5,10 +5,8 @@
  */
 
 /**
- * 任务管理桥接模块
  * Task Management Bridge Module
  *
- * 负责管理所有运行中的任务（暂停所有、获取运行中任务数量等）
  * Handles management of all running tasks (pause all, get running count, etc.)
  */
 
@@ -16,7 +14,7 @@ import { ipcBridge } from '@/common';
 import type { IWorkerTaskManager } from '@process/task/IWorkerTaskManager';
 
 export function initTaskBridge(workerTaskManager: IWorkerTaskManager): void {
-  // 暂停所有运行中的任务 / Stop all running tasks
+  // Stop all running tasks
   ipcBridge.task.stopAll.provider(async () => {
     try {
       const tasks = workerTaskManager.listTasks();
@@ -32,7 +30,7 @@ export function initTaskBridge(workerTaskManager: IWorkerTaskManager): void {
     }
   });
 
-  // 获取运行中的任务数量 / Get count of running tasks
+  // Get count of running tasks
   ipcBridge.task.getRunningCount.provider(async () => {
     try {
       const tasks = workerTaskManager.listTasks();

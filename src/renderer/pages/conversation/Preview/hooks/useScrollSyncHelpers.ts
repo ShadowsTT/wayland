@@ -7,14 +7,12 @@
 import { useEffect, useCallback, useRef } from 'react';
 
 /**
- * 监听外部滚动同步请求的 Hook
  * Hook for listening to external scroll sync requests
  *
- * 通过 MutationObserver 监听容器的 data-target-scroll-percent 属性变化
  * Uses MutationObserver to listen for data-target-scroll-percent attribute changes
  *
- * @param containerRef - 容器引用 / Container ref
- * @param onTargetScroll - 目标滚动百分比回调 / Target scroll percentage callback
+ * @param containerRef - Container ref
+ * @param onTargetScroll - Target scroll percentage callback
  */
 export const useScrollSyncTarget = (
   containerRef: React.RefObject<HTMLElement> | undefined,
@@ -41,32 +39,27 @@ export const useScrollSyncTarget = (
 };
 
 /**
- * CodeMirror 滚动监听和设置的 Hook
  * Hook for CodeMirror scroll listening and setting
  *
- * 监听 CodeMirror 内部 .cm-scroller 元素的滚动事件，并提供设置滚动位置的方法
  * Listens to CodeMirror's internal .cm-scroller element scroll events and provides scroll position setter
  *
- * @param wrapperRef - CodeMirror 包裹元素引用 / CodeMirror wrapper element ref
- * @param onScroll - 滚动回调 / Scroll callback
- * @returns setScrollPercent - 设置滚动百分比的函数 / Function to set scroll percentage
+ * @param wrapperRef - CodeMirror wrapper element ref
+ * @param onScroll - Scroll callback
+ * @returns setScrollPercent - Function to set scroll percentage
  */
 export const useCodeMirrorScroll = (
   wrapperRef: React.RefObject<HTMLDivElement>,
   onScroll?: (scrollTop: number, scrollHeight: number, clientHeight: number) => void
 ): { setScrollPercent: (percent: number) => void } => {
-  // 监听 CodeMirror 内部滚动容器的滚动事件
   // Listen to CodeMirror's internal scroller scroll events
   useEffect(() => {
     if (!onScroll) return;
 
-    // 延迟获取 scroller，等待 CodeMirror 渲染完成
     // Delay getting scroller to wait for CodeMirror to render
     const timer = setTimeout(() => {
       const wrapper = wrapperRef.current;
       if (!wrapper) return;
 
-      // CodeMirror 的滚动容器是 .cm-scroller 元素
       // CodeMirror's scroll container is the .cm-scroller element
       const scroller = wrapper.querySelector('.cm-scroller') as HTMLElement;
       if (!scroller) {
@@ -80,7 +73,6 @@ export const useCodeMirrorScroll = (
 
       scroller.addEventListener('scroll', handleScroll, { passive: true });
 
-      // 存储清理函数以便在 effect 清理时调用
       // Store cleanup function for effect cleanup
       (wrapperRef.current as HTMLDivElement & { __scrollCleanup?: () => void }).__scrollCleanup = () => {
         scroller.removeEventListener('scroll', handleScroll);
@@ -94,7 +86,6 @@ export const useCodeMirrorScroll = (
     };
   }, [onScroll, wrapperRef]);
 
-  // 设置滚动百分比
   // Set scroll percentage
   const setScrollPercent = useCallback(
     (percent: number) => {
@@ -114,11 +105,10 @@ export const useCodeMirrorScroll = (
 };
 
 /**
- * 普通容器滚动监听的 Hook
  * Hook for normal container scroll listening
  *
- * @param containerRef - 容器引用 / Container ref
- * @param onScroll - 滚动回调 / Scroll callback
+ * @param containerRef - Container ref
+ * @param onScroll - Scroll callback
  */
 export const useContainerScroll = (
   containerRef: React.RefObject<HTMLElement>,
@@ -138,10 +128,9 @@ export const useContainerScroll = (
 };
 
 /**
- * 普通容器的滚动同步目标 Hook（设置 scrollTop）
  * Hook for normal container scroll sync target (sets scrollTop)
  *
- * @param containerRef - 容器引用 / Container ref
+ * @param containerRef - Container ref
  */
 export const useContainerScrollTarget = (containerRef: React.RefObject<HTMLElement>): void => {
   const handleTargetScroll = useCallback(

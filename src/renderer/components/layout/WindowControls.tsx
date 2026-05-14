@@ -22,11 +22,11 @@ const WindowControls: React.FC = () => {
   const [isMaximized, setIsMaximized] = useState(false);
   const [available, setAvailable] = useState(true);
 
-  // 初始化时同步窗口状态并订阅最大化事件 / Sync current window state and subscribe to maximize events
+  // Sync current window state and subscribe to maximize events
   useEffect(() => {
     let isMounted = true;
 
-    // 获取初始窗口状态 / Get initial window state
+    // Get initial window state
     ipcBridge.windowControls.isMaximized
       .invoke()
       .then((state) => {
@@ -40,7 +40,7 @@ const WindowControls: React.FC = () => {
         }
       });
 
-    // 订阅窗口最大化状态变化 / Subscribe to window maximize state changes
+    // Subscribe to window maximize state changes
     const unsubscribe = ipcBridge.windowControls.maximizedChanged.on(({ isMaximized }) => {
       if (isMounted) {
         setIsMaximized(isMaximized);
@@ -53,12 +53,12 @@ const WindowControls: React.FC = () => {
     };
   }, []);
 
-  // 桌面环境缺少控制接口时直接不渲染 / Hide when window controls are not available (non-desktop)
+  // Hide when window controls are not available (non-desktop)
   if (!available) {
     return null;
   }
 
-  // 以下处理三种窗口按钮点击事件 / Handle minimize, maximize/restore, and close button events
+  // Handle minimize, maximize/restore, and close button events
   const handleMinimize = () => {
     void ipcBridge.windowControls.minimize.invoke();
   };

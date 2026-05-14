@@ -52,7 +52,7 @@ export function stripCodeExecutionBlocks(text: string): string {
     .trim();
 }
 
-// 流监控配置
+// Stream monitor configuration
 export interface StreamMonitorOptions {
   config?: Partial<StreamResilienceConfig>;
   onConnectionEvent?: (event: StreamConnectionEvent) => void;
@@ -60,7 +60,6 @@ export interface StreamMonitorOptions {
 
 /**
  * Get file extension from MIME type (e.g., 'image/png' -> '.png')
- * 从 MIME 类型获取文件扩展名
  */
 function getExtensionFromMimeType(mimeType: string): string {
   // Extract subtype from MIME type (e.g., 'image/png' -> 'png')
@@ -73,7 +72,6 @@ function getExtensionFromMimeType(mimeType: string): string {
 
 /**
  * Save inline image data to a file and return the file path
- * 将内联图片数据保存到文件并返回文件路径
  */
 async function saveInlineImage(mimeType: string, base64Data: string, workingDir: string): Promise<string> {
   const ext = getExtensionFromMimeType(mimeType);
@@ -88,13 +86,12 @@ async function saveInlineImage(mimeType: string, base64Data: string, workingDir:
 }
 
 /**
- * 处理 Gemini 流式事件（带弹性监控）
  * Process Gemini stream events with resilience monitoring
  *
- * @param stream - 原始流
- * @param config - 配置对象
- * @param onStreamEvent - 事件回调
- * @param monitorOptions - 流监控选项（可选）
+ * @param stream - original stream
+ * @param config - config object
+ * @param onStreamEvent - event callback
+ * @param monitorOptions - stream monitor options (optional)
  */
 export const processGeminiStreamEvents = async (
   stream: AsyncIterable<ServerGeminiStreamEvent>,
@@ -102,16 +99,16 @@ export const processGeminiStreamEvents = async (
   onStreamEvent: (event: { type: ServerGeminiStreamEvent['type']; data: unknown }) => void,
   monitorOptions?: StreamMonitorOptions
 ): Promise<StreamProcessingStatus> => {
-  // 创建流监控器
+  // Create the stream monitor
   const monitorConfig = { ...DEFAULT_STREAM_RESILIENCE_CONFIG, ...monitorOptions?.config };
   const monitor = new StreamMonitor(monitorConfig, (event) => {
-    // 处理连接状态变化
+    // Handle connection-state changes
     if (event.type === 'state_change') {
       console.debug(`[StreamMonitor] State changed to: ${event.state}`, event.reason || '');
     } else if (event.type === 'heartbeat_timeout') {
       console.warn(`[StreamMonitor] Heartbeat timeout detected, last event: ${event.lastEventTime}`);
     }
-    // 传递给外部监听器
+    // Forward to the external listener
     monitorOptions?.onConnectionEvent?.(event);
   });
 
@@ -119,13 +116,13 @@ export const processGeminiStreamEvents = async (
 
   try {
     for await (const event of stream) {
-      // 记录收到事件，更新心跳时间
+      // Record received event and update heartbeat time
       monitor.recordEvent();
 
-      // 检查是否心跳超时（长时间无数据）
+      // Check whether the heartbeat has timed out (no data for a long time)
       if (monitor.isHeartbeatTimeout()) {
         console.warn('[StreamMonitor] Stream heartbeat timeout, connection may be stale');
-        // 不立即中断，让上层处理决定
+        // Do not interrupt immediately; let the upper layer decide
       }
 
       switch (event.type) {
@@ -140,8 +137,6 @@ export const processGeminiStreamEvents = async (
 
             // Check if content contains <think> or <thinking> tags (common in proxy services like newapi)
             // Also detect orphaned closing tags from models like MiniMax M2.5 that omit opening <think>
-            // 检查内容是否包含 <think> 或 <thinking> 标签（中转站如 newapi 常见格式）
-            // 同时检测 MiniMax M2.5 等省略开始标签的孤立结束标签
             const thinkTagRegex = /<think(?:ing)?>([\s\S]*?)<\/think(?:ing)?>/gi;
             const hasThinkTags = /<\/?think(?:ing)?>/i.test(contentText);
 
@@ -149,7 +144,6 @@ export const processGeminiStreamEvents = async (
 
             if (hasThinkTags) {
               // Extract thinking content from complete blocks and emit as thought events
-              // 提取完整块中的思考内容并作为 thought 事件发送
               const thinkMatches = contentText.matchAll(thinkTagRegex);
               for (const match of thinkMatches) {
                 const thinkContent = match[1]?.trim();
@@ -166,9 +160,6 @@ export const processGeminiStreamEvents = async (
               // accumulated in the frontend. Only the chunk containing </think> has the tag.
               // By preserving it, the frontend can detect </think> in the accumulated content
               // and strip all preceding thinking content via stripThinkTags.
-              // 移除完整的 think 块，但保留孤立的 </think> 标签。
-              // 流式模式下，前面 chunk 的思考内容（无标签）已被前端累积。
-              // 保留 </think> 让前端在累积内容中检测到它，从而正确过滤所有思考内容。
               processedContent = contentText
                 .replace(/<think(?:ing)?>([\s\S]*?)<\/think(?:ing)?>/gi, '')
                 // Keep orphaned </think> for frontend accumulated content filtering
@@ -182,8 +173,6 @@ export const processGeminiStreamEvents = async (
             // These appear as lines like: code_execution {"code":"import os; ..."}
             // They are internal tool calls and should not be shown to end users,
             // especially in channel adapters (WeChat, DingTalk, etc.).
-            // 过滤 Gemini 内置 code_execution 工具调用块，
-            // 这些是内部工具调用，不应展示给终端用户。
             if (processedContent.includes('code_execution')) {
               processedContent = stripCodeExecutionBlocks(processedContent);
             }
@@ -194,7 +183,7 @@ export const processGeminiStreamEvents = async (
           }
           break;
         // InlineData: Handle inline image data from image generation models (e.g., gemini-3-pro-image)
-        // 处理来自图片生成模型的内联图片数据（使用字符串字面量以兼容旧版本 aioncli-core）
+        // (using a string literal to remain compatible with older versions of aioncli-core)
         case 'inline_data' as ServerGeminiEventType:
           {
             const inlineData = (event as unknown as { value: { mimeType: string; data: string } }).value;
@@ -236,7 +225,7 @@ export const processGeminiStreamEvents = async (
           break;
         case ServerGeminiEventType.Finished:
           {
-            // 传递 Finished 事件，包含 token 使用统计
+            // Forward the Finished event including token usage stats
             onStreamEvent({ type: event.type, data: (event as unknown as { value: unknown }).value });
           }
           break;
@@ -283,8 +272,6 @@ export const processGeminiStreamEvents = async (
         case ServerGeminiEventType.InvalidStream:
           // InvalidStream indicates the model returned invalid content (empty response, no finish reason, etc.)
           // This is typically a transient issue - we emit a special event type so the caller can implement retry
-          // InvalidStream 表示模型返回了无效内容（空响应、无结束原因等）
-          // 这通常是临时问题 - 我们发出特殊事件类型，以便调用方可以实现重试
           onStreamEvent({
             type: 'invalid_stream' as ServerGeminiEventType,
             data: {
@@ -313,15 +300,15 @@ export const processGeminiStreamEvents = async (
       }
     }
 
-    // 流正常结束
+    // Stream ended normally
     monitor.stop();
     return StreamProcessingStatus.Completed;
   } catch (error) {
-    // 流处理出错
+    // Stream processing failed
     const errorMessage = error instanceof Error ? error.message : String(error);
     monitor.markFailed(errorMessage);
 
-    // 检查是否是连接相关错误
+    // Check whether this is a connection-related error
     if (
       errorMessage.includes('fetch failed') ||
       errorMessage.includes('network') ||
@@ -333,18 +320,17 @@ export const processGeminiStreamEvents = async (
       return StreamProcessingStatus.ConnectionLost;
     }
 
-    // 重新抛出其他错误
+    // Re-throw all other errors
     throw error;
   } finally {
-    // 确保监控器停止
+    // Make sure the monitor is stopped
     monitor.stop();
   }
 };
 
 /**
- * 规范化工具参数名称
- * 某些模型可能返回不同的参数名称，需要映射到工具期望的标准名称
  * Normalize tool parameter names - some models may return different param names
+ * that must be mapped to the standard names expected by the tool.
  */
 const normalizeToolParams = (toolName: string, args: Record<string, unknown>): Record<string, unknown> => {
   const normalized = { ...args };
@@ -357,7 +343,6 @@ const normalizeToolParams = (toolName: string, args: Record<string, unknown>): R
     normalized.path = normalized.path.slice(1);
   }
 
-  // 文件操作工具：将 path 映射到 file_path
   // File operation tools: map 'path' to 'file_path'
   const fileTools = ['ReadFileTool', 'WriteFileTool', 'EditTool', 'read_file', 'write_file', 'edit'];
   if (fileTools.includes(toolName) && 'path' in normalized && !('file_path' in normalized)) {
@@ -365,7 +350,6 @@ const normalizeToolParams = (toolName: string, args: Record<string, unknown>): R
     delete normalized.path;
   }
 
-  // 目录操作相关工具：兼容旧版本模型输出的 path/directory 字段
   // Directory-related tools: normalize legacy keys (path/directory) to dir_path
   const dirPathTools = ['list_directory', 'glob', 'search_file_content', 'run_shell_command'];
   if (dirPathTools.includes(toolName)) {
@@ -381,7 +365,6 @@ const normalizeToolParams = (toolName: string, args: Record<string, unknown>): R
       }
     }
 
-    // 新版 core 要求 list_directory 必填 dir_path，这里缺省时默认当前目录
     // aioncli-core now requires dir_path; default to workspace root when missing
     if (
       toolName === 'list_directory' &&
@@ -406,7 +389,7 @@ export const processGeminiFunctionCalls = async (
 
   for (const fc of functionCalls) {
     const callId = fc.callId ?? `${fc.name}-${Date.now()}`;
-    // 规范化参数名称 / Normalize parameter names
+    // Normalize parameter names
     const normalizedArgs = normalizeToolParams(fc.name, fc.args ?? {});
     const requestInfo = {
       callId,
@@ -459,13 +442,12 @@ export const processGeminiFunctionCalls = async (
 };
 
 /**
- * 处理已完成的工具调用（带保护机制）
  * Handle completed tool calls with protection mechanism
  *
- * 改进点：
- * 1. 使用 globalToolCallGuard 保护正在执行的工具调用
- * 2. 受保护的工具调用不会被误判为 cancelled
- * 3. 工具完成后自动移除保护
+ * Notes:
+ * 1. Uses globalToolCallGuard to protect tool calls that are still executing
+ * 2. Protected tool calls will not be misclassified as cancelled
+ * 3. Protection is removed automatically once the tool completes
  */
 export const handleCompletedTools = (
   completedToolCallsFromScheduler: CompletedToolCall[],
@@ -476,7 +458,6 @@ export const handleCompletedTools = (
     const isTerminalState = tc.status === 'success' || tc.status === 'error' || tc.status === 'cancelled';
     if (isTerminalState) {
       const completedOrCancelledCall = tc;
-      // 标记工具完成，移除保护
       // Mark tool as complete, remove protection
       if (tc.status === 'success' || tc.status === 'error') {
         globalToolCallGuard.complete(tc.request.callId);
@@ -508,10 +489,8 @@ export const handleCompletedTools = (
     return;
   }
 
-  // 检查是否所有工具都被取消（排除受保护的工具）
   // Check if all tools were cancelled (excluding protected tools)
   const allToolsCancelled = geminiTools.every((tc) => {
-    // 如果工具仍在保护中，不认为是被取消
     // If tool is still protected, don't consider it cancelled
     if (globalToolCallGuard.isProtected(tc.request.callId)) {
       console.debug(`[ToolCallGuard] Tool ${tc.request.callId} is protected, not treating as cancelled`);

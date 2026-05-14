@@ -8,7 +8,6 @@ import type { IDirOrFile } from '@/common/adapter/ipcBridge';
 import type { NodeInstance } from '@arco-design/web-react/es/Tree/interface';
 
 /**
- * 从 Tree 节点中提取数据引用
  * Extract data reference from Tree node
  */
 export function extractNodeData(node: NodeInstance | null | undefined): IDirOrFile | null {
@@ -18,7 +17,6 @@ export function extractNodeData(node: NodeInstance | null | undefined): IDirOrFi
 }
 
 /**
- * 从 Tree 节点中提取 key（优先使用 relativePath）
  * Extract key from Tree node (prefer relativePath)
  */
 export function extractNodeKey(node: NodeInstance | null | undefined): string | null {
@@ -32,7 +30,6 @@ export function extractNodeKey(node: NodeInstance | null | undefined): string | 
 }
 
 /**
- * 根据路径判断平台分隔符
  * Detect correct path separator by platform based on path
  */
 export function getPathSeparator(targetPath: string): string {
@@ -40,7 +37,6 @@ export function getPathSeparator(targetPath: string): string {
 }
 
 /**
- * 在树中查找节点（通过 relativePath）
  * Find node in tree by relativePath
  */
 export function findNodeByKey(list: IDirOrFile[], key: string): IDirOrFile | null {
@@ -55,12 +51,10 @@ export function findNodeByKey(list: IDirOrFile[], key: string): IDirOrFile | nul
 }
 
 /**
- * 获取第一层节点的 keys（用于初始展开）
  * Get first level node keys (for initial expansion)
  */
 export function getFirstLevelKeys(nodes: IDirOrFile[]): string[] {
   if (nodes.length > 0 && nodes[0].relativePath === '') {
-    // 如果第一个节点是根节点（relativePath 为空），展开它
     // If first node is root (empty relativePath), expand it
     return [''];
   }
@@ -68,7 +62,6 @@ export function getFirstLevelKeys(nodes: IDirOrFile[]): string[] {
 }
 
 /**
- * 替换路径列表中的旧路径为新路径
  * Replace old path with new path in path list
  */
 export function replacePathInList(keys: string[], oldPath: string, newPath: string): string[] {
@@ -82,7 +75,6 @@ export function replacePathInList(keys: string[], oldPath: string, newPath: stri
 }
 
 /**
- * 递归更新子节点路径（用于重命名后更新整棵树）
  * Recursively update children paths (for tree update after rename)
  */
 export function updateChildrenPaths(
@@ -97,17 +89,17 @@ export function updateChildrenPaths(
   return children.map((child) => {
     const updatedChild = { ...child };
 
-    // 更新 fullPath / Update fullPath
+    // Update fullPath
     if (child.fullPath.startsWith(oldFullPrefix)) {
       updatedChild.fullPath = newFullPrefix + child.fullPath.slice(oldFullPrefix.length);
     }
 
-    // 更新 relativePath / Update relativePath
+    // Update relativePath
     if (child.relativePath && child.relativePath.startsWith(oldRelativePrefix)) {
       updatedChild.relativePath = newRelativePrefix + child.relativePath.slice(oldRelativePrefix.length);
     }
 
-    // 递归更新子节点 / Recursively update children
+    // Recursively update children
     if (child.children) {
       updatedChild.children = updateChildrenPaths(
         child.children,
@@ -123,7 +115,6 @@ export function updateChildrenPaths(
 }
 
 /**
- * 递归更新树中的节点（用于重命名）
  * Recursively update node in tree (for rename)
  */
 export function updateTreeForRename(
@@ -134,7 +125,7 @@ export function updateTreeForRename(
 ): IDirOrFile[] {
   return list.map((node) => {
     if (node.relativePath === oldKey) {
-      // 找到目标节点，更新它的信息 / Found target node, update its info
+      // Found target node, update its info
       const oldFullPath = node.fullPath;
       const oldRelativePath = node.relativePath || '';
       const newRelativePath = oldRelativePath.replace(/[^/]+$/, newName);
@@ -146,7 +137,7 @@ export function updateTreeForRename(
         relativePath: newRelativePath,
       };
 
-      // 如果有子节点，递归更新子节点的路径 / If has children, recursively update their paths
+      // If has children, recursively update their paths
       if (node.children && node.children.length > 0) {
         const separator = getPathSeparator(oldFullPath);
         const oldFullPrefix = oldFullPath + separator;
@@ -166,7 +157,7 @@ export function updateTreeForRename(
       return updatedNode;
     }
 
-    // 递归检查子节点 / Recursively check children
+    // Recursively check children
     if (node.children && node.children.length > 0) {
       return {
         ...node,
@@ -224,7 +215,6 @@ export function computeContextMenuPosition(
 }
 
 /**
- * 获取目标文件夹路径（从 selectedNodeRef 或 selected keys）
  * Get target folder path from selectedNodeRef or selected keys
  */
 export function getTargetFolderPath(
@@ -233,7 +223,7 @@ export function getTargetFolderPath(
   files: IDirOrFile[],
   workspace: string
 ): { fullPath: string; relativePath: string | null } {
-  // 优先使用 selectedNodeRef / Prioritize selectedNodeRef
+  // Prioritize selectedNodeRef
   if (selectedNodeRef) {
     return {
       fullPath: selectedNodeRef.fullPath,
@@ -241,7 +231,7 @@ export function getTargetFolderPath(
     };
   }
 
-  // 回退逻辑：从 selected 中查找最深的文件夹 / Fallback: find the deepest folder from selected keys
+  // Fallback: find the deepest folder from selected keys
   if (selected && selected.length > 0) {
     const folderNodes: IDirOrFile[] = [];
     for (const key of selected) {
@@ -252,7 +242,7 @@ export function getTargetFolderPath(
     }
 
     if (folderNodes.length > 0) {
-      // 按最深的相对路径排序（路径段越多越深） / Sort by deepest relativePath (more path segments)
+      // Sort by deepest relativePath (more path segments)
       folderNodes.sort((a, b) => {
         const aDepth = (a.relativePath || '').split('/').length;
         const bDepth = (b.relativePath || '').split('/').length;
@@ -265,7 +255,7 @@ export function getTargetFolderPath(
     }
   }
 
-  // 默认使用工作空间根目录 / Default to workspace root
+  // Default to workspace root
   return {
     fullPath: workspace,
     relativePath: null,

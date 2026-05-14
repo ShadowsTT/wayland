@@ -37,14 +37,12 @@ const GeminiModalContent: React.FC = () => {
   const isPageMode = viewMode === 'page';
 
   /**
-   * 加载当前账号对应的 GOOGLE_CLOUD_PROJECT
    * Load GOOGLE_CLOUD_PROJECT for current account
    */
   const loadAccountProject = async (email: string, geminiConfig: Record<string, unknown>) => {
     const accountProjects = (geminiConfig?.accountProjects as Record<string, string>) || {};
     const projectId = accountProjects[email];
 
-    // 清理旧的全局配置（不自动迁移，因为可能属于其他账号）
     // Clean up old global config (don't auto-migrate, it might belong to another account)
     if (geminiConfig?.GOOGLE_CLOUD_PROJECT) {
       const { GOOGLE_CLOUD_PROJECT: _, ...restConfig } = geminiConfig;
@@ -64,7 +62,7 @@ const GeminiModalContent: React.FC = () => {
           form.setFieldValue('googleAccount', email);
           setCurrentAccountEmail(email);
           setUserLoggedOut(false);
-          // 加载该账号的项目配置 / Load project config for this account
+          // Load project config for this account
           if (geminiConfig) {
             void loadAccountProject(email, geminiConfig);
           }
@@ -138,7 +136,6 @@ const GeminiModalContent: React.FC = () => {
       .then((geminiConfig) => {
         const formData = {
           ...geminiConfig,
-          // 先不设置 GOOGLE_CLOUD_PROJECT，等账号加载完再设置
           // Don't set GOOGLE_CLOUD_PROJECT yet, wait for account to load
           GOOGLE_CLOUD_PROJECT: '',
         };
@@ -215,7 +212,6 @@ const GeminiModalContent: React.FC = () => {
                                   );
                                 }
                               } else {
-                                // 登录失败，显示错误消息
                                 // Login failed, show error message
                                 const errorMsg =
                                   result.msg ||

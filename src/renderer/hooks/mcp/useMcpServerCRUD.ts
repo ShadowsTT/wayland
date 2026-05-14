@@ -6,8 +6,8 @@ import { ConfigStorage } from '@/common/config/storage';
 import type { IMcpServer } from '@/common/config/storage';
 
 /**
- * MCP服务器CRUD操作Hook
- * 处理MCP服务器的增加、编辑、删除、启用/禁用等操作
+ * MCP server CRUD operations hook.
+ * Handles add/edit/delete and enable/disable for MCP servers.
  */
 export const useMcpServerCRUD = (
   mcpServers: IMcpServer[],
@@ -19,18 +19,18 @@ export const useMcpServerCRUD = (
 ) => {
   const { t } = useTranslation();
 
-  // 添加MCP服务器
+  // Add MCP server
   const handleAddMcpServer = useCallback(
     async (serverData: Omit<IMcpServer, 'id' | 'createdAt' | 'updatedAt'>) => {
       const now = Date.now();
       let serverToSync: IMcpServer | null = null;
 
-      // 使用函数式更新，避免闭包问题
+      // Use functional update to avoid stale-closure issues
       await saveMcpServers((prevServers) => {
         const existingServerIndex = prevServers.findIndex((server) => server.name === serverData.name);
 
         if (existingServerIndex !== -1) {
-          // 如果存在同名服务器，更新现有服务器
+          // If a server with the same name exists, update the existing one
           const updatedServers = [...prevServers];
           updatedServers[existingServerIndex] = {
             ...updatedServers[existingServerIndex],
@@ -40,7 +40,7 @@ export const useMcpServerCRUD = (
           serverToSync = updatedServers[existingServerIndex];
           return updatedServers;
         } else {
-          // 如果不存在同名服务器，添加新服务器
+          // If no server with the same name exists, add a new server
           const newServer: IMcpServer = {
             ...serverData,
             id: `mcp_${now}`,
@@ -52,24 +52,24 @@ export const useMcpServerCRUD = (
         }
       });
 
-      // 检查安装状态
+      // Check install status
       if (serverToSync) {
         setTimeout(() => void checkSingleServerInstallStatus(serverToSync.name), 100);
       }
 
-      // 返回新添加/更新的服务器，用于后续的连接测试
+      // Return the newly added/updated server for subsequent connection testing
       return serverToSync;
     },
     [saveMcpServers, syncMcpToAgents, t, checkSingleServerInstallStatus]
   );
 
-  // 批量导入MCP服务器
+  // Batch-import MCP servers
   const handleBatchImportMcpServers = useCallback(
     async (serversData: Omit<IMcpServer, 'id' | 'createdAt' | 'updatedAt'>[]) => {
       const now = Date.now();
       const addedServers: IMcpServer[] = [];
 
-      // 使用函数式更新，避免闭包问题
+      // Use functional update to avoid stale-closure issues
       await saveMcpServers((prevServers) => {
         const updatedServers = [...prevServers];
 
@@ -77,14 +77,14 @@ export const useMcpServerCRUD = (
           const existingServerIndex = updatedServers.findIndex((server) => server.name === serverData.name);
 
           if (existingServerIndex !== -1) {
-            // 如果存在同名服务器，更新现有服务器
+            // If a server with the same name exists, update the existing one
             updatedServers[existingServerIndex] = {
               ...updatedServers[existingServerIndex],
               ...serverData,
               updatedAt: now,
             };
           } else {
-            // 如果不存在同名服务器，添加新服务器
+            // If no server with the same name exists, add a new server
             const newServer: IMcpServer = {
               ...serverData,
               id: `mcp_${now}_${index}`,
@@ -99,20 +99,20 @@ export const useMcpServerCRUD = (
         return updatedServers;
       });
 
-      // 检查安装状态
+      // Check install status
       setTimeout(() => {
         serversData.forEach((serverData) => {
           void checkSingleServerInstallStatus(serverData.name);
         });
       }, 100);
 
-      // 返回新添加的服务器列表，用于后续的连接测试
+      // Return list of newly added servers for subsequent connection testing
       return addedServers;
     },
     [saveMcpServers, syncMcpToAgents, t, checkSingleServerInstallStatus]
   );
 
-  // 编辑MCP服务器
+  // Edit MCP server
   const handleEditMcpServer = useCallback(
     async (
       editingMcpServer: IMcpServer | undefined,
@@ -122,7 +122,7 @@ export const useMcpServerCRUD = (
 
       let updatedServer: IMcpServer | undefined;
 
-      // 使用函数式更新，避免闭包问题
+      // Use functional update to avoid stale-closure issues
       await saveMcpServers((prevServers) => {
         updatedServer = {
           ...editingMcpServer,
@@ -134,21 +134,21 @@ export const useMcpServerCRUD = (
       });
 
       Message.success(t('settings.mcpImportSuccess'));
-      // 编辑后立即检查该服务器的安装状态（仅安装状态）
+      // Immediately re-check install status for this server after editing (install status only)
       setTimeout(() => void checkSingleServerInstallStatus(serverData.name), 100);
 
-      // 返回更新后的服务器对象，用于后续的连接测试
+      // Return the updated server object for subsequent connection testing
       return updatedServer;
     },
     [saveMcpServers, t, checkSingleServerInstallStatus]
   );
 
-  // 删除MCP服务器
+  // Delete MCP server
   const handleDeleteMcpServer = useCallback(
     async (serverId: string) => {
       let targetServer: IMcpServer | undefined;
 
-      // 使用函数式更新，避免闭包问题
+      // Use functional update to avoid stale-closure issues
       await saveMcpServers((prevServers) => {
         targetServer = prevServers.find((server) => server.id === serverId);
         if (!targetServer) return prevServers;
@@ -158,11 +158,11 @@ export const useMcpServerCRUD = (
 
       if (!targetServer) return;
 
-      // 删除后直接更新安装状态，不触发检测
+      // After deletion, update install status directly without triggering detection
       setAgentInstallStatus((prev) => {
         const updated = { ...prev };
         delete updated[targetServer.name];
-        // 同时更新本地存储
+        // Also update local storage
         void ConfigStorage.set('mcp.agentInstallStatus', updated).catch(() => {
           // Handle storage error silently
         });
@@ -170,7 +170,7 @@ export const useMcpServerCRUD = (
       });
 
       try {
-        // 如果服务器是启用状态，需要从所有agents中删除MCP配置
+        // If the server is enabled, remove the MCP config from all agents
         if (targetServer.enabled) {
           await removeMcpFromAgents(
             targetServer.name,
@@ -187,13 +187,13 @@ export const useMcpServerCRUD = (
     [saveMcpServers, setAgentInstallStatus, removeMcpFromAgents, t]
   );
 
-  // 启用/禁用MCP服务器
+  // Enable/disable MCP server
   const handleToggleMcpServer = useCallback(
     async (serverId: string, enabled: boolean) => {
       let targetServer: IMcpServer | undefined;
       let updatedTargetServer: IMcpServer | undefined;
 
-      // 使用函数式更新，避免闭包问题
+      // Use functional update to avoid stale-closure issues
       await saveMcpServers((prevServers) => {
         targetServer = prevServers.find((server) => server.id === serverId);
         if (!targetServer) return prevServers;
@@ -211,18 +211,18 @@ export const useMcpServerCRUD = (
 
       try {
         if (enabled) {
-          // 如果启用了MCP服务器，只将当前服务器同步到所有检测到的agent
+          // If the MCP server is enabled, sync only the current server to all detected agents
           await syncMcpToAgents(updatedTargetServer, true);
-          // 启用后立即检查该服务器的安装状态（仅安装状态）
+          // Immediately re-check install status after enabling (install status only)
           setTimeout(() => void checkSingleServerInstallStatus(targetServer.name), 100);
         } else {
-          // 如果禁用了MCP服务器，从所有agent中删除该配置
+          // If the MCP server is disabled, remove the config from all agents
           await removeMcpFromAgents(targetServer.name, undefined, targetServer.transport.type);
-          // 禁用后直接更新UI状态，不需要重新检测
+          // After disabling, update UI state directly; no re-detection needed
           setAgentInstallStatus((prev) => {
             const updated = { ...prev };
             delete updated[targetServer.name];
-            // 同时更新本地存储
+            // Also update local storage
             void ConfigStorage.set('mcp.agentInstallStatus', updated).catch(() => {
               // Handle storage error silently
             });

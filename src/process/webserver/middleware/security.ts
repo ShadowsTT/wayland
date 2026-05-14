@@ -9,7 +9,7 @@ import rateLimit from 'express-rate-limit';
 import { CSRF_COOKIE_NAME, CSRF_HEADER_NAME, SECURITY_CONFIG } from '@process/webserver/config/constants';
 
 /**
- * 登录/注册等敏感操作的限流
+ * Rate-limit for sensitive operations like login/register
  */
 export const authRateLimiter = rateLimit({
   standardHeaders: true,
@@ -24,7 +24,7 @@ export const authRateLimiter = rateLimit({
 });
 
 /**
- * 一般 API 请求限流
+ * Rate-limit for general API requests
  */
 export const apiRateLimiter = rateLimit({
   standardHeaders: true,
@@ -37,7 +37,7 @@ export const apiRateLimiter = rateLimit({
 });
 
 /**
- * 文件浏览等操作限流
+ * Rate-limit for file-browsing and similar operations
  */
 export const fileOperationLimiter = rateLimit({
   standardHeaders: true,
@@ -50,7 +50,7 @@ export const fileOperationLimiter = rateLimit({
 });
 
 /**
- * 已认证用户的敏感操作限流（优先按用户 ID，其次按 IP）
+ * Rate-limit for sensitive actions by authenticated users (keyed by user ID, falling back to IP)
  */
 export const authenticatedActionLimiter = rateLimit({
   standardHeaders: true,
@@ -72,9 +72,6 @@ export const authenticatedActionLimiter = rateLimit({
 /**
  * Attach CSRF token to response for client-side usage
  * tiny-csrf provides req.csrfToken() method to generate tokens
- *
- * 将 CSRF token 添加到响应中供客户端使用
- * tiny-csrf 提供 req.csrfToken() 方法来生成 token
  */
 export function attachCsrfToken(req: Request, res: Response, next: NextFunction): void {
   // tiny-csrf provides req.csrfToken() method
@@ -87,7 +84,7 @@ export function attachCsrfToken(req: Request, res: Response, next: NextFunction)
 }
 
 /**
- * 供静态路由等场景使用的通用限流器工厂
+ * Generic rate-limiter factory for use cases like static routes
  */
 export function createRateLimiter(options: Parameters<typeof rateLimit>[0]) {
   return rateLimit({

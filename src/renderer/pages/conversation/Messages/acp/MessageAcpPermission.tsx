@@ -20,7 +20,7 @@ const MessageAcpPermission: React.FC<MessageAcpPermissionProps> = React.memo(({ 
   const { options = [], toolCall } = message.content || {};
   const { t } = useTranslation();
 
-  // 基于实际数据生成显示信息
+  // Build display info from the actual data
   const getToolInfo = () => {
     if (!toolCall) {
       return {
@@ -30,10 +30,10 @@ const MessageAcpPermission: React.FC<MessageAcpPermissionProps> = React.memo(({ 
       };
     }
 
-    // 直接使用 toolCall 中的实际数据
+    // Use actual data from toolCall directly
     const displayTitle = toolCall.title || toolCall.rawInput?.description || t('messages.permissionRequest');
 
-    // 简单的图标映射
+    // Simple icon mapping
     const kindIcons: Record<string, string> = {
       edit: '✏️',
       read: '📖',
@@ -60,7 +60,7 @@ const MessageAcpPermission: React.FC<MessageAcpPermissionProps> = React.memo(({ 
         confirmKey: selected,
         msg_id: message.id,
         conversation_id: message.conversation_id,
-        callId: toolCall?.toolCallId || message.id, // 使用 toolCallId 或 message.id 作为 fallback
+        callId: toolCall?.toolCallId || message.id, // Use toolCallId or message.id as fallback
       };
 
       const result = await conversation.confirmMessage.invoke(invokeData);

@@ -263,7 +263,6 @@ function registerExtensionWebuiRoutes(app: Express, validateApiAccess: RequestHa
 }
 
 /**
- * 注册 API 路由
  * Register API routes
  */
 export function registerApiRoutes(app: Express): void {
@@ -272,15 +271,14 @@ export function registerApiRoutes(app: Express): void {
   });
 
   /**
-   * 目录 API - Directory API
+   * Directory API
    * /api/directory/*
    */
   app.use('/api/directory', apiRateLimiter, validateApiAccess, directoryApi);
 
   /**
-   * 上传文件 - Upload file
+   * Upload file
    * POST /api/upload
-   * WebUI 模式下粘贴/拖拽/选择文件时，通过 HTTP multipart 上传到 workspace
    * Used in WebUI mode for paste/drag/pick files via HTTP multipart upload
    *
    * Must be registered BEFORE extension webui routes and catch-all /api route
@@ -448,7 +446,7 @@ export function registerApiRoutes(app: Express): void {
   registerExtensionWebuiRoutes(app, validateApiAccess);
 
   /**
-   * 扩展资产 API（WebUI）- Extension asset API (WebUI)
+   * Extension asset API (WebUI)
    * GET /api/ext-asset?path={absolutePath}
    */
   app.get('/api/ext-asset', apiRateLimiter, validateApiAccess, (req: Request, res: Response) => {
@@ -632,13 +630,13 @@ export function registerApiRoutes(app: Express): void {
   }
 
   /**
-   * PPT 预览反向代理 - PPT Preview Reverse Proxy
+   * PPT Preview Reverse Proxy
    * GET /api/ppt-proxy/:port/*
    */
   registerOfficecliWatchProxy('/api/ppt-proxy', isActivePreviewPort, 'PPT preview');
 
   /**
-   * Office Watch 预览反向代理 (Word & Excel) - Office Watch Preview Reverse Proxy
+   * Office Watch Preview Reverse Proxy (Word & Excel)
    * GET /api/office-watch-proxy/:port/*
    */
   registerOfficecliWatchProxy('/api/office-watch-proxy', isActiveOfficeWatchPort, 'Office watch preview');
@@ -650,7 +648,7 @@ export function registerApiRoutes(app: Express): void {
   registerWeixinLoginRoutes(app, validateApiAccess);
 
   /**
-   * 通用 API 端点 - Generic API endpoint
+   * Generic API endpoint
    * GET /api
    */
   app.use('/api', apiRateLimiter, validateApiAccess, (_req: Request, res: Response) => {

@@ -28,7 +28,6 @@ import type { IWorkspaceFlatFile } from '@/common/adapter/ipcBridge';
 
 // ============================================================================
 // Helper functions for builtin resource directory resolution
-// 内置资源目录解析辅助函数
 // ============================================================================
 
 type ResourceType = 'rules' | 'skills' | 'assistant';
@@ -61,7 +60,6 @@ async function findBuiltinResourceDirNode(resourceType: ResourceType): Promise<s
 
 /**
  * Copy directory recursively
- * 递归复制目录
  */
 async function copyDirectory(src: string, dest: string) {
   await fs.mkdir(dest, { recursive: true });
@@ -81,7 +79,6 @@ async function copyDirectory(src: string, dest: string) {
 
 /**
  * Read a builtin resource file (.md only)
- * 读取内置资源文件（仅限 .md）
  */
 async function readBuiltinResource(resourceType: ResourceType, fileName: string): Promise<string> {
   const safeFileName = path.basename(fileName);
@@ -94,7 +91,6 @@ async function readBuiltinResource(resourceType: ResourceType, fileName: string)
 
 /**
  * Read assistant resource file with locale fallback
- * 读取助手资源文件，支持语言回退
  */
 async function readAssistantResource(
   resourceType: ResourceType,
@@ -133,7 +129,6 @@ async function readAssistantResource(
 
 /**
  * Write assistant resource file to user directory
- * 写入助手资源文件到用户目录
  */
 async function writeAssistantResource(
   resourceType: ResourceType,
@@ -157,7 +152,6 @@ async function writeAssistantResource(
 
 /**
  * Delete assistant resource files (all locale versions)
- * 删除助手资源文件（所有语言版本）
  */
 async function deleteAssistantResource(resourceType: ResourceType, filePattern: RegExp): Promise<boolean> {
   try {
@@ -358,7 +352,7 @@ export function initFsBridge(): void {
     }
   });
 
-  // 下载远程图片并限制协议/重定向次数 / Download remote resource with protocol & redirect guard
+  // Download remote resource with protocol & redirect guard
   const downloadRemoteBuffer = (
     targetUrl: string,
     redirectCount = 0
@@ -374,7 +368,7 @@ export function initFsBridge(): void {
       return Promise.reject(new Error('Unsupported protocol'));
     }
 
-    // 仅允许白名单域名，避免随意访问 / Restrict to a whitelist of hosts for safety
+    // Restrict to a whitelist of hosts for safety
     const allowedHosts = ['github.com', 'raw.githubusercontent.com', 'contrib.rocks', 'img.shields.io'];
     const isAllowedHost = allowedHosts.some(
       (host) => parsedUrl.hostname === host || parsedUrl.hostname.endsWith(`.${host}`)
@@ -450,7 +444,7 @@ export function initFsBridge(): void {
     });
   };
 
-  // 通过桥接层拉取远程图片并转成 base64 / Fetch remote image via bridge and return base64
+  // Fetch remote image via bridge and return base64
   ipcBridge.fs.fetchRemoteImage.provider(async ({ url }) => {
     try {
       const { buffer, contentType } = await downloadRemoteBuffer(url);
@@ -462,20 +456,20 @@ export function initFsBridge(): void {
     }
   });
 
-  // 创建临时文件 / Create temporary file on disk
+  // Create temporary file on disk
   ipcBridge.fs.createTempFile.provider(async ({ fileName }) => {
     try {
       const { cacheDir } = getSystemDir();
       const tempDir = path.join(cacheDir, 'temp');
 
-      // 确保临时目录存在 / Ensure temp directory exists
+      // Ensure temp directory exists
       await fs.mkdir(tempDir, { recursive: true });
 
-      // 使用原文件名，必要时清理非法字符 / Keep original name but sanitize illegal characters
+      // Keep original name but sanitize illegal characters
       const safeFileName = fileName.replace(/[<>:"/\\|?*]/g, '_');
       let tempFilePath = path.join(tempDir, safeFileName);
 
-      // 如果冲突则追加时间戳后缀 / Append timestamp when duplicate exists
+      // Append timestamp when duplicate exists
       const fileExists = await fs
         .access(tempFilePath)
         .then(() => true)
@@ -489,7 +483,7 @@ export function initFsBridge(): void {
         tempFilePath = path.join(tempDir, tempFileName);
       }
 
-      // 创建空文件作为占位 / Create empty placeholder file
+      // Create empty placeholder file
       await fs.writeFile(tempFilePath, Buffer.alloc(0));
 
       return tempFilePath;
@@ -499,17 +493,16 @@ export function initFsBridge(): void {
     }
   });
 
-  // 创建上传文件 / Create upload file based on user preference
-  // 根据"上传文件保存到工作区"设置决定文件保存位置
+  // Create upload file based on user preference.
+  // The "save uploads to workspace" setting decides where the file is stored.
   ipcBridge.fs.createUploadFile.provider(async ({ fileName, conversationId }) => {
     try {
-      // 检查用户偏好：保存到工作区还是缓存目录
       // Check user preference: save to workspace or cache directory
       const saveToWorkspace = await ProcessConfig.get('upload.saveToWorkspace').catch(() => false);
 
       let uploadDir: string;
       if (conversationId && saveToWorkspace) {
-        // 保存到工作区 / Save to workspace
+        // Save to workspace
         try {
           const db = await getDatabase();
           const result = db.getConversation(conversationId);
@@ -523,7 +516,6 @@ export function initFsBridge(): void {
           uploadDir = path.join(resolvedWorkspace, 'uploads');
           await fs.mkdir(uploadDir, { recursive: true });
         } catch (error) {
-          // 如果无法获取工作区，回退到缓存目录
           // Fallback to cache directory if workspace cannot be resolved
           console.warn('[fsBridge] Failed to resolve workspace, using cache directory:', error);
           const { cacheDir } = getSystemDir();
@@ -532,18 +524,18 @@ export function initFsBridge(): void {
           uploadDir = tempDir;
         }
       } else {
-        // 保存到缓存目录 / Save to cache directory
+        // Save to cache directory
         const { cacheDir } = getSystemDir();
         const tempDir = path.join(cacheDir, 'temp');
         await fs.mkdir(tempDir, { recursive: true });
         uploadDir = tempDir;
       }
 
-      // 使用原文件名，必要时清理非法字符 / Keep original name but sanitize illegal characters
+      // Keep original name but sanitize illegal characters
       const safeFileName = fileName.replace(/[<>:"/\\|?*]/g, '_');
       let filePath = path.join(uploadDir, safeFileName);
 
-      // 如果冲突则追加时间戳后缀 / Append timestamp when duplicate exists
+      // Append timestamp when duplicate exists
       const fileExists = await fs
         .access(filePath)
         .then(() => true)
@@ -564,7 +556,7 @@ export function initFsBridge(): void {
         throw new Error('Invalid file name');
       }
 
-      // 创建空文件作为占位 / Create empty placeholder file
+      // Create empty placeholder file
       await fs.writeFile(filePath, Buffer.alloc(0));
 
       return filePath;
@@ -574,7 +566,7 @@ export function initFsBridge(): void {
     }
   });
 
-  // 读取文件内容（UTF-8编码）/ Read file content (UTF-8 encoding)
+  // Read file content (UTF-8 encoding)
   // V8 string length limit is ~512MB; guard against RangeError on oversized files
   const MAX_READ_FILE_SIZE = 256 * 1024 * 1024; // 256 MB
 
@@ -598,11 +590,10 @@ export function initFsBridge(): void {
     }
   });
 
-  // 读取二进制文件为 ArrayBuffer / Read binary file as ArrayBuffer
+  // Read binary file as ArrayBuffer
   ipcBridge.fs.readFileBuffer.provider(async ({ path: filePath }) => {
     try {
       const buffer = await fs.readFile(filePath);
-      // 将 Node.js Buffer 转换为 ArrayBuffer
       // Convert Node.js Buffer to ArrayBuffer
       return buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength);
     } catch (error) {
@@ -615,14 +606,13 @@ export function initFsBridge(): void {
     }
   });
 
-  // 写入文件
+  // Write file
   ipcBridge.fs.writeFile.provider(async ({ path: filePath, data }) => {
     try {
-      // 处理字符串类型 / Handle string type
+      // Handle string type
       if (typeof data === 'string') {
         await fs.writeFile(filePath, data, 'utf-8');
 
-        // 发送流式内容更新事件到预览面板（用于实时更新）
         // Send streaming content update to preview panel (for real-time updates)
         try {
           const pathSegments = filePath.split(path.sep);
@@ -646,17 +636,17 @@ export function initFsBridge(): void {
         return true;
       }
 
-      // 处理 Uint8Array 在 IPC 传输中被序列化为对象的情况
+      // Handle the case where a Uint8Array is serialized into a plain object during IPC transport
       let bufferData;
 
-      // 检查是否是被序列化的类型化数组（包含数字键的对象）
+      // Check whether this looks like a serialized typed array (object with numeric keys)
       if (data && typeof data === 'object' && data.constructor?.name === 'Object') {
         const keys = Object.keys(data);
-        // 检查是否所有键都是数字字符串（类型化数组的特征）
+        // Check whether all keys are numeric strings (the typed-array signature)
         const isTypedArrayLike = keys.length > 0 && keys.every((key) => /^\d+$/.test(key));
 
         if (isTypedArrayLike) {
-          // 确保值是数字数组
+          // Ensure the values are a numeric array
           const values = Object.values(data).map((v) => (typeof v === 'number' ? v : parseInt(v, 10)));
           bufferData = Buffer.from(values);
         } else {
@@ -806,7 +796,7 @@ export function initFsBridge(): void {
     }
   });
 
-  // 获取文件元数据
+  // Get file metadata
   ipcBridge.fs.getFileMetadata.provider(async ({ path: filePath }) => {
     try {
       const stats = await fs.stat(filePath);
@@ -814,7 +804,7 @@ export function initFsBridge(): void {
         name: path.basename(filePath),
         path: filePath,
         size: stats.size,
-        type: '', // MIME type可以根据扩展名推断
+        type: '', // MIME type can be inferred from the file extension
         lastModified: stats.mtime.getTime(),
       };
     } catch (error) {
@@ -831,13 +821,13 @@ export function initFsBridge(): void {
     }
   });
 
-  // 复制文件到工作空间
+  // Copy files into the workspace
   ipcBridge.fs.copyFilesToWorkspace.provider(async ({ filePaths, workspace, sourceRoot }) => {
     try {
       const copiedFiles: string[] = [];
       const failedFiles: Array<{ path: string; error: string }> = [];
 
-      // 确保工作空间目录存在 / Ensure workspace directory exists
+      // Ensure workspace directory exists
       await fs.mkdir(workspace, { recursive: true });
 
       for (const filePath of filePaths) {
@@ -845,19 +835,19 @@ export function initFsBridge(): void {
           let targetPath: string;
 
           if (sourceRoot) {
-            // Preserve directory structure / 保留目录结构
+            // Preserve directory structure
             const relativePath = path.relative(sourceRoot, filePath);
             targetPath = path.join(workspace, relativePath);
 
-            // Ensure parent directory exists / 确保父目录存在
+            // Ensure parent directory exists
             await fs.mkdir(path.dirname(targetPath), { recursive: true });
           } else {
-            // Flatten to root (legacy behavior) / 扁平化到根目录（旧行为）
+            // Flatten to root (legacy behavior)
             const fileName = path.basename(filePath);
             targetPath = path.join(workspace, fileName);
           }
 
-          // 检查目标文件是否已存在
+          // Check whether the target file already exists
           const exists = await fs
             .access(targetPath)
             .then(() => true)
@@ -865,11 +855,11 @@ export function initFsBridge(): void {
 
           let finalTargetPath = targetPath;
           if (exists) {
-            // 如果文件已存在，添加时间戳后缀 / Append timestamp when target file already exists
+            // Append timestamp when target file already exists
             const timestamp = Date.now();
             const ext = path.extname(targetPath);
             const name = path.basename(targetPath, ext);
-            // Construct new path in the same directory / 在同一目录下构建新路径
+            // Construct new path in the same directory
             const dir = path.dirname(targetPath);
             const newFileName = `${name}${WAYLAND_TIMESTAMP_SEPARATOR}${timestamp}${ext}`;
             finalTargetPath = path.join(dir, newFileName);
@@ -878,14 +868,14 @@ export function initFsBridge(): void {
           await fs.copyFile(filePath, finalTargetPath);
           copiedFiles.push(finalTargetPath);
         } catch (error) {
-          // 记录失败的文件路径与错误信息，前端可以用来提示用户 / Record failed file info so UI can warn user
+          // Record failed file info so UI can warn user
           const message = error instanceof Error ? error.message : String(error);
           console.error(`Failed to copy file ${filePath}:`, message);
           failedFiles.push({ path: filePath, error: message });
         }
       }
 
-      // 只要存在失败文件就视作部分失败，并返回提示信息 / Mark operation as non-success if anything failed and provide hint text
+      // Mark operation as non-success if anything failed and provide hint text
       const success = failedFiles.length === 0;
       const msg = success ? undefined : 'Some files failed to copy';
       if (copiedFiles.length > 0) {
@@ -906,7 +896,7 @@ export function initFsBridge(): void {
     }
   });
 
-  // Delete file or directory on disk (删除磁盘上的文件或文件夹)
+  // Delete file or directory on disk
   ipcBridge.fs.removeEntry.provider(async ({ path: targetPath }) => {
     try {
       const stats = await fs.lstat(targetPath);
@@ -916,7 +906,6 @@ export function initFsBridge(): void {
       } else {
         await fs.unlink(targetPath);
 
-        // 发送流式删除事件到预览面板（用于关闭预览）
         // Send streaming delete event to preview panel (to close preview)
         try {
           const pathSegments = targetPath.split(path.sep);
@@ -946,14 +935,14 @@ export function initFsBridge(): void {
     }
   });
 
-  // Rename file or directory and return new path (重命名文件/文件夹并返回新路径)
+  // Rename file or directory and return new path
   ipcBridge.fs.renameEntry.provider(async ({ path: targetPath, newName }) => {
     try {
       const directory = path.dirname(targetPath);
       const newPath = path.join(directory, newName);
 
       if (newPath === targetPath) {
-        // Skip when the new name equals the original path (新旧路径一致时直接跳过)
+        // Skip when the new name equals the original path
         return { success: true, data: { newPath } };
       }
 
@@ -963,7 +952,7 @@ export function initFsBridge(): void {
         .catch(() => false);
 
       if (exists) {
-        // Avoid overwriting existing targets (避免覆盖已存在的目标文件)
+        // Avoid overwriting existing targets
         return { success: false, msg: 'Target path already exists' };
       }
 
@@ -980,7 +969,7 @@ export function initFsBridge(): void {
     }
   });
 
-  // 读取内置 rules 文件 / Read built-in rules file from app resources
+  // Read built-in rules file from app resources
   ipcBridge.fs.readBuiltinRule.provider(async ({ fileName }) => {
     try {
       return await readBuiltinResource('rules', fileName);
@@ -990,7 +979,7 @@ export function initFsBridge(): void {
     }
   });
 
-  // 读取内置 skills 文件 / Read built-in skills file from app resources
+  // Read built-in skills file from app resources
   ipcBridge.fs.readBuiltinSkill.provider(async ({ fileName }) => {
     try {
       return await readBuiltinResource('skills', fileName);
@@ -1000,7 +989,7 @@ export function initFsBridge(): void {
     }
   });
 
-  // 读取助手规则文件 / Read assistant rule file from user directory or builtin rules
+  // Read assistant rule file from user directory or builtin rules
   ipcBridge.fs.readAssistantRule.provider(async ({ assistantId, locale = 'en-US' }) => {
     try {
       return await readAssistantResource('rules', assistantId, locale, ruleFilePattern);
@@ -1010,17 +999,17 @@ export function initFsBridge(): void {
     }
   });
 
-  // 写入助手规则文件 / Write assistant rule file to user directory
+  // Write assistant rule file to user directory
   ipcBridge.fs.writeAssistantRule.provider(({ assistantId, content, locale = 'en-US' }) => {
     return writeAssistantResource('rules', assistantId, content, locale, ruleFilePattern);
   });
 
-  // 删除助手规则文件 / Delete assistant rule files
+  // Delete assistant rule files
   ipcBridge.fs.deleteAssistantRule.provider(({ assistantId }) => {
     return deleteAssistantResource('rules', new RegExp(`^${assistantId}\\..*\\.md$`));
   });
 
-  // 读取助手技能文件 / Read assistant skill file from user directory or builtin skills
+  // Read assistant skill file from user directory or builtin skills
   ipcBridge.fs.readAssistantSkill.provider(async ({ assistantId, locale = 'en-US' }) => {
     try {
       return await readAssistantResource('skills', assistantId, locale, skillFilePattern);
@@ -1030,17 +1019,17 @@ export function initFsBridge(): void {
     }
   });
 
-  // 写入助手技能文件 / Write assistant skill file to user directory
+  // Write assistant skill file to user directory
   ipcBridge.fs.writeAssistantSkill.provider(({ assistantId, content, locale = 'en-US' }) => {
     return writeAssistantResource('skills', assistantId, content, locale, skillFilePattern);
   });
 
-  // 删除助手技能文件 / Delete assistant skill files
+  // Delete assistant skill files
   ipcBridge.fs.deleteAssistantSkill.provider(({ assistantId }) => {
     return deleteAssistantResource('skills', new RegExp(`^${assistantId}-skills\\..*\\.md$`));
   });
 
-  // 获取可用 skills 列表 / List available skills from builtin, user, and extension directories
+  // List available skills from builtin, user, and extension directories
   ipcBridge.fs.listAvailableSkills.provider(async () => {
     try {
       type SkillEntry = {
@@ -1052,7 +1041,7 @@ export function initFsBridge(): void {
       };
       const skills: SkillEntry[] = [];
 
-      // 辅助函数：从目录读取 skills
+      // Helper: read skills from a directory
       const readSkillsFromDir = async (skillsDir: string, source: 'builtin' | 'custom') => {
         try {
           await fs.access(skillsDir);
@@ -1061,7 +1050,6 @@ export function initFsBridge(): void {
           for (const entry of entries) {
             if (!entry.isDirectory() && !entry.isSymbolicLink()) continue;
 
-            // 跳过内置 skills 目录（_builtin），这些 skills 自动注入，不需要用户选择
             // Skip builtin skills directory (_builtin), these are auto-injected, no user selection needed
             if (entry.name === '_builtin') continue;
 
@@ -1069,7 +1057,7 @@ export function initFsBridge(): void {
 
             try {
               const content = await fs.readFile(skillMdPath, 'utf-8');
-              // 解析 YAML front matter
+              // Parse YAML front matter
               const frontMatterMatch = content.match(/^---\s*\n([\s\S]*?)\n---/);
               if (frontMatterMatch) {
                 const yaml = frontMatterMatch[1];
@@ -1100,13 +1088,13 @@ export function initFsBridge(): void {
       await readSkillsFromDir(builtinSkillsDir, 'builtin');
       const builtinCount = skills.length - builtinCountBefore;
 
-      // 读取用户自定义 skills
+      // Read user-defined skills
       const userSkillsDir = getSkillsDir();
       const userCountBefore = skills.length;
       await readSkillsFromDir(userSkillsDir, 'custom');
       const userCount = skills.length - userCountBefore;
 
-      // 读取扩展贡献的 skills / Read extension-contributed skills from ExtensionRegistry
+      // Read extension-contributed skills from ExtensionRegistry
       let extensionCount = 0;
       try {
         const registry = ExtensionRegistry.getInstance();
@@ -1146,7 +1134,7 @@ export function initFsBridge(): void {
     }
   });
 
-  // 获取内置自动注入 skills 列表 / List builtin auto-injected skills from _builtin directory
+  // List builtin auto-injected skills from _builtin directory
   ipcBridge.fs.listBuiltinAutoSkills.provider(async () => {
     try {
       const autoSkillsDir = getAutoSkillsDir();
@@ -1188,10 +1176,10 @@ export function initFsBridge(): void {
     }
   });
 
-  // 读取 skill 信息（不导入）/ Read skill info without importing
+  // Read skill info without importing
   ipcBridge.fs.readSkillInfo.provider(async ({ skillPath }) => {
     try {
-      // 验证 SKILL.md 文件存在 / Verify SKILL.md file exists
+      // Verify SKILL.md file exists
       const skillMdPath = path.join(skillPath, 'SKILL.md');
       try {
         await fs.access(skillMdPath);
@@ -1202,10 +1190,10 @@ export function initFsBridge(): void {
         };
       }
 
-      // 读取 SKILL.md 获取 skill 信息 / Read SKILL.md to get skill info
+      // Read SKILL.md to get skill info
       const content = await fs.readFile(skillMdPath, 'utf-8');
       const frontMatterMatch = content.match(/^---\s*\n([\s\S]*?)\n---/);
-      let skillName = path.basename(skillPath); // 默认使用目录名 / Default to directory name
+      let skillName = path.basename(skillPath); // Default to directory name
       let skillDescription = '';
 
       if (frontMatterMatch) {
@@ -1237,10 +1225,10 @@ export function initFsBridge(): void {
     }
   });
 
-  // 导入 skill 目录 / Import skill directory
+  // Import skill directory
   ipcBridge.fs.importSkill.provider(async ({ skillPath }) => {
     try {
-      // 验证 SKILL.md 文件存在 / Verify SKILL.md file exists
+      // Verify SKILL.md file exists
       const skillMdPath = path.join(skillPath, 'SKILL.md');
       try {
         await fs.access(skillMdPath);
@@ -1251,10 +1239,10 @@ export function initFsBridge(): void {
         };
       }
 
-      // 读取 SKILL.md 获取 skill 名称 / Read SKILL.md to get skill name
+      // Read SKILL.md to get skill name
       const content = await fs.readFile(skillMdPath, 'utf-8');
       const frontMatterMatch = content.match(/^---\s*\n([\s\S]*?)\n---/);
-      let skillName = path.basename(skillPath); // 默认使用目录名 / Default to directory name
+      let skillName = path.basename(skillPath); // Default to directory name
 
       if (frontMatterMatch) {
         const yaml = frontMatterMatch[1];
@@ -1264,7 +1252,7 @@ export function initFsBridge(): void {
         }
       }
 
-      // 获取用户 skills 目录 / Get user skills directory
+      // Get user skills directory
       const userSkillsDir = getSkillsDir();
       const targetDir = path.join(userSkillsDir, skillName);
 
@@ -1274,7 +1262,6 @@ export function initFsBridge(): void {
       try {
         await fs.access(targetDir);
         // Skill already exists in user directory, treat as success (skip copy)
-        // 用户目录已存在同名 skill，视为成功（跳过复制）
         console.log(`[fsBridge] Skill "${skillName}" already exists in user skills, skipping import`);
         return {
           success: true,
@@ -1295,7 +1282,7 @@ export function initFsBridge(): void {
         // Builtin skill doesn't exist, proceed with copy
       }
 
-      // 复制整个目录 / Copy entire directory
+      // Copy entire directory
       await copyDirectory(skillPath, targetDir);
 
       console.log(`[fsBridge] Successfully imported skill "${skillName}" to ${targetDir}`);
@@ -1314,7 +1301,7 @@ export function initFsBridge(): void {
     }
   });
 
-  // 扫描目录下的 skills / Scan directory for skills
+  // Scan directory for skills
   ipcBridge.fs.scanForSkills.provider(async ({ folderPath }) => {
     console.log(`[fsBridge] scanForSkills called with path: ${folderPath}`);
     try {
@@ -1332,7 +1319,7 @@ export function initFsBridge(): void {
 
         try {
           const content = await fs.readFile(skillMdPath, 'utf-8');
-          // 解析 YAML front matter
+          // Parse YAML front matter
           const frontMatterMatch = content.match(/^---\s*\n([\s\S]*?)\n---/);
           if (frontMatterMatch) {
             const yaml = frontMatterMatch[1];
@@ -1392,7 +1379,7 @@ export function initFsBridge(): void {
     }
   });
 
-  // 检测常见的 skills 路径 / Detect common skills paths
+  // Detect common skills paths
   ipcBridge.fs.detectCommonSkillPaths.provider(async () => {
     try {
       const homedir = os.homedir();
@@ -1437,7 +1424,7 @@ export function initFsBridge(): void {
     }
   });
 
-  // 检测外部 skills 并统计数量 / Detect external skills with counts
+  // Detect external skills with counts
   // ===== Custom external skill paths helpers =====
   const getCustomExternalPathsFile = () => path.join(getSystemDir().workDir, 'custom_external_skill_paths.json');
 
@@ -1634,7 +1621,7 @@ export function initFsBridge(): void {
     }
   });
 
-  // 符号链接方式导入 skill / Import skill via symlink
+  // Import skill via symlink
   ipcBridge.fs.importSkillWithSymlink.provider(async ({ skillPath }) => {
     try {
       const skillMdPath = path.join(skillPath, 'SKILL.md');
@@ -1683,7 +1670,7 @@ export function initFsBridge(): void {
     }
   });
 
-  // 删除自定义 skill / Delete a user custom skill
+  // Delete a user custom skill
   ipcBridge.fs.deleteSkill.provider(async ({ skillName }) => {
     try {
       const userSkillsDir = getSkillsDir();
@@ -1722,22 +1709,22 @@ export function initFsBridge(): void {
     }
   });
 
-  // 获取技能存储路径 / Get skill storage paths
+  // Get skill storage paths
   ipcBridge.fs.getSkillPaths.provider(async () => ({
     userSkillsDir: getSkillsDir(),
     builtinSkillsDir: getBuiltinSkillsCopyDir(),
   }));
 
-  // 将 skill 同步导出到外部目录 / Export skill to external directory via symlink
+  // Export skill to external directory via symlink
   ipcBridge.fs.exportSkillWithSymlink.provider(async ({ skillPath, targetDir }) => {
     try {
       const skillName = path.basename(skillPath);
       const targetPath = path.join(targetDir, skillName);
 
-      // 确保目标基础目录存在 / Ensure target base directory exists
+      // Ensure target base directory exists
       await fs.mkdir(targetDir, { recursive: true });
 
-      // 检查目标路径是否已存在 / Check if target path already exists
+      // Check if target path already exists
       try {
         await fs.access(targetPath);
         return {
@@ -1748,7 +1735,7 @@ export function initFsBridge(): void {
         // Path does not exist, proceed
       }
 
-      // 创建符号链接 / Create symlink
+      // Create symlink
       await fs.symlink(skillPath, targetPath, 'junction');
       console.log(`[fsBridge] Exported skill "${skillName}" to ${targetPath} via symlink`);
 

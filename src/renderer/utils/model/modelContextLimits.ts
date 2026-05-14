@@ -5,10 +5,10 @@
  */
 
 /**
- * 已知模型的 context window 大小配置
+ * Context window size configuration for known models
  */
 const MODEL_CONTEXT_LIMITS: Record<string, number> = {
-  // Gemini 系列
+  // Gemini family
   'gemini-3.1-pro-preview': 1_048_576,
   'gemini-3-pro-preview': 1_048_576,
   'gemini-3-flash-preview': 1_048_576,
@@ -22,7 +22,7 @@ const MODEL_CONTEXT_LIMITS: Record<string, number> = {
   'gemini-1.5-pro': 2_097_152,
   'gemini-1.5-flash': 1_048_576,
 
-  // OpenAI 系列
+  // OpenAI family
   'gpt-5.1': 400_000,
   'gpt-5.1-chat': 128_000,
   'gpt-5': 400_000,
@@ -40,7 +40,7 @@ const MODEL_CONTEXT_LIMITS: Record<string, number> = {
   o3: 200_000,
   'o3-mini': 200_000,
 
-  // Claude 系列
+  // Claude family
   'claude-opus-4.5': 200_000,
   'claude-haiku-4.5': 200_000,
   'claude-sonnet-4.5': 1_000_000,
@@ -54,25 +54,25 @@ const MODEL_CONTEXT_LIMITS: Record<string, number> = {
 };
 
 /**
- * 默认 context limit（当无法确定模型时使用）
+ * Default context limit (used when the model cannot be determined)
  */
 export const DEFAULT_CONTEXT_LIMIT = 1_048_576;
 
 /**
- * 根据模型名称获取 context limit
- * 支持模糊匹配，例如 "gemini-2.5-pro-latest" 会匹配 "gemini-2.5-pro"
+ * Get context limit by model name
+ * Supports fuzzy matching, e.g. "gemini-2.5-pro-latest" matches "gemini-2.5-pro"
  */
 export function getModelContextLimit(modelName: string | undefined | null): number {
   if (!modelName) return DEFAULT_CONTEXT_LIMIT;
 
   const lowerModelName = modelName.toLowerCase();
 
-  // 精确匹配
+  // Exact match
   if (MODEL_CONTEXT_LIMITS[lowerModelName]) {
     return MODEL_CONTEXT_LIMITS[lowerModelName];
   }
 
-  // 模糊匹配：查找最长匹配的模型名
+  // Fuzzy match: find the longest matching model name
   let bestMatch = '';
   let bestLimit = DEFAULT_CONTEXT_LIMIT;
 

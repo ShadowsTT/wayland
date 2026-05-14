@@ -11,7 +11,7 @@
 export const BACKGROUND_BLOCK_START = '/* Wayland Theme Background Start */';
 export const BACKGROUND_BLOCK_END = '/* Wayland Theme Background End */';
 
-// Precompiled regex for better performance / 预编译正则以提升性能
+// Precompiled regex for better performance
 const escapeRegex = (str: string) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const BACKGROUND_BLOCK_PATTERN = new RegExp(
   `${escapeRegex(BACKGROUND_BLOCK_START)}[\\s\\S]*?${escapeRegex(BACKGROUND_BLOCK_END)}\n?`,
@@ -66,7 +66,7 @@ export const injectBackgroundCssBlock = (css: string, imageDataUrl: string): str
   if (!css) {
     return buildBackgroundCss(imageDataUrl);
   }
-  // Reset lastIndex for global regex reuse / 重置 lastIndex 以重用全局正则
+  // Reset lastIndex for global regex reuse
   BACKGROUND_BLOCK_PATTERN.lastIndex = 0;
   const cleanedCss = css.replace(BACKGROUND_BLOCK_PATTERN, '').trim();
   const block = buildBackgroundCss(imageDataUrl);

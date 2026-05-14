@@ -380,7 +380,7 @@
   background: color-mix(in srgb, var(--color-text-4) 55%, transparent);
 }
 
-/* 首页输入框下方「模型 / 模式」按钮：弱化视觉，不抢主输入区 */
+/* Home page "Model / Mode" buttons below the input: visually de-emphasized, do not compete with the main input area */
 .actionTools :global(.sendbox-model-btn) {
   background-color: transparent !important;
   border: none !important;
@@ -454,12 +454,12 @@
   border-radius: 100px;
 }
 
-/* 移动端优化 */
+/* Mobile optimizations */
 @media (max-width: 768px) {
   .guidLayout {
     width: clamp(var(--app-min-width, 360px), calc(100% - 24px), 100%);
     padding: 0 12px;
-    padding-bottom: 100px; /* 为底部快捷按钮留出空间 */
+    padding-bottom: 100px; /* Reserve space for bottom quick action buttons */
     box-sizing: border-box;
   }
 
@@ -510,7 +510,7 @@
   }
 }
 
-/* 小屏手机再收窄一点安全边距，提升可操作面积 */
+/* Narrow safe-area padding further on small phones to increase tappable area */
 @media (max-width: 420px) {
   .guidLayout {
     width: clamp(var(--app-min-width, 360px), calc(100% - 20px), 100%);
@@ -518,7 +518,7 @@
   }
 }
 
-/* 移动端容器滚动支持 */
+/* Mobile container scroll support */
 .guidContainer {
   height: 100%;
   display: flex;
@@ -529,12 +529,12 @@
   position: relative;
 }
 
-/* 整体内容块略往上移，减轻「重心偏下」的感觉 */
+/* Shift overall content slightly upward to reduce the bottom-heavy feel */
 .guidContainer .guidLayout {
   margin-top: -5vh;
 }
 
-/* Agent 选中时：先放大再回落至略大（pop 动效） */
+/* When an Agent is selected: scale up then settle slightly larger (pop animation) */
 @keyframes agentSelectPop {
   0% {
     transform: scale(1);
@@ -555,7 +555,7 @@
   animation: agentSelectPop 0.4s ease-out forwards;
 }
 
-/* 底部快捷按钮：基础间距 + 安全区 */
+/* Bottom quick action buttons: base spacing + safe area */
 .guidQuickActions {
   bottom: calc(32px + env(safe-area-inset-bottom, 0px));
 }
@@ -574,13 +574,13 @@
   }
 }
 
-/* 浅色占位符 */
+/* Light placeholder */
 .lightPlaceholder :global(textarea::placeholder) {
   color: #a1a2aa !important;
   opacity: 1 !important;
 }
 
-/* 预设助手标签 */
+/* Preset assistant tag */
 .presetAgentTag {
   display: inline-flex;
   align-items: center;
@@ -690,7 +690,7 @@
   background: var(--color-fill-4);
 }
 
-/* 移动端助手标签优化 */
+/* Mobile assistant tag optimizations */
 @media (max-width: 768px) {
   .presetAgentTagName {
     max-width: 120px;
@@ -708,7 +708,7 @@
   }
 }
 
-/* iPhone专门优化 */
+/* iPhone-specific optimizations */
 @supports (-webkit-touch-callout: none) {
   .actionRow {
     flex-wrap: nowrap !important;

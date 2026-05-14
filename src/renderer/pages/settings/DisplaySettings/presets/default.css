@@ -1,9 +1,8 @@
-/* Default Theme - AOU Purple Theme / 默认主题 */
-/* 此主题展示了系统默认的颜色变量，您可以基于此进行自定义 */
+/* Default Theme - AOU Purple Theme */
 /* This theme shows the system default color variables, you can customize based on this */
 
 :root {
-  /* Primary Colors - 主色调 */
+  /* Primary Colors */
   --color-primary: #165dff;
   --primary: #165dff;
   --color-primary-light-1: #4080ff;
@@ -12,14 +11,14 @@
   --color-primary-dark-1: #0e42d2;
   --primary-rgb: 22, 93, 255;
 
-  /* Brand Colors - 品牌色 */
+  /* Brand Colors */
   --brand: #7583b2;
   --brand-light: #eff0f6;
   --brand-hover: #b5bcd6;
   --color-brand-fill: #7583b2;
   --color-brand-bg: #eff0f6;
 
-  /* AOU Brand Colors - AOU 品牌色板 */
+  /* AOU Brand Colors */
   --aou-1: #eff0f6;
   --aou-2: #e5e7f0;
   --aou-3: #d1d5e5;
@@ -31,7 +30,7 @@
   --aou-9: #262c41;
   --aou-10: #0d101c;
 
-  /* Background Colors - 背景色 */
+  /* Background Colors */
   --color-bg-1: #f9fafb;
   --bg-1: #f9fafb;
   --color-bg-2: #f2f3f5;
@@ -47,11 +46,11 @@
   --bg-9: #1d2129;
   --bg-10: #0c0e12;
 
-  /* Interactive State Colors - 交互状态色 */
+  /* Interactive State Colors */
   --bg-hover: #f3f4f6;
   --bg-active: #e5e6eb;
 
-  /* Fill Colors - 填充色 */
+  /* Fill Colors */
   --fill: #f7f8fa;
   --color-fill: #f7f8fa;
   --fill-0: #ffffff;
@@ -59,7 +58,7 @@
   --dialog-fill-0: #ffffff;
   --inverse: #ffffff;
 
-  /* Text Colors - 文字色 */
+  /* Text Colors */
   --color-text-1: #1d2129;
   --text-primary: #1d2129;
   --color-text-2: #4e5969;
@@ -69,7 +68,7 @@
   --text-0: #000000;
   --text-white: #ffffff;
 
-  /* Border Colors - 边框色 */
+  /* Border Colors */
   --color-border: #e5e6eb;
   --color-border-1: #e5e6eb;
   --color-border-2: #f2f3f5;
@@ -77,19 +76,19 @@
   --border-light: #f2f3f5;
   --border-special: var(--bg-3);
 
-  /* Semantic Colors - 语义色 */
+  /* Semantic Colors */
   --success: #00b42a;
   --warning: #ff7d00;
   --danger: #f53f3f;
   --info: #165dff;
 
-  /* Message & UI Component Colors - 消息和组件色 */
+  /* Message & UI Component Colors */
   --message-user-bg: #e9efff;
   --message-tips-bg: #f0f4ff;
   --workspace-btn-bg: #eff0f1;
 }
 
-/* Dark Mode Overrides - 深色模式覆盖 */
+/* Dark Mode Overrides */
 [data-theme='dark'] {
   /* Primary Colors - Dark Mode */
   --color-primary: #4d9fff;

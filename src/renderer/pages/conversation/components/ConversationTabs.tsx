@@ -93,10 +93,8 @@ const CreateConversationTrigger: React.FC<CreateConversationTriggerProps> = ({ d
 );
 
 /**
- * 会话 Tabs 栏组件
  * Conversation tabs bar component
  *
- * 显示所有打开的会话 tabs，支持切换、关闭和新建会话
  * Displays all open conversation tabs, supports switching, closing, and creating new conversations
  */
 const ConversationTabs: React.FC = () => {
@@ -122,7 +120,7 @@ const ConversationTabs: React.FC = () => {
   const defaultConversationName = t('conversation.welcome.newConversation');
   const isCreatingRef = useRef(false);
 
-  // 更新 Tab 溢出状态
+  // Update tab overflow state
   const updateTabOverflow = useCallback(() => {
     const container = tabsContainerRef.current;
     if (!container) return;
@@ -141,12 +139,12 @@ const ConversationTabs: React.FC = () => {
     });
   }, []);
 
-  // 当 tabs 变化时更新溢出状态
+  // Update overflow state when tabs change
   useEffect(() => {
     updateTabOverflow();
   }, [updateTabOverflow, openTabs.length]);
 
-  // 监听滚动和窗口大小变化
+  // Listen to scroll and window resize events
   useEffect(() => {
     const container = tabsContainerRef.current;
     if (!container) return;
@@ -170,7 +168,7 @@ const ConversationTabs: React.FC = () => {
     };
   }, [updateTabOverflow]);
 
-  // 切换 tab 并导航
+  // Switch tab and navigate
   const handleSwitchTab = useCallback(
     (tabId: string) => {
       cleanupSiderTooltips();
@@ -180,13 +178,13 @@ const ConversationTabs: React.FC = () => {
     [switchTab, navigate]
   );
 
-  // 关闭 tab
+  // Close tab
   const handleCloseTab = useCallback(
     (tabId: string) => {
       cleanupSiderTooltips();
       closeTab(tabId);
-      // 如果关闭的是当前 tab，导航将由 context 自动处理（切换到最后一个）
-      // 如果没有 tab 了，导航到欢迎页
+      // If closing current tab, context auto-handles navigation (switch to last)
+      // If no tabs remain, navigate to welcome page
       if (openTabs.length === 1 && tabId === activeTabId) {
         void navigate('/guid');
       }
@@ -194,7 +192,7 @@ const ConversationTabs: React.FC = () => {
     [closeTab, openTabs.length, activeTabId, navigate]
   );
 
-  // 创建新会话 - 通过下拉菜单选择 Agent/助手后创建
+  // Create a new conversation after selecting an agent/assistant from the dropdown
   const handleCreateConversation = useCallback(
     async (key: string) => {
       if (isCreatingRef.current) return;
@@ -268,7 +266,7 @@ const ConversationTabs: React.FC = () => {
     ]
   );
 
-  // 渲染 Agent 下拉菜单
+  // Render agent dropdown menu
   const renderAgentDropdownMenu = useCallback(() => {
     return (
       <Menu onClickMenuItem={(key) => void handleCreateConversation(key)}>
@@ -322,7 +320,7 @@ const ConversationTabs: React.FC = () => {
     );
   }, [cliAgents, presetAssistants, handleCreateConversation, t]);
 
-  // 生成右键菜单内容
+  // Generate context menu content
   const getContextMenu = useCallback(
     (tabId: string) => {
       const tabIndex = openTabs.findIndex((tab) => tab.id === tabId);
@@ -368,11 +366,9 @@ const ConversationTabs: React.FC = () => {
   );
 
   const { left: showLeftFade, right: showRightFade } = tabFadeState;
-  // 检查当前激活的 tab 是否在 openTabs 中
   // Check if current active tab is in openTabs
   const isActiveTabInList = openTabs.some((tab) => tab.id === activeTabId);
 
-  // 如果没有打开的 tabs，或者当前激活的会话不在 tabs 中（说明切换到了非工作空间会话），不显示此组件
   // If no open tabs, or active conversation is not in tabs (switched to non-workspace chat), hide component
   if (openTabs.length === 0 || !isActiveTabInList) {
     return null;
@@ -383,7 +379,7 @@ const ConversationTabs: React.FC = () => {
   return (
     <div className='relative shrink-0 bg-2 min-h-40px'>
       <div className='relative flex items-center h-40px w-full border-t border-x border-solid border-[color:var(--border-base)]'>
-        {/* Tabs 滚动区域 */}
+        {/* Tabs scroll area */}
         <div
           ref={tabsContainerRef}
           className='flex items-center h-full flex-1 overflow-x-auto overflow-y-hidden [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden'
@@ -402,19 +398,19 @@ const ConversationTabs: React.FC = () => {
           ))}
         </div>
 
-        {/* 新建会话按钮 - 点击显示 Agent 下拉选择 */}
+        {/* New conversation button - click to show agent dropdown */}
         <CreateConversationTrigger
           disabled={isDropdownDisabled}
           title={t('conversation.workspace.createNewConversation')}
           menu={renderAgentDropdownMenu()}
         />
 
-        {/* 左侧渐变指示器 */}
+        {/* Left gradient indicator */}
         {showLeftFade && (
           <div className='pointer-events-none absolute left-0 top-0 bottom-0 w-32px [background:linear-gradient(90deg,var(--bg-2)_0%,transparent_100%)]' />
         )}
 
-        {/* 右侧渐变指示器 */}
+        {/* Right gradient indicator */}
         {showRightFade && (
           <div className='pointer-events-none absolute right-40px top-0 bottom-0 w-32px [background:linear-gradient(270deg,var(--bg-2)_0%,transparent_100%)]' />
         )}

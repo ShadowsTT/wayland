@@ -46,10 +46,10 @@ const GuidModelSelector: React.FC<GuidModelSelectorProps> = ({
   const navigate = useNavigate();
   const defaultModelLabel = t('common.defaultModel');
 
-  // 获取模型配置数据（包含健康状态）
+  // Fetch model config data (includes health status)
   const { data: modelConfig } = useSWR<IProvider[]>('model.config', () => ipcBridge.mode.getModelConfig.invoke());
 
-  // 过滤掉被禁用的 provider
+  // Filter out disabled providers
   const enabledModelList = React.useMemo(() => {
     return modelList.filter((p) => p.enabled !== false);
   }, [modelList]);
@@ -137,7 +137,7 @@ const GuidModelSelector: React.FC<GuidModelSelectorProps> = ({
                           const isGoogleProvider = provider.platform?.toLowerCase().includes('gemini-with-google-auth');
                           const option = isGoogleProvider ? geminiModeLookup.get(modelName) : undefined;
 
-                          // 获取模型健康状态
+                          // Get model health status
                           const matchedProvider = modelConfig?.find((p) => p.id === provider.id);
                           const healthStatus = matchedProvider?.modelHealth?.[modelName]?.status || 'unknown';
                           const healthColor =
@@ -266,7 +266,7 @@ const GuidModelSelector: React.FC<GuidModelSelectorProps> = ({
           droplist={
             <Menu selectedKeys={selectedAcpModel ? [selectedAcpModel] : []}>
               {currentAcpCachedModelInfo.availableModels.map((model) => {
-                // 获取模型健康状态
+                // Get model health status
                 const backend = currentAcpCachedModelInfo.source;
                 const providerConfig = modelConfig?.find((p) => p.platform?.includes(backend || ''));
                 const healthStatus = providerConfig?.modelHealth?.[model.id]?.status || 'unknown';

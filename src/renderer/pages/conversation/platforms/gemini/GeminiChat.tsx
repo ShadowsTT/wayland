@@ -16,7 +16,6 @@ import ConversationChatConfirm from '../../components/ConversationChatConfirm';
 import GeminiSendBox from './GeminiSendBox';
 import type { GeminiModelSelection } from './useGeminiModelSelection';
 
-// GeminiChat 接收共享的模型选择状态，避免组件内重复管理
 // GeminiChat consumes shared model selection state to avoid duplicate logic
 const GeminiChat: React.FC<{
   conversation_id: string;

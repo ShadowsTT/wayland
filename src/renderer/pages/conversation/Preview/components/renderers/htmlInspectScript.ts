@@ -13,12 +13,11 @@ const DEFAULT_MESSAGES: InspectMessages = {
 };
 
 /**
- * 生成 HTML 审核元素的注入脚本
  * Generate HTML inspect mode injection script
  *
- * @param inspectMode - 是否启用审核模式
- * @param messages - 自定义提示消息
- * @returns 注入脚本字符串
+ * @param inspectMode - Whether to enable inspect mode
+ * @param messages - Custom prompt messages
+ * @returns Injection script string
  */
 export function generateInspectScript(inspectMode: boolean, messages: InspectMessages = DEFAULT_MESSAGES): string {
   const copySuccess = JSON.stringify(messages.copySuccess);

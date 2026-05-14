@@ -19,7 +19,6 @@ export type PluginMessageHandler = (message: IUnifiedIncomingMessage) => Promise
 
 /**
  * Tool confirmation handler type
- * 工具确认处理器类型
  * @param userId - Platform user ID
  * @param platform - Platform type (telegram, etc.)
  * @param callId - Tool call ID
@@ -65,7 +64,6 @@ export abstract class BasePlugin {
 
   /**
    * Tool confirmation handler callback (set by PluginManager)
-   * 工具确认处理器回调
    */
   protected confirmHandler: PluginConfirmHandler | null = null;
 
@@ -173,7 +171,6 @@ export abstract class BasePlugin {
   /**
    * Register tool confirmation handler
    * Called by PluginManager to set the callback for tool confirmations
-   * 注册工具确认处理器
    */
   onConfirm(handler: PluginConfirmHandler): void {
     this.confirmHandler = handler;

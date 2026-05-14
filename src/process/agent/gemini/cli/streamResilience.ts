@@ -6,66 +6,57 @@
 
 /**
  * Stream Resilience Module - OAuth Stream Resilience Handling
- * Stream Resilience Module - OAuth 流式连接弹性处理
  *
  * Solves the issue of Gemini stream disconnection in OAuth mode.
- * 解决 OAuth 模式下 Gemini 断流问题
  *
  * Key Features:
- * 主要功能：
- * 1. SSE Reconnection Mechanism / SSE 重连机制
- * 2. Heartbeat Detection / 心跳检测
- * 3. Timeout Handling / 超时处理
- * 4. Connection State Monitoring / 连接状态监控
+ * 1. SSE Reconnection Mechanism
+ * 2. Heartbeat Detection
+ * 3. Timeout Handling
+ * 4. Connection State Monitoring
  */
 
 import type { ServerGeminiStreamEvent } from '@office-ai/aioncli-core';
 
-// Stream Connection Configuration / 流式连接配置
+// Stream Connection Configuration
 export interface StreamResilienceConfig {
   /**
    * Maximum retries
-   * 最大重试次数
    */
   maxRetries: number;
   /**
    * Initial retry delay (ms)
-   * 初始重试延迟 (ms)
    */
   initialRetryDelayMs: number;
   /**
    * Maximum retry delay (ms)
-   * 最大重试延迟 (ms)
    */
   maxRetryDelayMs: number;
   /**
    * Heartbeat timeout (ms) - Connection considered disconnected if no data within this time
-   * 心跳超时时间 (ms) - 超过此时间无数据则认为连接断开
    */
   heartbeatTimeoutMs: number;
   /**
    * Single request timeout (ms)
-   * 单次请求超时 (ms)
    */
   requestTimeoutMs: number;
   /**
    * Enable auto-reconnect
-   * 是否启用自动重连
    */
   enableAutoReconnect: boolean;
 }
 
-// Default Configuration / 默认配置
+// Default Configuration
 export const DEFAULT_STREAM_RESILIENCE_CONFIG: StreamResilienceConfig = {
   maxRetries: 3,
   initialRetryDelayMs: 1000,
   maxRetryDelayMs: 10000,
-  heartbeatTimeoutMs: 90000, // 90 seconds without data considered disconnected / 90秒无数据则认为断开
-  requestTimeoutMs: 120000, // 2 minutes request timeout / 2分钟请求超时
+  heartbeatTimeoutMs: 90000, // 90 seconds without data considered disconnected
+  requestTimeoutMs: 120000, // 2 minutes request timeout
   enableAutoReconnect: true,
 };
 
-// Stream State / 流状态
+// Stream State
 export enum StreamConnectionState {
   CONNECTING = 'connecting',
   CONNECTED = 'connected',
@@ -74,7 +65,7 @@ export enum StreamConnectionState {
   FAILED = 'failed',
 }
 
-// Connection Event Types / 连接事件类型
+// Connection Event Types
 export type StreamConnectionEvent =
   | { type: 'state_change'; state: StreamConnectionState; reason?: string }
   | { type: 'heartbeat_timeout'; lastEventTime: number }
@@ -82,7 +73,7 @@ export type StreamConnectionEvent =
   | { type: 'reconnect_success'; attempt: number }
   | { type: 'reconnect_failed'; error: Error };
 
-// Stream Monitor / 流监控器
+// Stream Monitor
 export class StreamMonitor {
   private lastEventTime: number = Date.now();
   private heartbeatTimer: NodeJS.Timeout | null = null;
@@ -100,7 +91,6 @@ export class StreamMonitor {
 
   /**
    * Start monitoring stream connection
-   * 开始监控流连接
    */
   start(): void {
     this.setState(StreamConnectionState.CONNECTING);
@@ -110,7 +100,6 @@ export class StreamMonitor {
 
   /**
    * Record received event and update heartbeat time
-   * 记录收到事件，更新心跳时间
    */
   recordEvent(): void {
     this.lastEventTime = Date.now();
@@ -121,7 +110,6 @@ export class StreamMonitor {
 
   /**
    * Stop monitoring
-   * 停止监控
    */
   stop(): void {
     this.stopHeartbeatCheck();
@@ -130,7 +118,6 @@ export class StreamMonitor {
 
   /**
    * Mark connection as failed
-   * 标记连接失败
    */
   markFailed(reason?: string): void {
     this.stopHeartbeatCheck();
@@ -139,7 +126,6 @@ export class StreamMonitor {
 
   /**
    * Mark as reconnecting
-   * 标记正在重连
    */
   markReconnecting(): void {
     this.setState(StreamConnectionState.RECONNECTING);
@@ -147,7 +133,6 @@ export class StreamMonitor {
 
   /**
    * Get current state
-   * 获取当前状态
    */
   getState(): StreamConnectionState {
     return this.state;
@@ -155,7 +140,6 @@ export class StreamMonitor {
 
   /**
    * Get last event time
-   * 获取上次事件时间
    */
   getLastEventTime(): number {
     return this.lastEventTime;
@@ -163,7 +147,6 @@ export class StreamMonitor {
 
   /**
    * Check if heartbeat timed out
-   * 检查是否心跳超时
    */
   isHeartbeatTimeout(): boolean {
     return Date.now() - this.lastEventTime > this.config.heartbeatTimeoutMs;
@@ -184,9 +167,9 @@ export class StreamMonitor {
           type: 'heartbeat_timeout',
           lastEventTime: this.lastEventTime,
         });
-        // Do not stop automatically, let upper layer decide how to handle / 不自动停止，让上层决定如何处理
+        // Do not stop automatically, let upper layer decide how to handle
       }
-    }, 5000); // Check every 5 seconds / 每5秒检查一次
+    }, 5000); // Check every 5 seconds
   }
 
   private stopHeartbeatCheck(): void {
@@ -200,8 +183,6 @@ export class StreamMonitor {
 /**
  * Stream Wrapper with Resilience
  * Wraps original stream, adding heartbeat detection and timeout handling
- * 带弹性处理的流包装器
- * 包装原始流，添加心跳检测和超时处理
  */
 export async function* wrapStreamWithResilience<T extends ServerGeminiStreamEvent>(
   stream: AsyncIterable<T>,
@@ -228,7 +209,6 @@ export async function* wrapStreamWithResilience<T extends ServerGeminiStreamEven
 
 /**
  * Delay function
- * 延迟函数
  */
 export function delay(ms: number, signal?: AbortSignal): Promise<void> {
   return new Promise((resolve, reject) => {
@@ -248,7 +228,6 @@ export function delay(ms: number, signal?: AbortSignal): Promise<void> {
 
 /**
  * Calculate Exponential Backoff Delay
- * 计算指数退避延迟
  */
 export function calculateBackoffDelay(attempt: number, config: StreamResilienceConfig): number {
   const baseDelay = config.initialRetryDelayMs * Math.pow(2, attempt);
@@ -258,12 +237,11 @@ export function calculateBackoffDelay(attempt: number, config: StreamResilienceC
 
 /**
  * Check if error is retryable
- * 检查错误是否可重试
  */
 export function isRetryableError(error: unknown): boolean {
   if (error instanceof Error) {
     const message = error.message.toLowerCase();
-    // Network related errors / 网络相关错误
+    // Network related errors
     if (
       message.includes('fetch failed') ||
       message.includes('network') ||
@@ -274,7 +252,7 @@ export function isRetryableError(error: unknown): boolean {
     ) {
       return true;
     }
-    // HTTP Status Code related / HTTP 状态码相关
+    // HTTP Status Code related
     if (message.includes('429') || message.includes('503') || message.includes('502') || message.includes('504')) {
       return true;
     }
@@ -285,8 +263,6 @@ export function isRetryableError(error: unknown): boolean {
 /**
  * Tool Call Guard
  * Prevents tool calls from being cancelled during execution
- * 工具调用保护器
- * 防止工具调用在执行过程中被取消
  */
 export class ToolCallGuard {
   private protectedCallIds: Set<string> = new Set();
@@ -294,7 +270,6 @@ export class ToolCallGuard {
 
   /**
    * Protect a tool call from being cancelled
-   * 保护一个工具调用，防止被取消
    */
   protect(callId: string): void {
     this.protectedCallIds.add(callId);
@@ -302,7 +277,6 @@ export class ToolCallGuard {
 
   /**
    * Check if a tool call is protected
-   * 检查工具调用是否受保护
    */
   isProtected(callId: string): boolean {
     return this.protectedCallIds.has(callId);
@@ -310,7 +284,6 @@ export class ToolCallGuard {
 
   /**
    * Mark a tool call as completed
-   * 标记工具调用完成
    */
   complete(callId: string): void {
     this.protectedCallIds.delete(callId);
@@ -319,7 +292,6 @@ export class ToolCallGuard {
 
   /**
    * Check if a tool call is completed
-   * 检查工具调用是否已完成
    */
   isCompleted(callId: string): boolean {
     return this.completedCallIds.has(callId);
@@ -327,7 +299,6 @@ export class ToolCallGuard {
 
   /**
    * Remove protection
-   * 移除保护
    */
   unprotect(callId: string): void {
     this.protectedCallIds.delete(callId);
@@ -335,7 +306,6 @@ export class ToolCallGuard {
 
   /**
    * Clear all states
-   * 清理所有状态
    */
   clear(): void {
     this.protectedCallIds.clear();
@@ -344,7 +314,6 @@ export class ToolCallGuard {
 
   /**
    * Get all protected call IDs
-   * 获取所有受保护的调用ID
    */
   getProtectedCallIds(): string[] {
     return Array.from(this.protectedCallIds);
@@ -352,5 +321,4 @@ export class ToolCallGuard {
 }
 
 // Global Tool Call Guard Instance
-// 全局工具调用保护器实例
 export const globalToolCallGuard = new ToolCallGuard();

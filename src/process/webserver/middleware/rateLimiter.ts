@@ -4,18 +4,17 @@
  * SPDX-License-Identifier: Apache-2.0
  *
  * Simple in-memory rate limiter middleware without external dependencies
- * 简单的内存速率限制中间件，无需外部依赖
  */
 
 import type { Request, Response, NextFunction } from 'express';
 
 interface RateLimitConfig {
-  windowMs: number; // Time window in milliseconds / 时间窗口（毫秒）
-  max: number; // Max requests per window / 每个窗口最大请求数
-  message?: string; // Custom error message / 自定义错误消息
-  keyGenerator?: (req: Request) => string; // Custom key generator / 自定义key生成器
-  skipSuccessfulRequests?: boolean; // Skip counting successful requests / 跳过成功请求计数
-  skip?: (req: Request) => boolean; // Function to skip certain requests / 跳过特定请求的函数
+  windowMs: number; // Time window in milliseconds
+  max: number; // Max requests per window
+  message?: string; // Custom error message
+  keyGenerator?: (req: Request) => string; // Custom key generator
+  skipSuccessfulRequests?: boolean; // Skip counting successful requests
+  skip?: (req: Request) => boolean; // Function to skip certain requests
 }
 
 interface RateLimitEntry {
@@ -29,14 +28,13 @@ type RateLimitMiddleware = ((req: Request, res: Response, next: NextFunction) =>
 
 /**
  * In-memory store for rate limit tracking
- * 内存存储用于速率限制跟踪
  */
 class RateLimitStore {
   private store = new Map<string, RateLimitEntry>();
   private cleanupInterval: NodeJS.Timeout;
 
   constructor() {
-    // Clean up expired entries every 60 seconds / 每60秒清理过期条目
+    // Clean up expired entries every 60 seconds
     this.cleanupInterval = setInterval(() => this.cleanup(), 60000);
   }
 
@@ -69,7 +67,6 @@ class RateLimitStore {
 
 /**
  * Create a rate limiter middleware
- * 创建速率限制中间件
  */
 export function createRateLimiter(config: RateLimitConfig): RateLimitMiddleware {
   const {
@@ -84,7 +81,7 @@ export function createRateLimiter(config: RateLimitConfig): RateLimitMiddleware 
   const store = new RateLimitStore();
 
   const middleware: RateLimitMiddleware = (req: Request, res: Response, next: NextFunction): void => {
-    // Skip if configured to skip / 如果配置跳过则跳过
+    // Skip if configured to skip
     if (skip(req)) {
       return next();
     }
@@ -94,7 +91,7 @@ export function createRateLimiter(config: RateLimitConfig): RateLimitMiddleware 
 
     let entry = store.get(key);
 
-    // Initialize or reset if window expired / 初始化或重置如果窗口已过期
+    // Initialize or reset if window expired
     if (!entry || now > entry.resetTime) {
       entry = {
         count: 0,
@@ -102,16 +99,16 @@ export function createRateLimiter(config: RateLimitConfig): RateLimitMiddleware 
       };
     }
 
-    // Increment request count / 增加请求计数
+    // Increment request count
     entry.count++;
     store.set(key, entry);
 
-    // Set rate limit headers / 设置速率限制头
+    // Set rate limit headers
     res.setHeader('X-RateLimit-Limit', max.toString());
     res.setHeader('X-RateLimit-Remaining', Math.max(0, max - entry.count).toString());
     res.setHeader('X-RateLimit-Reset', new Date(entry.resetTime).toISOString());
 
-    // Check if limit exceeded / 检查是否超过限制
+    // Check if limit exceeded
     if (entry.count > max) {
       res.setHeader('Retry-After', Math.ceil((entry.resetTime - now) / 1000).toString());
       res.status(429).json({
@@ -122,7 +119,6 @@ export function createRateLimiter(config: RateLimitConfig): RateLimitMiddleware 
     }
 
     // If skipSuccessfulRequests is true, decrement on successful response
-    // 如果skipSuccessfulRequests为true，在成功响应时递减
     if (skipSuccessfulRequests) {
       res.on('finish', () => {
         if (res.statusCode < 400) {
@@ -138,7 +134,7 @@ export function createRateLimiter(config: RateLimitConfig): RateLimitMiddleware 
     next();
   };
 
-  // Add cleanup method / 添加清理方法
+  // Add cleanup method
   middleware.destroy = () => store.destroy();
 
   return middleware;
@@ -146,42 +142,41 @@ export function createRateLimiter(config: RateLimitConfig): RateLimitMiddleware 
 
 /**
  * Predefined rate limiters for common use cases
- * 常见用例的预定义速率限制器
  */
 
-// Authentication endpoints - strict limit / 认证端点 - 严格限制
+// Authentication endpoints - strict limit
 export const authRateLimiter = createRateLimiter({
-  windowMs: 15 * 60 * 1000, // 15 minutes / 15分钟
-  max: 5, // 5 attempts per window / 每个窗口5次尝试
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // 5 attempts per window
   message: 'Too many authentication attempts, please try again later',
-  skipSuccessfulRequests: true, // Don't count successful logins / 不计算成功登录
+  skipSuccessfulRequests: true, // Don't count successful logins
 });
 
-// API endpoints - moderate limit / API端点 - 中等限制
+// API endpoints - moderate limit
 export const apiRateLimiter = createRateLimiter({
-  windowMs: 60 * 1000, // 1 minute / 1分钟
-  max: 60, // 60 requests per minute / 每分钟60次请求
+  windowMs: 60 * 1000, // 1 minute
+  max: 60, // 60 requests per minute
   message: 'Too many API requests, please slow down',
 });
 
-// File operations - moderate limit / 文件操作 - 中等限制
+// File operations - moderate limit
 export const fileOperationLimiter = createRateLimiter({
-  windowMs: 60 * 1000, // 1 minute / 1分钟
-  max: 30, // 30 operations per minute / 每分钟30次操作
+  windowMs: 60 * 1000, // 1 minute
+  max: 30, // 30 operations per minute
   message: 'Too many file operations, please slow down',
 });
 
-// WebSocket/Streaming - lenient limit / WebSocket/流式传输 - 宽松限制
+// WebSocket/Streaming - lenient limit
 export const streamingLimiter = createRateLimiter({
-  windowMs: 60 * 1000, // 1 minute / 1分钟
-  max: 120, // 120 requests per minute / 每分钟120次请求
+  windowMs: 60 * 1000, // 1 minute
+  max: 120, // 120 requests per minute
   message: 'Too many streaming requests, please slow down',
 });
 
-// Authenticated user actions - protect sensitive endpoints / 已认证用户操作 - 保护敏感端点
+// Authenticated user actions - protect sensitive endpoints
 export const authenticatedActionLimiter = createRateLimiter({
-  windowMs: 60 * 1000, // 1 minute / 1分钟
-  max: 20, // 20 actions per minute / 每分钟20次操作
+  windowMs: 60 * 1000, // 1 minute
+  max: 20, // 20 actions per minute
   message: 'Too many sensitive actions, please try again later',
   keyGenerator: (req) => {
     if (req.user?.id) {

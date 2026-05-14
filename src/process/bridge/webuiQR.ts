@@ -12,16 +12,14 @@ import { AuthService } from '@process/webserver/auth/service/AuthService';
 import { UserRepository } from '@process/webserver/auth/repository/UserRepository';
 import { WebuiService } from './services/WebuiService';
 
-// QR Token 存储 (内存中，有效期短) / QR Token store (in-memory, short-lived)
-// 增加 allowLocalOnly 标志，限制本地模式下只能从本地网络使用
+// QR Token store (in-memory, short-lived).
 // Added allowLocalOnly flag to restrict local mode to local network only
 const qrTokenStore = new Map<string, { expiresAt: number; used: boolean; allowLocalOnly: boolean }>();
 
-// QR Token 有效期 5 分钟 / QR Token validity: 5 minutes
+// QR Token validity: 5 minutes
 const QR_TOKEN_EXPIRY = 5 * 60 * 1000;
 
 /**
- * 清理过期的 QR Token
  * Clean up expired QR tokens
  */
 function cleanupExpiredTokens(): void {
@@ -34,12 +32,11 @@ function cleanupExpiredTokens(): void {
 }
 
 /**
- * 检查 IP 是否为本地/局域网地址
  * Check if IP is localhost or local network address
  */
 function isLocalIP(ip: string): boolean {
   if (!ip) return false;
-  // 处理 IPv6 格式的 localhost / Handle IPv6 localhost format
+  // Handle IPv6 localhost format
   const cleanIP = ip.replace(/^::ffff:/, '');
 
   // localhost
@@ -47,7 +44,7 @@ function isLocalIP(ip: string): boolean {
     return true;
   }
 
-  // 私有网络地址 / Private network addresses
+  // Private network addresses
   // 10.0.0.0/8
   if (cleanIP.startsWith('10.')) return true;
   // 172.16.0.0/12
@@ -61,22 +58,21 @@ function isLocalIP(ip: string): boolean {
 }
 
 /**
- * 直接生成二维码登录 URL（供服务端启动时调用）
  * Generate QR login URL directly (for server-side use on startup)
  */
 export function generateQRLoginUrlDirect(port: number, allowRemote: boolean): { qrUrl: string; expiresAt: number } {
-  // 清理过期 token / Clean up expired tokens
+  // Clean up expired tokens
   cleanupExpiredTokens();
 
-  // 生成随机 token / Generate random token
+  // Generate random token
   const token = crypto.randomBytes(32).toString('hex');
   const expiresAt = Date.now() + QR_TOKEN_EXPIRY;
 
-  // 存储 token / Store token
+  // Store token
   const allowLocalOnly = !allowRemote;
   qrTokenStore.set(token, { expiresAt, used: false, allowLocalOnly });
 
-  // 构建 QR URL / Build QR URL
+  // Build QR URL
   const lanIP = WebuiService.getLanIP();
   const baseUrl = allowRemote && lanIP ? `http://${lanIP}:${port}` : `http://localhost:${port}`;
   const qrUrl = `${baseUrl}/qr-login?token=${token}`;
@@ -85,11 +81,10 @@ export function generateQRLoginUrlDirect(port: number, allowRemote: boolean): { 
 }
 
 /**
- * 直接验证 QR Token（供 authRoutes 使用，无需 IPC）
  * Verify QR token directly (for authRoutes, no IPC needed)
  *
  * @param qrToken - QR token string
- * @param clientIP - 客户端 IP 地址（用于本地网络限制）/ Client IP address (for local network restriction)
+ * @param clientIP - Client IP address (for local network restriction)
  */
 export async function verifyQRTokenDirect(
   qrToken: string,
@@ -100,7 +95,7 @@ export async function verifyQRTokenDirect(
   msg?: string;
 }> {
   try {
-    // 检查 token 是否存在 / Check if token exists
+    // Check if token exists
     const tokenData = qrTokenStore.get(qrToken);
     if (!tokenData) {
       return {
@@ -109,7 +104,7 @@ export async function verifyQRTokenDirect(
       };
     }
 
-    // 检查是否过期 / Check if expired
+    // Check if expired
     if (Date.now() > tokenData.expiresAt) {
       qrTokenStore.delete(qrToken);
       return {
@@ -118,7 +113,7 @@ export async function verifyQRTokenDirect(
       };
     }
 
-    // 检查是否已使用 / Check if already used
+    // Check if already used
     if (tokenData.used) {
       qrTokenStore.delete(qrToken);
       return {
@@ -127,7 +122,7 @@ export async function verifyQRTokenDirect(
       };
     }
 
-    // P0 安全修复：检查本地网络限制 / P0 Security fix: Check local network restriction
+    // P0 Security fix: Check local network restriction
     if (tokenData.allowLocalOnly && clientIP && !isLocalIP(clientIP)) {
       console.warn(`[WebUI QR] QR token rejected: non-local IP ${clientIP} attempted to use local-only token`);
       return {
@@ -136,10 +131,10 @@ export async function verifyQRTokenDirect(
       };
     }
 
-    // 标记为已使用 / Mark as used
+    // Mark as used
     tokenData.used = true;
 
-    // 获取管理员用户 / Get admin user
+    // Get admin user
     const adminUser = await UserRepository.getPrimaryWebUIUser();
     if (!adminUser) {
       return {
@@ -148,13 +143,13 @@ export async function verifyQRTokenDirect(
       };
     }
 
-    // 生成会话 token / Generate session token
+    // Generate session token
     const sessionToken = await AuthService.generateToken(adminUser);
 
-    // 更新最后登录时间 / Update last login time
+    // Update last login time
     await UserRepository.updateLastLogin(adminUser.id);
 
-    // 删除已使用的 QR token / Delete used QR token
+    // Delete used QR token
     qrTokenStore.delete(qrToken);
 
     return {

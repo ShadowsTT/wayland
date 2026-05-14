@@ -59,7 +59,7 @@ test.describe('F-CONFIG-03 调整 AI 参数选项', () => {
     await takeScreenshot(page, 'config-03-options-list');
   });
 
-  // arch 放宽规则：AcpConfigSelector UI 控件选择器不稳定，用 bridge 触发 + bridge assert
+  // arch relaxation: AcpConfigSelector UI selectors are flaky; use bridge to trigger + bridge to assert
   test('参数修改后立即生效（通过 bridge 验证）', async ({ page }) => {
     const result = await invokeBridge<ConfigOptionsResponse>(page, 'acp.get-config-options', { conversationId });
 

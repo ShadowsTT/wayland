@@ -1,11 +1,11 @@
 /* ========================================
-   Hello Kitty 主题 - 优化版
-   粉色系可爱风格，支持明暗双模式
+   Hello Kitty Theme - Optimized version
+   Cute pink style, supports light and dark modes
    ======================================== */
 
-/* ==================== 明亮模式 (Light Mode) ==================== */
+/* ==================== Light Mode ==================== */
 :root {
-  /* ===== 主色调 - Primary ===== */
+  /* ===== Primary ===== */
   --hk-primary: #ff85a2;
   --hk-primary-light: #ffb7c5;
   --hk-primary-lighter: #ffe4e8;
@@ -14,7 +14,7 @@
   --hk-primary-darker: #c95a75;
   --hk-primary-rgb: 255, 133, 162;
 
-  /* ===== 品牌色板渐变 ===== */
+  /* ===== Brand color palette gradient ===== */
   --hk-shade-1: #fff0f3;
   --hk-shade-2: #ffe4e8;
   --hk-shade-3: #ffcad4;
@@ -26,7 +26,7 @@
   --hk-shade-9: #a84a62;
   --hk-shade-10: #8c3d4f;
 
-  /* ===== 背景色 ===== */
+  /* ===== Background ===== */
   --hk-bg-base: #ffffff;
   --hk-bg-1: #fff0f3;
   --hk-bg-2: #ffffff;
@@ -35,36 +35,36 @@
   --hk-bg-hover: #ffe4e8;
   --hk-bg-active: #ffcad4;
 
-  /* ===== 文字色 ===== */
+  /* ===== Text ===== */
   --hk-text-primary: #5a3e45;
   --hk-text-secondary: #8c6b74;
   --hk-text-tertiary: #bfa5ac;
   --hk-text-disabled: #d4c0c6;
   --hk-text-inverse: #ffffff;
 
-  /* ===== 边框色 ===== */
+  /* ===== Border ===== */
   --hk-border-base: #ffcad4;
   --hk-border-light: #ffe4e8;
   --hk-border-strong: #ffb7c5;
 
-  /* ===== 语义色 ===== */
+  /* ===== Semantic ===== */
   --hk-success: #52c41a;
   --hk-warning: #faad14;
   --hk-error: #f5222d;
   --hk-info: #ff85a2;
 
-  /* ===== 阴影 ===== */
+  /* ===== Shadow ===== */
   --hk-shadow-sm: 0 2px 8px rgba(255, 133, 162, 0.15);
   --hk-shadow-md: 0 4px 16px rgba(255, 133, 162, 0.2);
   --hk-shadow-lg: 0 8px 24px rgba(255, 133, 162, 0.25);
   --hk-shadow-glow: 0 0 20px rgba(255, 133, 162, 0.3);
 
-  /* ===== 渐变 ===== */
+  /* ===== Gradient ===== */
   --hk-gradient-primary: linear-gradient(135deg, #ff85a2 0%, #ff9db6 100%);
   --hk-gradient-light: linear-gradient(135deg, #fff0f3 0%, #ffe4e8 100%);
   --hk-gradient-button: linear-gradient(135deg, #ff85a2 0%, #ffb7c5 100%);
 
-  /* ===== 映射到系统变量 ===== */
+  /* ===== Map to system variables ===== */
   --color-primary: var(--hk-primary);
   --primary: var(--hk-primary);
   --brand: var(--hk-primary);
@@ -84,14 +84,14 @@
   --info: var(--hk-info);
 }
 
-/* ===== 字体设置 ===== */
+/* ===== Font settings ===== */
 body {
   font-family: 'Varela Round', 'Nunito', 'PingFang SC', 'Microsoft YaHei', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* ===== 全局背景 ===== */
+/* ===== Global background ===== */
 body,
 html {
   background-color: var(--hk-bg-1);
@@ -107,13 +107,13 @@ html {
   background-color: var(--hk-bg-1);
 }
 
-/* ===== 背景图设置 ===== */
+/* ===== Background image settings ===== */
 .layout-content.bg-1 {
   position: relative;
   background-color: var(--hk-bg-1);
 }
 
-/* 半透明遮罩层 */
+/* Semi-transparent overlay */
 .layout-content.bg-1::before {
   content: '';
   position: absolute;
@@ -136,7 +136,7 @@ html {
   z-index: 1;
 }
 
-/* 聊天页面背景 */
+/* Chat page background */
 [class*='chat-layout'] .arco-layout-content,
 [class*='conversation'] .arco-layout-content {
   position: relative;
@@ -159,7 +159,7 @@ html {
   z-index: 1;
 }
 
-/* ==================== 侧边栏 Sidebar ==================== */
+/* ==================== Sidebar ==================== */
 .layout-sider {
   background-color: var(--hk-bg-1);
   border-right: 2px solid var(--hk-border-strong);
@@ -172,7 +172,7 @@ html {
   border-bottom: 1px solid rgba(255, 255, 255, 0.2);
 }
 
-/* 侧边栏图标 */
+/* Sidebar icons */
 .layout-sider-header svg {
   color: rgba(255, 255, 255, 0.9);
   transition:
@@ -185,8 +185,8 @@ html {
   transform: scale(1.1);
 }
 
-/* ==================== 输入框 Input ==================== */
-/* 首页输入框 */
+/* ==================== Input ==================== */
+/* Home page input */
 .guidInputCard {
   background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(12px);
@@ -207,7 +207,7 @@ html {
   border: none;
 }
 
-/* 发送框 */
+/* Send box */
 .sendbox-container {
   background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(12px);
@@ -229,8 +229,8 @@ html {
   color: var(--hk-text-primary);
 }
 
-/* ==================== 消息气泡 Message ==================== */
-/* 用户消息 */
+/* ==================== Message ==================== */
+/* User messages */
 .message-item.user .message-bubble,
 [class*='message-user'] .message-content {
   background: var(--hk-gradient-primary);
@@ -241,7 +241,7 @@ html {
   border: none;
 }
 
-/* AI 消息 */
+/* AI messages */
 .message-item.ai .message-bubble,
 .message-item.assistant .message-bubble,
 [class*='message-ai'] .message-content,
@@ -255,7 +255,7 @@ html {
   color: var(--hk-text-primary);
 }
 
-/* 工具调用提示 - 保持简洁 */
+/* Tool call hint - keep it simple */
 .message-item.ai .arco-alert,
 .message-item.assistant .arco-alert {
   background-color: rgba(255, 255, 255, 0.7);
@@ -272,7 +272,7 @@ html {
   margin: 8px 0;
 }
 
-/* ==================== 按钮 Button ==================== */
+/* ==================== Button ==================== */
 .arco-btn-primary,
 button[type='primary'] {
   background: var(--hk-gradient-button);
@@ -315,7 +315,7 @@ button[type='secondary']:hover {
   transform: translateY(-1px);
 }
 
-/* 按钮禁用状态 */
+/* Button disabled state */
 .arco-btn:disabled,
 button:disabled {
   background: var(--hk-bg-3);
@@ -325,8 +325,8 @@ button:disabled {
   opacity: 0.6;
 }
 
-/* ==================== 图标 Icon ==================== */
-/* 基础图标颜色 - 仅针对需要的图标 */
+/* ==================== Icon ==================== */
+/* Base icon color - only for icons that need it */
 .arco-icon {
   color: var(--hk-primary);
   transition:
@@ -339,13 +339,13 @@ button:disabled {
   transform: scale(1.1);
 }
 
-/* 按钮内图标 */
+/* Icons inside buttons */
 .arco-btn-primary .arco-icon,
 button[type='primary'] .arco-icon {
   color: var(--hk-text-inverse);
 }
 
-/* ==================== 滚动条 Scrollbar ==================== */
+/* ==================== Scrollbar ==================== */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
@@ -370,8 +370,8 @@ button[type='primary'] .arco-icon {
   background: var(--hk-gradient-primary);
 }
 
-/* ==================== 其他元素 ==================== */
-/* 链接 */
+/* ==================== Other elements ==================== */
+/* Links */
 a {
   color: var(--hk-primary);
   text-decoration: none;
@@ -383,7 +383,7 @@ a:hover {
   text-decoration: underline;
 }
 
-/* 选中文本 */
+/* Selected text */
 ::selection {
   background-color: var(--hk-primary);
   color: var(--hk-text-inverse);
@@ -405,7 +405,7 @@ a:hover {
   border-color: var(--hk-primary-dark);
 }
 
-/* Modal 对话框 */
+/* Modal dialog */
 .arco-modal-header {
   background: var(--hk-gradient-light);
   border-bottom: 1px solid var(--hk-border-light);
@@ -423,9 +423,9 @@ a:hover {
   border-top: 1px solid var(--hk-border-light);
 }
 
-/* ==================== 深色模式 (Dark Mode) ==================== */
+/* ==================== Dark Mode ==================== */
 [data-theme='dark'] {
-  /* ===== 主色调 - 调亮以提高可见度 ===== */
+  /* ===== Primary - brightened for better visibility ===== */
   --hk-primary: #ffb7c5;
   --hk-primary-light: #ffcad4;
   --hk-primary-lighter: #ffe4e8;
@@ -434,7 +434,7 @@ a:hover {
   --hk-primary-darker: #ff85a2;
   --hk-primary-rgb: 255, 183, 197;
 
-  /* ===== 品牌色板 - 深色模式反转 ===== */
+  /* ===== Brand palette - inverted for dark mode ===== */
   --hk-shade-1: #2d1a24;
   --hk-shade-2: #3d2431;
   --hk-shade-3: #4a2f3a;
@@ -446,7 +446,7 @@ a:hover {
   --hk-shade-9: #fff0f3;
   --hk-shade-10: #fff5f7;
 
-  /* ===== 背景色 - 温暖的深粉紫色 ===== */
+  /* ===== Background - warm dark pink-purple ===== */
   --hk-bg-base: #1f1119;
   --hk-bg-1: #2d1a24;
   --hk-bg-2: #3d2431;
@@ -455,36 +455,36 @@ a:hover {
   --hk-bg-hover: #3d2431;
   --hk-bg-active: #4a2f3a;
 
-  /* ===== 文字色 - 高对比度粉白色 ===== */
+  /* ===== Text - high-contrast pink-white ===== */
   --hk-text-primary: #fff0f3;
   --hk-text-secondary: #ffcad4;
   --hk-text-tertiary: #ff9db6;
   --hk-text-disabled: #8c6b74;
   --hk-text-inverse: #ffffff;
 
-  /* ===== 边框色 ===== */
+  /* ===== Border ===== */
   --hk-border-base: #7a4d5f;
   --hk-border-light: #5d3b4a;
   --hk-border-strong: #ff9db6;
 
-  /* ===== 语义色 - 深色模式调整 ===== */
+  /* ===== Semantic - dark mode adjustments ===== */
   --hk-success: #95de64;
   --hk-warning: #ffc53d;
   --hk-error: #ff7875;
   --hk-info: #ffb7c5;
 
-  /* ===== 阴影 - 增强发光效果 ===== */
+  /* ===== Shadow - enhanced glow effect ===== */
   --hk-shadow-sm: 0 2px 12px rgba(255, 183, 197, 0.2);
   --hk-shadow-md: 0 4px 20px rgba(255, 183, 197, 0.3);
   --hk-shadow-lg: 0 8px 32px rgba(255, 183, 197, 0.4);
   --hk-shadow-glow: 0 0 24px rgba(255, 183, 197, 0.4);
 
-  /* ===== 渐变 - 深色模式保持鲜艳 ===== */
+  /* ===== Gradient - keep vivid in dark mode ===== */
   --hk-gradient-primary: linear-gradient(135deg, #ff85a2 0%, #ffb7c5 100%);
   --hk-gradient-light: linear-gradient(135deg, #4a2f3a 0%, #5d3b4a 100%);
   --hk-gradient-button: linear-gradient(135deg, #ff85a2 0%, #ffb7c5 100%);
 
-  /* ===== 重新映射系统变量 ===== */
+  /* ===== Remap system variables ===== */
   --color-primary: var(--hk-primary);
   --primary: var(--hk-primary);
   --brand: var(--hk-primary);
@@ -502,14 +502,14 @@ a:hover {
   --border-base: var(--hk-border-base);
 }
 
-/* ===== 深色模式全局样式 ===== */
+/* ===== Dark mode global styles ===== */
 [data-theme='dark'] body,
 [data-theme='dark'] html {
   background-color: var(--hk-bg-1);
   color: var(--hk-text-primary);
 }
 
-/* ===== 深色模式标题栏 ===== */
+/* ===== Dark mode title bar ===== */
 [data-theme='dark'] .app-titlebar {
   background-color: var(--hk-bg-2);
   border-color: var(--hk-border-base);
@@ -537,7 +537,7 @@ a:hover {
   background-color: var(--hk-bg-1);
 }
 
-/* ===== 深色模式背景图 ===== */
+/* ===== Dark mode background image ===== */
 [data-theme='dark'] .layout-content.bg-1::before {
   background: linear-gradient(
     135deg,
@@ -553,7 +553,7 @@ a:hover {
   filter: brightness(0.9) saturate(1.2);
 }
 
-/* ===== 深色模式侧边栏 ===== */
+/* ===== Dark mode sidebar ===== */
 [data-theme='dark'] .layout-sider {
   background: linear-gradient(180deg, #4a2f3a 0%, #3d2431 100%);
   border-right: 2px solid var(--hk-border-strong);
@@ -566,7 +566,7 @@ a:hover {
   border-bottom: 1px solid rgba(255, 255, 255, 0.3);
 }
 
-/* ===== 深色模式输入框 ===== */
+/* ===== Dark mode input ===== */
 [data-theme='dark'] .guidInputCard {
   background: linear-gradient(135deg, rgba(74, 47, 58, 0.95) 0%, rgba(93, 59, 74, 0.95) 100%);
   backdrop-filter: blur(16px);
@@ -603,7 +603,7 @@ a:hover {
   color: var(--hk-text-primary);
 }
 
-/* ===== 深色模式消息气泡 ===== */
+/* ===== Dark mode message bubbles ===== */
 [data-theme='dark'] .message-item.user .message-bubble,
 [data-theme='dark'] [class*='message-user'] .message-content {
   background: var(--hk-gradient-primary);
@@ -638,7 +638,7 @@ a:hover {
   border-color: var(--hk-border-light);
 }
 
-/* ===== 深色模式按钮 ===== */
+/* ===== Dark mode buttons ===== */
 [data-theme='dark'] .arco-btn-primary,
 [data-theme='dark'] button[type='primary'] {
   background: var(--hk-gradient-primary);
@@ -665,7 +665,7 @@ a:hover {
   box-shadow: 0 0 12px rgba(255, 183, 197, 0.3);
 }
 
-/* ===== 深色模式图标 ===== */
+/* ===== Dark mode icons ===== */
 [data-theme='dark'] .arco-icon {
   color: var(--hk-primary);
 }
@@ -675,7 +675,7 @@ a:hover {
   filter: drop-shadow(0 0 8px rgba(255, 183, 197, 0.5));
 }
 
-/* ===== 深色模式滚动条 ===== */
+/* ===== Dark mode scrollbar ===== */
 [data-theme='dark'] *:hover::-webkit-scrollbar-thumb {
   background: rgba(255, 183, 197, 0.4);
 }
@@ -685,7 +685,7 @@ a:hover {
   box-shadow: 0 0 8px rgba(255, 183, 197, 0.5);
 }
 
-/* ===== 深色模式其他元素 ===== */
+/* ===== Dark mode other elements ===== */
 [data-theme='dark'] a {
   color: var(--hk-primary);
 }
@@ -732,7 +732,7 @@ a:hover {
   border-top: 1px solid var(--hk-border-base);
 }
 
-/* ==================== 动画效果 ==================== */
+/* ==================== Animation effects ==================== */
 @keyframes hk-float {
   0%,
   100% {
@@ -753,14 +753,14 @@ a:hover {
   }
 }
 
-/* 可选：给某些元素添加悬浮动画 */
+/* Optional: add float animation to certain elements */
 .arco-btn-primary:hover {
   animation: hk-float 2s ease-in-out infinite;
 }
 
-/* ==================== 响应式调整 ==================== */
+/* ==================== Responsive adjustments ==================== */
 @media (max-width: 768px) {
-  /* 移动端优化 */
+  /* Mobile optimizations */
   .guidInputCard,
   .sendbox-container {
     border-radius: 16px;
@@ -780,9 +780,9 @@ a:hover {
   }
 }
 
-/* ==================== 打印样式 ==================== */
+/* ==================== Print styles ==================== */
 @media print {
-  /* 打印时移除背景图和阴影 */
+  /* Remove background images and shadows when printing */
   .layout-content.bg-1::before,
   [class*='chat-layout'] .arco-layout-content::before {
     display: none;

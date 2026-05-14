@@ -19,16 +19,12 @@ import { getSkillsDir, getBuiltinSkillsCopyDir, getAutoSkillsDir, getSystemDir }
 import { computeOpenClawIdentityHash } from './openclawUtils';
 
 /**
- * 为 assistant 设置原生 workspace 结构（skill symlinks）
  * Set up native workspace structure for assistant (skill symlinks only)
  *
- * 将启用的 skills symlink 到 CLI 原生 skills 目录，让各 CLI 自动发现
  * Symlink enabled skills into CLI-native skills directories for auto-discovery
  *
- * 只在 temp workspace（非用户指定）时执行，避免污染用户项目目录
  * Only runs for temp workspaces (not user-specified) to avoid polluting user project dirs
  *
- * 注意：Rules/人格设定通过 system prompt 注入，不写 context file
  * Note: Rules/personality are injected via system prompt, NOT written to context files
  */
 export async function setupAssistantWorkspace(
@@ -129,11 +125,8 @@ export async function setupAssistantWorkspace(
 }
 
 /**
- * 创建工作空间目录（不复制文件）
  * Create workspace directory (without copying files)
  *
- * 注意：文件复制统一由 sendMessage 时的 copyFilesToDirectory 处理
- * 避免文件被复制两次（一次在创建会话时，一次在发送消息时）
  * Note: File copying is handled by copyFilesToDirectory in sendMessage
  * This avoids files being copied twice
  */
@@ -143,7 +136,7 @@ const buildWorkspaceWidthFiles = async (
   _defaultFiles?: string[],
   providedCustomWorkspace?: boolean
 ) => {
-  // 使用前端提供的customWorkspace标志，如果没有则根据workspace参数判断
+  // Use the customWorkspace flag from frontend; otherwise infer from the workspace parameter
   const customWorkspace = providedCustomWorkspace !== undefined ? providedCustomWorkspace : !!workspace;
 
   if (!workspace) {
@@ -151,7 +144,7 @@ const buildWorkspaceWidthFiles = async (
     workspace = path.join(tempPath, defaultWorkspaceName);
     await fs.mkdir(workspace, { recursive: true });
   } else {
-    // 规范化路径：去除末尾斜杠，解析为绝对路径
+    // Normalize path: strip trailing slashes and resolve to absolute path
     workspace = path.resolve(workspace);
   }
 
@@ -180,7 +173,6 @@ export const createGeminiAgent = async (
     customWorkspace
   );
 
-  // 对 temp workspace 设置 skill symlinks（原生 SkillManager 自动发现）
   // Set up skill symlinks for native SkillManager discovery
   if (!finalCustomWorkspace) {
     await setupAssistantWorkspace(newWorkspace, {
@@ -199,13 +191,12 @@ export const createGeminiAgent = async (
       customWorkspace: finalCustomWorkspace,
       webSearchEngine,
       contextFileName,
-      // 系统规则 / System rules
+      // System rules
       presetRules,
-      // 向后兼容：contextContent 保存 rules / Backward compatible: contextContent stores rules
+      // Backward compatible: contextContent stores rules
       contextContent: presetRules,
-      // 启用的 skills 列表（通过 SkillManager 加载）/ Enabled skills list (loaded via SkillManager)
+      // Enabled skills list (loaded via SkillManager)
       enabledSkills,
-      // 预设助手 ID，用于在会话面板显示助手名称和头像
       // Preset assistant ID for displaying name and avatar in conversation panel
       presetAssistantId,
       // Initial session mode from Guid page mode selector
@@ -230,7 +221,7 @@ export const createAcpAgent = async (options: ICreateConversationParams): Promis
     extra.customWorkspace
   );
 
-  // 对 temp workspace 设置 skill symlinks（原生发现）
+  // Set up skill symlinks for temp workspace (native discovery)
   if (!customWorkspace) {
     await setupAssistantWorkspace(workspace, {
       backend: extra.backend,
@@ -248,13 +239,12 @@ export const createAcpAgent = async (options: ICreateConversationParams): Promis
       backend: extra.backend as AcpBackend,
       cliPath: extra.cliPath,
       agentName: extra.agentName,
-      customAgentId: extra.customAgentId, // 同时用于标识预设助手 / Also used to identify preset assistant
-      presetContext: extra.presetContext, // 智能助手的预设规则/提示词
-      // 启用的 skills 列表（通过 SkillManager 加载）/ Enabled skills list (loaded via SkillManager)
+      customAgentId: extra.customAgentId, // Also used to identify preset assistant
+      presetContext: extra.presetContext, // Preset rules/prompt for the smart assistant
+      // Enabled skills list (loaded via SkillManager)
       enabledSkills: extra.enabledSkills,
-      // 排除的内置自动注入 skills / Builtin auto-injected skills to exclude
+      // Builtin auto-injected skills to exclude
       excludeBuiltinSkills: extra.excludeBuiltinSkills,
-      // 预设助手 ID，用于在会话面板显示助手名称和头像
       // Preset assistant ID for displaying name and avatar in conversation panel
       presetAssistantId: extra.presetAssistantId,
       // Initial session mode selected on Guid page (from AgentModeSelector)
@@ -282,7 +272,7 @@ export const createNanobotAgent = async (options: ICreateConversationParams): Pr
     extra.customWorkspace
   );
 
-  // 对 temp workspace 设置 skill symlinks
+  // Set up skill symlinks for temp workspace
   if (!customWorkspace) {
     await setupAssistantWorkspace(workspace, {
       agentType: 'nanobot',
@@ -393,7 +383,7 @@ export const createOpenClawAgent = async (options: ICreateConversationParams): P
     extra.customWorkspace
   );
 
-  // 对 temp workspace 设置 skill symlinks
+  // Set up skill symlinks for temp workspace
   if (!customWorkspace) {
     await setupAssistantWorkspace(workspace, {
       enabledSkills: extra.enabledSkills,

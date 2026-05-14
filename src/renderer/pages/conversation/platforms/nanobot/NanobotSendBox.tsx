@@ -363,7 +363,6 @@ const NanobotSendBox: React.FC<{ conversation_id: string }> = ({ conversation_id
           createdAt: Date.now(),
         };
         // Reset AI reply for new turn
-        // 重置 AI 回复用于新一轮
         addOrUpdateMessage(userMessage, true);
 
         void checkAndUpdateTitle(conversation_id, input);

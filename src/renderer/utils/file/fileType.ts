@@ -12,7 +12,7 @@ interface FileTypeInfo {
   language: string;
 }
 
-// 扩展名到类型的直接映射 / Direct extension to type mapping
+// Direct extension to type mapping
 const EXTENSION_MAP: Record<string, FileTypeInfo> = {
   // Markdown
   md: { contentType: 'markdown', editable: true, language: 'markdown' },
@@ -53,7 +53,6 @@ const EXTENSION_MAP: Record<string, FileTypeInfo> = {
 };
 
 /**
- * 根据文件名推断内容类型及是否可编辑
  * Determine preview content type and editability from file name
  */
 export const getFileTypeInfo = (fileName: string): FileTypeInfo => {

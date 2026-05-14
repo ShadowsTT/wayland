@@ -7,7 +7,7 @@
 import type { AcpModelInfo } from '@/common/types/acpTypes';
 
 /**
- * 获取模型来源标签，用于界面直接显示。
+ * Get the model source label, used directly in the UI.
  */
 export function getAcpModelSourceLabel(modelInfo: Pick<AcpModelInfo, 'source' | 'sourceDetail'> | null): string {
   const sourceDetail = modelInfo?.sourceDetail;
@@ -23,7 +23,7 @@ export function getAcpModelSourceLabel(modelInfo: Pick<AcpModelInfo, 'source' | 
 }
 
 /**
- * 组合模型显示文本，附带来源标签。
+ * Compose the model display text together with its source label.
  */
 export function formatAcpModelDisplayLabel(modelLabel: string, sourceLabel: string): string {
   if (!sourceLabel) return modelLabel;

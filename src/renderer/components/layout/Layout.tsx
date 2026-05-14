@@ -74,7 +74,6 @@ const detectMobileViewportOrTouch = (): boolean => {
   }
   const width = window.innerWidth;
   const byWidth = width < 768;
-  // 仅在小屏时才将 coarse/touch 视为移动端，避免触控笔记本被误判
   // Treat touch/coarse pointer as mobile only on smaller viewports
   const smallScreen = width < 1024;
   const byMedia = window.matchMedia('(hover: none)').matches || window.matchMedia('(pointer: coarse)').matches;
@@ -162,7 +161,7 @@ const Layout: React.FC<{
     }
   }, [customCss]);
 
-  // 加载并监听自定义 CSS 配置 / Load & watch custom CSS configuration
+  // Load & watch custom CSS configuration
   useEffect(() => {
     void loadAndHealCustomCss();
 
@@ -194,7 +193,7 @@ const Layout: React.FC<{
     void loadAndHealCustomCss();
   }, [location.pathname, location.search, location.hash, loadAndHealCustomCss]);
 
-  // 注入自定义 CSS / Inject custom CSS into document head
+  // Inject custom CSS into document head
   useEffect(() => {
     const styleId = 'user-defined-custom-css';
 
@@ -243,7 +242,7 @@ const Layout: React.FC<{
     };
   }, [customCss]);
 
-  // 检测移动端并响应窗口大小变化
+  // Detect mobile viewport and react to window resize
   useEffect(() => {
     const checkMobile = () => {
       const mobile = detectMobileViewportOrTouch();
@@ -251,15 +250,15 @@ const Layout: React.FC<{
       setViewportWidth(window.innerWidth);
     };
 
-    // 初始检测
+    // Initial check
     checkMobile();
 
-    // 监听窗口大小变化
+    // Listen for window resize
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // 进入移动端后立即折叠 / Collapse immediately when switching to mobile
+  // Collapse immediately when switching to mobile
   useEffect(() => {
     if (!isMobile || collapsedRef.current) {
       return;
@@ -267,7 +266,7 @@ const Layout: React.FC<{
     setCollapsed(true);
   }, [isMobile]);
 
-  // 清理侧栏 Tooltip 残留节点，避免移动端路由切换后浮层卡在左上角
+  // Clean up sider Tooltip leftovers to prevent floating panels stuck in the top-left after mobile route changes
   useEffect(() => {
     cleanupSiderTooltips();
   }, [isMobile, collapsed, location.pathname, location.search, location.hash]);
@@ -288,27 +287,27 @@ const Layout: React.FC<{
     return () => unsubscribe();
   }, []);
 
-  // Handle tray events from main process / 处理来自主进程的托盘事件
+  // Handle tray events from main process
   useEffect(() => {
     if (!isElectronDesktop()) return;
 
-    // Navigate to guid page when requested from tray / 托盘请求导航到 guid 页面
+    // Navigate to guid page when requested from tray
     const handleNavigateToGuid = () => {
       void navigate('/guid');
     };
 
-    // Navigate to conversation when requested from tray / 托盘请求导航到对话页面
+    // Navigate to conversation when requested from tray
     const handleNavigateToConversation = (event: CustomEvent<{ conversationId: string }>) => {
       void navigate(`/conversation/${event.detail.conversationId}`);
     };
 
-    // Open about dialog when requested from tray / 托盘请求打开关于对话框
+    // Open about dialog when requested from tray
     const handleOpenAbout = () => {
-      // Navigate to settings/about page / 导航到设置/关于页面
+      // Navigate to settings/about page
       void navigate('/settings/about');
     };
 
-    // Handle pause all tasks request from tray / 托盘请求暂停所有任务
+    // Handle pause all tasks request from tray
     const handlePauseAllTasks = async () => {
       const { ipcBridge } = await import('@/common');
       const result = await ipcBridge.task.stopAll.invoke();
@@ -318,9 +317,9 @@ const Layout: React.FC<{
       }
     };
 
-    // Handle check update request from tray / 托盘请求检查更新
-    // 1. Navigate to about page / 导航到关于页面
-    // 2. Trigger update modal check / 触发更新模态框检查
+    // Handle check update request from tray
+    // 1. Navigate to about page
+    // 2. Trigger update modal check
     const handleCheckUpdate = () => {
       void navigate('/settings/about');
       // Trigger update modal after a short delay to ensure page is loaded
@@ -329,7 +328,7 @@ const Layout: React.FC<{
       }, 100);
     };
 
-    // Listen for tray events / 监听托盘事件
+    // Listen for tray events
     window.addEventListener('tray:navigate-to-guid', handleNavigateToGuid as EventListener);
     window.addEventListener('tray:navigate-to-conversation', handleNavigateToConversation as EventListener);
     window.addEventListener('tray:open-about', handleOpenAbout as EventListener);
@@ -423,7 +422,7 @@ const Layout: React.FC<{
       <NavigationHistoryProvider>
         <div className='app-shell flex flex-col size-full min-h-0'>
           <Titlebar workspaceAvailable={workspaceAvailable} />
-          {/* 移动端左侧边栏蒙板 / Mobile left sider backdrop */}
+          {/* Mobile left sider backdrop */}
           {isMobile && !collapsed && (
             <div className='fixed inset-0 bg-black/30 z-90' onClick={() => setCollapsed(true)} aria-hidden='true' />
           )}
@@ -491,7 +490,7 @@ const Layout: React.FC<{
                     )}
                   </button>
                 )}
-                {/* 侧栏折叠改由标题栏统一控制 / Sidebar folding handled by Titlebar toggle */}
+                {/* Sidebar folding handled by Titlebar toggle */}
               </ArcoLayout.Header>
               <ArcoLayout.Content className='pt-8px px-8px pb-0 layout-sider-content'>
                 {React.isValidElement(sider)

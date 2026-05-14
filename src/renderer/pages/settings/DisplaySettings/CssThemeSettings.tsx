@@ -211,7 +211,7 @@ const ThemeLayoutPreview: React.FC<{ palette: ThemePreviewPalette }> = ({ palett
 };
 
 const ensureBackgroundCss = <T extends { id?: string; cover?: string; css: string }>(theme: T): T => {
-  // 跳过 Default 主题，不注入背景图 CSS / Skip Default theme, do not inject background CSS
+  // Skip Default theme, do not inject background CSS
   if (theme.id === DEFAULT_THEME_ID) {
     return theme;
   }
@@ -238,8 +238,8 @@ const dispatchCustomCssUpdated = (css: string) => {
 };
 
 /**
- * CSS 主题设置组件 / CSS Theme Settings Component
- * 用于管理和切换 CSS 皮肤主题 / For managing and switching CSS skin themes
+ * CSS Theme Settings Component
+ * For managing and switching CSS skin themes
  */
 const CssThemeSettings: React.FC = () => {
   const { t } = useTranslation();
@@ -256,7 +256,7 @@ const CssThemeSettings: React.FC = () => {
     });
     return map;
   }, [themes, currentTheme]);
-  // 加载主题列表和激活状态 / Load theme list and active state
+  // Load theme list and active state
   useEffect(() => {
     const loadThemes = async () => {
       try {
@@ -271,10 +271,10 @@ const CssThemeSettings: React.FC = () => {
           );
         }
 
-        // 对预设主题也应用背景图 CSS 处理 / Apply background CSS processing to preset themes as well
+        // Apply background CSS processing to preset themes as well
         const normalizedPresets = PRESET_THEMES.map((theme) => ensureBackgroundCss(theme));
 
-        // 加载扩展主题 / Load extension-contributed themes
+        // Load extension-contributed themes
         let extensionThemes: ICssTheme[] = [];
         try {
           const loadedExtensionThemes = await ipcBridge.extensions.getThemes.invoke();
@@ -289,7 +289,6 @@ const CssThemeSettings: React.FC = () => {
           // Extensions not available (e.g., WebUI mode or not initialized yet)
         }
 
-        // 合并预设主题、扩展主题和用户主题，按 ID 去重（先出现的优先）
         // Merge preset, extension, and user themes; deduplicate by ID (first occurrence wins)
         const seenIds = new Set<string>();
         const allThemes: ICssTheme[] = [];
@@ -302,7 +301,6 @@ const CssThemeSettings: React.FC = () => {
         const resolvedActiveId = activeId || DEFAULT_THEME_ID;
         const activeTheme = allThemes.find((theme) => theme.id === resolvedActiveId);
 
-        // 如果激活主题不存在（扩展被移除等），回退到默认主题
         // If active theme no longer exists (extension removed etc.), fall back to default
         let effectiveActiveId = resolvedActiveId;
         if (!activeTheme && resolvedActiveId !== DEFAULT_THEME_ID) {
@@ -334,7 +332,7 @@ const CssThemeSettings: React.FC = () => {
   }, []);
 
   /**
-   * 应用主题 CSS / Apply theme CSS
+   * Apply theme CSS
    */
   // Serial queue to process theme changes in strict order without drops
   const applyQueue = React.useRef<Promise<void>>(Promise.resolve());
@@ -371,7 +369,7 @@ const CssThemeSettings: React.FC = () => {
     return applyQueue.current;
   }, []);
   /**
-   * 选择主题 / Select theme
+   * Select theme
    */
   const handleSelectTheme = useCallback(
     async (theme: ICssTheme) => {
@@ -392,7 +390,7 @@ const CssThemeSettings: React.FC = () => {
   );
 
   /**
-   * 打开添加主题弹窗 / Open add theme modal
+   * Open add theme modal
    */
   const handleAddTheme = useCallback(() => {
     setEditingTheme(null);
@@ -400,7 +398,7 @@ const CssThemeSettings: React.FC = () => {
   }, []);
 
   /**
-   * 打开编辑主题弹窗 / Open edit theme modal
+   * Open edit theme modal
    */
   const handleEditTheme = useCallback((theme: ICssTheme, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -409,7 +407,7 @@ const CssThemeSettings: React.FC = () => {
   }, []);
 
   /**
-   * 保存主题 / Save theme
+   * Save theme
    */
   const handleSaveTheme = useCallback(
     async (themeData: Omit<ICssTheme, 'id' | 'createdAt' | 'updatedAt' | 'isPreset'>) => {
@@ -419,12 +417,12 @@ const CssThemeSettings: React.FC = () => {
         const normalizedThemeData = ensureBackgroundCss(themeData);
 
         if (editingTheme && !editingTheme.isPreset) {
-          // 更新现有用户主题 / Update existing user theme
+          // Update existing user theme
           updatedThemes = themes.map((t) =>
             t.id === editingTheme.id ? { ...t, ...normalizedThemeData, updatedAt: now } : t
           );
         } else {
-          // 添加新主题（包括从预设主题编辑创建副本）/ Add new theme (including copy from preset)
+          // Add new theme (including copy from preset)
           const newTheme: ICssTheme = {
             id: uuid(),
             ...normalizedThemeData,
@@ -435,7 +433,7 @@ const CssThemeSettings: React.FC = () => {
           updatedThemes = [...themes, newTheme];
         }
 
-        // 只保存用户主题 / Only save user themes
+        // Only save user themes
         const userThemes = updatedThemes.filter((t) => !t.isPreset);
         await ConfigStorage.set('css.themes', userThemes);
 
@@ -452,7 +450,7 @@ const CssThemeSettings: React.FC = () => {
   );
 
   /**
-   * 删除主题 / Delete theme
+   * Delete theme
    */
   const handleDeleteTheme = useCallback(
     (themeId: string) => {
@@ -466,9 +464,9 @@ const CssThemeSettings: React.FC = () => {
             const userThemes = updatedThemes.filter((t) => !t.isPreset);
             await ConfigStorage.set('css.themes', userThemes);
 
-            // 如果删除的是当前激活主题，清除激活状态 / If deleting active theme, clear active state
+            // If deleting active theme, clear active state
             if (activeThemeId === themeId) {
-              // 删除操作也使用强一致性的状态重置 / Use strongly consistent state reset for delete too
+              // Use strongly consistent state reset for delete too
               await applyThemeCss('', '');
             }
 
@@ -488,7 +486,7 @@ const CssThemeSettings: React.FC = () => {
 
   return (
     <div className='space-y-12px'>
-      {/* 标题栏 / Header */}
+      {/* Header */}
       <div className='flex items-start md:items-center justify-between gap-8px flex-wrap'>
         <span className='text-14px text-t-secondary leading-22px'>{t('settings.cssTheme.selectOrCustomize')}</span>
         <Button
@@ -502,7 +500,7 @@ const CssThemeSettings: React.FC = () => {
         </Button>
       </div>
 
-      {/* 主题卡片列表 / Theme card list */}
+      {/* Theme card list */}
       <div
         className='grid w-full gap-12px'
         style={{
@@ -533,10 +531,10 @@ const CssThemeSettings: React.FC = () => {
             >
               {!theme.cover && <ThemeLayoutPreview palette={previewPalette} />}
 
-              {/* 底部渐变遮罩与名称、编辑按钮 / Bottom gradient overlay with name and edit button */}
+              {/* Bottom gradient overlay with name and edit button */}
               <div className='absolute bottom-0 left-0 right-0 h-1/3 bg-gradient-to-t from-black/60 to-transparent flex items-end justify-between p-8px'>
                 <span className='text-13px text-white truncate flex-1'>{theme.name}</span>
-                {/* 编辑按钮 / Edit button */}
+                {/* Edit button */}
                 {hoveredThemeId === theme.id && (
                   <div
                     className='p-4px rounded-6px bg-white/20 cursor-pointer hover:bg-white/40 transition-colors ml-8px'
@@ -547,7 +545,7 @@ const CssThemeSettings: React.FC = () => {
                 )}
               </div>
 
-              {/* 选中标记 / Selected indicator */}
+              {/* Selected indicator */}
               {activeThemeId === theme.id && (
                 <div className='absolute top-8px right-8px'>
                   <CheckOne theme='filled' size='20' fill='var(--color-primary)' />
@@ -558,7 +556,7 @@ const CssThemeSettings: React.FC = () => {
         })}
       </div>
 
-      {/* 主题编辑弹窗 / Theme edit modal */}
+      {/* Theme edit modal */}
       <CssThemeModal
         visible={modalVisible}
         theme={editingTheme}

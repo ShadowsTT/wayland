@@ -6,14 +6,12 @@
 
 /**
  * Timeline utility functions for conversation history grouping
- * 会话历史分组的时间线工具函数
  */
 
 import type { TChatConversation } from '@/common/config/storage';
 
 /**
  * Calculate the difference in days between two timestamps
- * 计算两个时间戳之间的天数差
  */
 export const diffDay = (time1: number, time2: number): number => {
   const date1 = new Date(time1);
@@ -26,7 +24,6 @@ export const diffDay = (time1: number, time2: number): number => {
 
 /**
  * Get the activity time (most recent) from a conversation
- * 获取会话的活动时间（最近的时间）
  */
 export const getActivityTime = (conversation: TChatConversation): number => {
   return conversation.modifyTime || conversation.createTime || 0;
@@ -34,7 +31,6 @@ export const getActivityTime = (conversation: TChatConversation): number => {
 
 /**
  * Get the timeline label for a given timestamp
- * 获取给定时间戳的时间线标签
  *
  * @param time - The timestamp to check
  * @param currentTime - The current timestamp (usually Date.now())
@@ -51,7 +47,6 @@ export const getTimelineLabel = (time: number, currentTime: number, t: (key: str
 
 /**
  * Create a timeline group function that deduplicates consecutive same-label items
- * 创建一个时间线分组函数，用于去重连续的相同标签项
  *
  * @param t - The i18n translation function
  * @returns A function that returns the timeline label or empty string if same as previous

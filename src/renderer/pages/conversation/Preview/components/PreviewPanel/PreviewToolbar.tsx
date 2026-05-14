@@ -12,166 +12,138 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 
 /**
- * PreviewToolbar 组件属性
  * PreviewToolbar component props
  */
 interface PreviewToolbarProps {
   /**
-   * 内容类型
    * Content type
    */
   contentType: string;
 
   /**
-   * 是否为 Markdown 文件
    * Whether it's a Markdown file
    */
   isMarkdown: boolean;
 
   /**
-   * 是否为 HTML 文件
    * Whether it's an HTML file
    */
   isHTML: boolean;
 
   /**
-   * 是否可编辑
    * Whether editable
    */
   isEditable: boolean;
 
   /**
-   * 是否处于编辑模式
    * Whether in edit mode
    */
   isEditMode: boolean;
 
   /**
-   * 当前视图模式
    * Current view mode
    */
   viewMode: 'source' | 'preview';
 
   /**
-   * 是否启用分屏模式
    * Whether split-screen mode is enabled
    */
   isSplitScreenEnabled: boolean;
 
   /**
-   * 文件名
    * Filename
    */
   fileName?: string;
 
   /**
-   * 是否显示"在系统中打开"按钮
    * Whether to show "Open in System" button
    */
   showOpenInSystemButton: boolean;
 
   /**
-   * 历史目标
    * History target
    */
   historyTarget: PreviewHistoryTarget | null;
 
   /**
-   * 是否正在保存快照
    * Whether snapshot is saving
    */
   snapshotSaving: boolean;
 
   /**
-   * 设置视图模式
    * Set view mode
    */
   onViewModeChange: (mode: 'source' | 'preview') => void;
 
   /**
-   * 设置分屏模式
    * Set split-screen mode
    */
   onSplitScreenToggle: () => void;
 
   /**
-   * 编辑按钮点击
    * Edit button click
    */
   onEditClick: () => void;
 
   /**
-   * 退出编辑按钮点击
    * Exit edit button click
    */
   onExitEdit: () => void;
 
   /**
-   * 保存快照
    * Save snapshot
    */
   onSaveSnapshot: () => void;
 
   /**
-   * 刷新历史列表
    * Refresh history list
    */
   onRefreshHistory: () => void;
 
   /**
-   * 渲染历史下拉菜单
    * Render history dropdown
    */
   renderHistoryDropdown: () => React.ReactNode;
 
   /**
-   * 在系统中打开文件
    * Open file in system
    */
   onOpenInSystem: () => void;
 
   /**
-   * 下载文件
    * Download file
    */
   onDownload: () => void;
 
   /**
-   * 关闭预览面板
    * Close preview panel
    */
   onClose: () => void;
 
   /**
-   * HTML 审核元素模式（仅HTML类型使用）
    * HTML inspect mode (only for HTML type)
    */
   inspectMode?: boolean;
 
   /**
-   * 切换HTML审核元素模式（仅HTML类型使用）
    * Toggle HTML inspect mode (only for HTML type)
    */
   onInspectModeToggle?: () => void;
 
   /**
-   * 左侧额外渲染内容
    * Extra content rendered on the left section
    */
   leftExtra?: React.ReactNode;
 
   /**
-   * 右侧额外渲染内容
    * Extra content rendered on the right section
    */
   rightExtra?: React.ReactNode;
 }
 
 /**
- * 预览面板工具栏组件
  * Preview panel toolbar component
  *
- * 包含文件名、视图模式切换、编辑按钮、快照/历史按钮、下载按钮、关闭按钮等
  * Contains filename, view mode toggle, edit button, snapshot/history buttons, download button, close button, etc.
  */
 // eslint-disable-next-line max-len
@@ -214,7 +186,7 @@ const PreviewToolbar: React.FC<PreviewToolbarProps> = ({
   return (
     <div className='flex items-center justify-between h-32px px-10px bg-bg-2 flex-shrink-0 border-b border-border-1 overflow-x-auto'>
       <div className='flex items-center justify-between gap-8px w-full' style={{ minWidth: 'max-content' }}>
-        {/* 左侧：Tabs（Markdown/HTML）+ 文件名 / Left: Tabs (Markdown/HTML) + Filename */}
+        {/* Left: Tabs (Markdown/HTML) + Filename */}
         <div className='flex items-center h-full gap-8px'>
           {(isMarkdown || isHTML || isDiff) && (
             <>

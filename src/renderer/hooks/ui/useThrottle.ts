@@ -2,10 +2,10 @@ import type React from 'react';
 import { useCallback, useRef } from 'react';
 
 /**
- * 节流 Hook
- * @param callback 需要节流的函数
- * @param delay 节流时间（毫秒）
- * @returns 节流后的函数
+ * Throttle hook
+ * @param callback The function to throttle
+ * @param delay Throttle interval in milliseconds
+ * @returns The throttled function
  */
 function useThrottle<T extends (...args: any[]) => any>(callback: T, delay: number, deps: React.DependencyList): T {
   const lastExecTime = useRef<number>(0);
@@ -16,12 +16,12 @@ function useThrottle<T extends (...args: any[]) => any>(callback: T, delay: numb
       const now = Date.now();
       const timeSinceLastExec = now - lastExecTime.current;
 
-      // 如果距离上次执行已经超过延迟时间，立即执行
+      // Execute immediately if enough time has elapsed since last execution
       if (timeSinceLastExec >= delay) {
         callback(...args);
         lastExecTime.current = now;
       } else {
-        // 否则清除之前的定时器，设置新的定时器
+        // Otherwise clear previous timer and schedule a new one
         if (timeoutId.current) {
           clearTimeout(timeoutId.current);
         }

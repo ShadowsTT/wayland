@@ -5,10 +5,8 @@
  */
 
 /**
- * 系统设置桥接模块
  * System Settings Bridge Module
  *
- * 负责���理系统级设置的读写操作（如关闭到托盘）
  * Handles read/write operations for system-level settings (e.g. close to tray)
  */
 
@@ -28,7 +26,6 @@ type LanguageChangeListener = () => void;
 let _languageChangeListener: LanguageChangeListener | null = null;
 
 /**
- * 注册关闭到托盘设置变更监听器（供主进程 index.ts 使用）
  * Register a listener for close-to-tray setting changes (used by main process index.ts)
  */
 export function onCloseToTrayChanged(listener: CloseToTrayChangeListener): void {
@@ -36,7 +33,6 @@ export function onCloseToTrayChanged(listener: CloseToTrayChangeListener): void 
 }
 
 /**
- * 注册语言变更监听器（供主进程 index.ts 使用）
  * Register a listener for language changes (used by main process index.ts)
  */
 export function onLanguageChanged(listener: LanguageChangeListener): void {
@@ -44,42 +40,41 @@ export function onLanguageChanged(listener: LanguageChangeListener): void {
 }
 
 export function initSystemSettingsBridge(): void {
-  // 获取"关闭到托盘"设置 / Get "close to tray" setting
+  // Get "close to tray" setting
   ipcBridge.systemSettings.getCloseToTray.provider(async () => {
     const value = await ProcessConfig.get('system.closeToTray');
     return value ?? false;
   });
 
-  // 设置"关闭到托盘"，先持久化再通知主进程
   // Set "close to tray", persist first then notify main process
   ipcBridge.systemSettings.setCloseToTray.provider(async ({ enabled }) => {
-    // 先持久化到配置存储
+    // Persist to config storage first
     await ProcessConfig.set('system.closeToTray', enabled);
-    // 然后通知主进程更新托盘状态
+    // Then notify the main process to update tray state
     _changeListener?.(enabled);
   });
 
-  // 获取"任务完成通知"设置 / Get "task completion notification" setting
+  // Get "task completion notification" setting
   ipcBridge.systemSettings.getNotificationEnabled.provider(async () => {
     const value = await ProcessConfig.get('system.notificationEnabled');
-    return value ?? true; // 默认开启 / Default enabled
+    return value ?? true; // Default enabled
   });
 
-  // 设置"任务完成通知" / Set "task completion notification"
+  // Set "task completion notification"
   ipcBridge.systemSettings.setNotificationEnabled.provider(async ({ enabled }) => {
-    // 先持久化到配置存储
+    // Persist to config storage first
     await ProcessConfig.set('system.notificationEnabled', enabled);
   });
 
-  // 获取"定时任务通知"设置 / Get "scheduled task notification" setting
+  // Get "scheduled task notification" setting
   ipcBridge.systemSettings.getCronNotificationEnabled.provider(async () => {
     const value = await ProcessConfig.get('system.cronNotificationEnabled');
-    return value ?? false; // 默认关闭 / Default disabled
+    return value ?? false; // Default disabled
   });
 
-  // 设置"定时任务通知" / Set "scheduled task notification"
+  // Set "scheduled task notification"
   ipcBridge.systemSettings.setCronNotificationEnabled.provider(async ({ enabled }) => {
-    // 先持久化到配置存储
+    // Persist to config storage first
     await ProcessConfig.set('system.cronNotificationEnabled', enabled);
   });
 
@@ -101,7 +96,6 @@ export function initSystemSettingsBridge(): void {
     }
   });
 
-  // 语言变更通知，同步主进程 i18n 并通知托盘重建
   // Language change notification, sync main process i18n and notify tray rebuild
   ipcBridge.systemSettings.changeLanguage.provider(async ({ language }) => {
     // Broadcast to all renderers FIRST (desktop + WebUI) for real-time sync.
@@ -127,24 +121,24 @@ export function initSystemSettingsBridge(): void {
       console.warn('[SystemSettings] Failed to restore keep-awake:', err);
     });
 
-  // 获取"上传文件保存到工作区"设置 / Get "save uploads to workspace" setting
+  // Get "save uploads to workspace" setting
   ipcBridge.systemSettings.getSaveUploadToWorkspace.provider(async () => {
     const value = await ProcessConfig.get('upload.saveToWorkspace');
-    return value ?? true; // 默认开启 / Default enabled
+    return value ?? true; // Default enabled
   });
 
-  // 设置"上传文件保存到工作区" / Set "save uploads to workspace"
+  // Set "save uploads to workspace"
   ipcBridge.systemSettings.setSaveUploadToWorkspace.provider(async ({ enabled }) => {
     await ProcessConfig.set('upload.saveToWorkspace', enabled);
   });
 
-  // 获取"自动预览新建 Office 文件"设置 / Get "auto preview new Office files" setting
+  // Get "auto preview new Office files" setting
   ipcBridge.systemSettings.getAutoPreviewOfficeFiles.provider(async () => {
     const value = await ProcessConfig.get('system.autoPreviewOfficeFiles');
-    return value ?? true; // 默认开启 / Default enabled
+    return value ?? true; // Default enabled
   });
 
-  // 设置"自动预览新建 Office 文件" / Set "auto preview new Office files"
+  // Set "auto preview new Office files"
   ipcBridge.systemSettings.setAutoPreviewOfficeFiles.provider(async ({ enabled }) => {
     await ProcessConfig.set('system.autoPreviewOfficeFiles', enabled);
   });

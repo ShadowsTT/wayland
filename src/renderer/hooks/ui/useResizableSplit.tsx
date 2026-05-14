@@ -23,23 +23,22 @@ const addWindowEventListener = <K extends keyof WindowEventMap>(
 };
 
 interface UseResizableSplitOptions {
-  defaultWidth?: number; // 默认宽度百分比（0-100） / Default width percentage (0-100)
-  minWidth?: number; // 最小宽度百分比 / Minimum width percentage
-  maxWidth?: number; // 最大宽度百分比 / Maximum width percentage
-  storageKey?: string; // LocalStorage 存储键名（用于记录偏好） / LocalStorage key for saving user preference
+  defaultWidth?: number; // Default width percentage (0-100)
+  minWidth?: number; // Minimum width percentage
+  maxWidth?: number; // Maximum width percentage
+  storageKey?: string; // LocalStorage key for saving user preference
 }
 
 /**
- * 可拖动分割面板 Hook，支持记录用户偏好
  * Resizable split panel Hook with user preference persistence
  *
- * @param options - 配置选项 / Configuration options
- * @returns 分割比例、拖动句柄和设置函数 / Split ratio, drag handle, and setter function
+ * @param options - Configuration options
+ * @returns Split ratio, drag handle, and setter function
  */
 export const useResizableSplit = (options: UseResizableSplitOptions = {}) => {
   const { defaultWidth = 50, minWidth = 20, maxWidth = 80, storageKey } = options;
 
-  // 从 LocalStorage 读取保存的比例 / Read saved ratio from LocalStorage
+  // Read saved ratio from LocalStorage
   const getStoredRatio = (): number => {
     if (!storageKey) return defaultWidth;
     try {
@@ -65,7 +64,7 @@ export const useResizableSplit = (options: UseResizableSplitOptions = {}) => {
     window.dispatchEvent(new CustomEvent('preview-panel-resize', { detail: { ratio } }));
   }, []);
 
-  // 保存比例到 LocalStorage / Save ratio to LocalStorage
+  // Save ratio to LocalStorage
   const setSplitRatio = useCallback(
     (ratio: number) => {
       setSplitRatioState(ratio);
@@ -81,7 +80,7 @@ export const useResizableSplit = (options: UseResizableSplitOptions = {}) => {
     [storageKey, dispatchSplitResizeEvent]
   );
 
-  // 处理拖动开始事件 / Handle drag start event
+  // Handle drag start event
   const handleDragStart = useCallback(
     (reverse = false) =>
       (event: React.PointerEvent<HTMLDivElement>) => {
@@ -116,7 +115,7 @@ export const useResizableSplit = (options: UseResizableSplitOptions = {}) => {
           dispatchSplitResizeEvent(pendingRatio);
         };
 
-        // 初始化拖动样式 / Initialize drag styles
+        // Initialize drag styles
         const initDragStyle = () => {
           const originalUserSelect = document.body.style.userSelect;
           document.body.style.userSelect = 'none';
@@ -194,7 +193,7 @@ export const useResizableSplit = (options: UseResizableSplitOptions = {}) => {
             dragHandle.setPointerCapture(pointerId);
             dragHandle.addEventListener('lostpointercapture', handleLostPointerCapture);
           } catch (error) {
-            // 忽略 pointer capture 失败，继续使用备用逻辑 / Ignore failures silently
+            // Ignore failures silently and fall back to default logic
           }
         }
 

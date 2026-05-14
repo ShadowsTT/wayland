@@ -9,7 +9,6 @@ import { getDatabase } from '@process/services/database/export';
 import type { IUser, IQueryResult } from '@process/services/database/types';
 
 /**
- * 认证用户类型，仅包含必要的认证字段
  * Authentication user type containing only essential auth fields
  */
 export type AuthUser = Pick<
@@ -18,11 +17,10 @@ export type AuthUser = Pick<
 >;
 
 /**
- * 解包数据库查询结果，失败时抛出异常
  * Unwrap database query result, throw error on failure
- * @param result - 查询结果 / Query result
- * @param errorMessage - 错误消息 / Error message
- * @returns 解包后的数据 / Unwrapped data
+ * @param result - Query result
+ * @param errorMessage - Error message
+ * @returns Unwrapped data
  */
 function unwrap<T>(result: IQueryResult<T>, errorMessage: string): T {
   if (!result.success || typeof result.data === 'undefined' || result.data === null) {
@@ -32,10 +30,9 @@ function unwrap<T>(result: IQueryResult<T>, errorMessage: string): T {
 }
 
 /**
- * 将数据库用户记录映射为认证用户对象
  * Map database user record to auth user object
- * @param row - 数据库用户记录 / Database user record
- * @returns 认证用户对象 / Auth user object
+ * @param row - Database user record
+ * @returns Auth user object
  */
 function mapUser(row: IUser): AuthUser {
   return {
@@ -54,14 +51,12 @@ function hasPassword(user: AuthUser | null): boolean {
 }
 
 /**
- * 用户仓库 - 提供用户数据访问接口
  * User Repository - Provides user data access interface
  */
 export const UserRepository = {
   /**
-   * 检查系统中是否存在用户
    * Check if any users exist in the system
-   * @returns 是否存在用户 / Whether users exist
+   * @returns Whether users exist
    */
   async hasUsers(): Promise<boolean> {
     const db = await getDatabase();
@@ -69,7 +64,6 @@ export const UserRepository = {
     if (!result.success) {
       throw new Error(result.error || 'Failed to check users');
     }
-    // 数据层已经过滤掉未设置密码的占位用户
     // Database layer already ignores placeholder rows without passwords
     return Boolean(result.data);
   },
@@ -107,11 +101,10 @@ export const UserRepository = {
   },
 
   /**
-   * 创建新用户
    * Create a new user
-   * @param username - 用户名 / Username
-   * @param passwordHash - 密码哈希 / Password hash
-   * @returns 创建的用户 / Created user
+   * @param username - Username
+   * @param passwordHash - Password hash
+   * @returns Created user
    */
   async createUser(username: string, passwordHash: string): Promise<AuthUser> {
     const db = await getDatabase();
@@ -121,10 +114,9 @@ export const UserRepository = {
   },
 
   /**
-   * 根据用户名查找用户
    * Find user by username
-   * @param username - 用户名 / Username
-   * @returns 用户对象或 null / User object or null
+   * @param username - Username
+   * @returns User object or null
    */
   async findByUsername(username: string): Promise<AuthUser | null> {
     const db = await getDatabase();
@@ -136,10 +128,9 @@ export const UserRepository = {
   },
 
   /**
-   * 根据用户 ID 查找用户
    * Find user by ID
-   * @param id - 用户 ID / User ID
-   * @returns 用户对象或 null / User object or null
+   * @param id - User ID
+   * @returns User object or null
    */
   async findById(id: string): Promise<AuthUser | null> {
     const db = await getDatabase();
@@ -151,9 +142,8 @@ export const UserRepository = {
   },
 
   /**
-   * 获取所有用户列表
    * Get list of all users
-   * @returns 用户数组 / Array of users
+   * @returns Array of users
    */
   async listUsers(): Promise<AuthUser[]> {
     const db = await getDatabase();
@@ -165,9 +155,8 @@ export const UserRepository = {
   },
 
   /**
-   * 统计用户总数
    * Count total number of users
-   * @returns 用户数量 / Number of users
+   * @returns Number of users
    */
   async countUsers(): Promise<number> {
     const db = await getDatabase();
@@ -179,10 +168,9 @@ export const UserRepository = {
   },
 
   /**
-   * 更新用户密码
    * Update user password
-   * @param userId - 用户 ID / User ID
-   * @param passwordHash - 新的密码哈希 / New password hash
+   * @param userId - User ID
+   * @param passwordHash - New password hash
    */
   async updatePassword(userId: string, passwordHash: string): Promise<void> {
     const db = await getDatabase();
@@ -201,9 +189,8 @@ export const UserRepository = {
   },
 
   /**
-   * 更新用户最后登录时间
    * Update user's last login time
-   * @param userId - 用户 ID / User ID
+   * @param userId - User ID
    */
   async updateLastLogin(userId: string): Promise<void> {
     const db = await getDatabase();
@@ -214,10 +201,9 @@ export const UserRepository = {
   },
 
   /**
-   * 更新用户的 JWT secret
    * Update user's JWT secret
-   * @param userId - 用户 ID / User ID
-   * @param jwtSecret - JWT secret 字符串 / JWT secret string
+   * @param userId - User ID
+   * @param jwtSecret - JWT secret string
    */
   async updateJwtSecret(userId: string, jwtSecret: string): Promise<void> {
     const db = await getDatabase();

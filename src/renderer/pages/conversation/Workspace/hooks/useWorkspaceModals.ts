@@ -8,11 +8,10 @@ import { useCallback, useState } from 'react';
 import type { ContextMenuState, RenameModalState, DeleteModalState, PasteConfirmState } from '../types';
 
 /**
- * useWorkspaceModals - 管理所有模态框和菜单状态
- * Manage all modal and menu states
+ * useWorkspaceModals - Manage all modal and menu states
  */
 export function useWorkspaceModals() {
-  // Context menu state (右键菜单状态)
+  // Context menu state
   const [contextMenu, setContextMenu] = useState<ContextMenuState>({
     visible: false,
     x: 0,
@@ -20,7 +19,7 @@ export function useWorkspaceModals() {
     node: null,
   });
 
-  // Rename modal state (重命名弹窗状态)
+  // Rename modal state
   const [renameModal, setRenameModal] = useState<RenameModalState>({
     visible: false,
     value: '',
@@ -28,14 +27,14 @@ export function useWorkspaceModals() {
   });
   const [renameLoading, setRenameLoading] = useState(false);
 
-  // Delete confirmation modal state (删除确认弹窗状态)
+  // Delete confirmation modal state
   const [deleteModal, setDeleteModal] = useState<DeleteModalState>({
     visible: false,
     target: null,
     loading: false,
   });
 
-  // Paste confirmation modal state (粘贴确认弹窗状态)
+  // Paste confirmation modal state
   const [pasteConfirm, setPasteConfirm] = useState<PasteConfirmState>({
     visible: false,
     fileName: '',
@@ -45,7 +44,6 @@ export function useWorkspaceModals() {
   });
 
   /**
-   * 关闭右键菜单
    * Close context menu
    */
   const closeContextMenu = useCallback(() => {
@@ -53,7 +51,6 @@ export function useWorkspaceModals() {
   }, []);
 
   /**
-   * 打开右键菜单
    * Open context menu
    */
   const openContextMenu = useCallback((x: number, y: number, node: any) => {
@@ -61,7 +58,6 @@ export function useWorkspaceModals() {
   }, []);
 
   /**
-   * 关闭重命名弹窗
    * Close rename modal
    */
   const closeRenameModal = useCallback(() => {
@@ -70,7 +66,6 @@ export function useWorkspaceModals() {
   }, []);
 
   /**
-   * 关闭删除确认弹窗
    * Close delete confirmation modal
    */
   const closeDeleteModal = useCallback(() => {
@@ -78,7 +73,6 @@ export function useWorkspaceModals() {
   }, []);
 
   /**
-   * 关闭粘贴确认弹窗
    * Close paste confirmation modal
    */
   const closePasteConfirm = useCallback(() => {

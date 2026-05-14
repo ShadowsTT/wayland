@@ -34,7 +34,7 @@ import { stripThinkTags, extractAndStripThinkTags } from './ThinkTagDetector';
 import { teamEventBus } from '@process/team/teamEventBus';
 import * as fs from 'node:fs';
 
-// gemini agent管理器类
+// Gemini agent manager class
 type UiMcpServerConfig = {
   command?: string;
   args?: string[];
@@ -52,15 +52,15 @@ export class GeminiAgentManager extends BaseAgentManager<
     webSearchEngine?: 'google' | 'default';
     mcpServers?: Record<string, UiMcpServerConfig>;
     contextFileName?: string;
-    // 系统规则 / System rules
+    // System rules
     presetRules?: string;
-    contextContent?: string; // 向后兼容 / Backward compatible
+    contextContent?: string; // Backward compatible
     GOOGLE_CLOUD_PROJECT?: string;
-    /** 内置 skills 目录路径 / Builtin skills directory path */
+    /** Builtin skills directory path */
     skillsDir?: string;
-    /** 启用的 skills 列表 / Enabled skills list */
+    /** Enabled skills list */
     enabledSkills?: string[];
-    /** Yolo mode: auto-approve all tool calls / 自动允许模式 */
+    /** Yolo mode: auto-approve all tool calls */
     yoloMode?: boolean;
   },
   string
@@ -107,10 +107,10 @@ export class GeminiAgentManager extends BaseAgentManager<
     await this.injectHistoryFromDatabase();
   }
 
-  /** Force yolo mode (for cron jobs) / 强制 yolo 模式（用于定时任务） */
+  /** Force yolo mode (for cron jobs) */
   private forceYoloMode?: boolean;
 
-  /** Current session mode for approval behavior / 当前会话模式（影响审批行为） */
+  /** Current session mode for approval behavior */
   private currentMode: string = 'default';
 
   /** Current turn's thinking message msg_id for accumulating content */
@@ -122,7 +122,7 @@ export class GeminiAgentManager extends BaseAgentManager<
   private thinkingDbFlushTimer: ReturnType<typeof setTimeout> | null = null;
   private readonly thinkingDbFlushIntervalMs = 120;
 
-  /** Stored webSearchEngine for worker re-bootstrap / 保存 webSearchEngine 用于重建 worker */
+  /** Stored webSearchEngine for worker re-bootstrap */
   private webSearchEngine?: 'google' | 'default';
 
   /** Team MCP stdio config injected by TeamSessionService */
@@ -139,14 +139,14 @@ export class GeminiAgentManager extends BaseAgentManager<
       conversation_id: string;
       webSearchEngine?: 'google' | 'default';
       contextFileName?: string;
-      // 系统规则 / System rules
+      // System rules
       presetRules?: string;
-      contextContent?: string; // 向后兼容 / Backward compatible
-      /** 启用的 skills 列表 / Enabled skills list */
+      contextContent?: string; // Backward compatible
+      /** Enabled skills list */
       enabledSkills?: string[];
-      /** Force yolo mode (for cron jobs) / 强制 yolo 模式（用于定时任务） */
+      /** Force yolo mode (for cron jobs) */
       yoloMode?: boolean;
-      /** Persisted session mode for resume support / 持久化的会话模式，用于恢复 */
+      /** Persisted session mode for resume support */
       sessionMode?: string;
       /** Team MCP server stdio config injected by TeamSessionService */
       teamMcpStdioConfig?: {
@@ -180,7 +180,7 @@ export class GeminiAgentManager extends BaseAgentManager<
       'constructor teamMcpStdioConfig:',
       this.teamMcpStdioConfig ? `PRESENT (command=${this.teamMcpStdioConfig.command})` : 'MISSING'
     );
-    // 向后兼容 / Backward compatible
+    // Backward compatible
     this.contextContent = data.contextContent || data.presetRules;
     this.bootstrap = this.createBootstrap();
     // Prevent unhandled rejection when bootstrap fails (e.g. missing OAuth credentials).
@@ -221,7 +221,7 @@ export class GeminiAgentManager extends BaseAgentManager<
         // No prompt injection needed -> native mechanisms handle everything
 
         // Merge builtin skill names into enabledSkills for the worker's skill discovery
-        // 将内置 skill 名称合并到 enabledSkills，使 worker 的 SkillManager 能找到它们
+        // Merge builtin skill names into enabledSkills so the worker's SkillManager can find them
         const skillManager = AcpSkillManager.getInstance(this.enabledSkills);
         await skillManager.discoverSkills(this.enabledSkills);
         const excludeSet = new Set(this.excludeBuiltinSkills ?? []);
@@ -268,7 +268,6 @@ export class GeminiAgentManager extends BaseAgentManager<
           presetRules: effectivePresetRules,
           contextContent: this.contextContent,
           skillsDir: getSkillsDir(),
-          // 启用的 skills 列表（含内置 skills），用于 worker 的 SkillManager
           // Enabled skills list (including builtins) for worker's SkillManager
           enabledSkills: allEnabledSkills,
           // Yolo mode: derived from currentMode, not directly from legacy config
@@ -309,7 +308,6 @@ export class GeminiAgentManager extends BaseAgentManager<
       const allServers: IMcpServer[] = Array.isArray(mcpServers) ? mcpServers : [];
 
       // Merge extension-contributed MCP servers
-      // 合并扩展贡献的 MCP servers
       try {
         const registry = ExtensionRegistry.getInstance();
         const extServers = registry.getMcpServers();
@@ -345,14 +343,13 @@ export class GeminiAgentManager extends BaseAgentManager<
       }
 
       // Store fingerprint for later change detection
-      // 保存指纹用于后续变更检测
       this.mcpFingerprint = GeminiAgentManager.computeMcpFingerprint(allServers);
 
-      // 转换为 aioncli-core 期望的格式
+      // Convert into the format aioncli-core expects
       // MCPServerConfig supports: stdio (command/args/env), sse/http (url/type/headers)
       const mcpConfig: Record<string, UiMcpServerConfig> = {};
       allServers
-        .filter((server: IMcpServer) => server.enabled && server.status === 'connected') // 只使用启用且连接成功的服务器
+        .filter((server: IMcpServer) => server.enabled && server.status === 'connected') // Only use enabled and connected servers
         .forEach((server: IMcpServer) => {
           if (server.transport.type === 'stdio') {
             mcpConfig[server.name] = {
@@ -488,8 +485,6 @@ export class GeminiAgentManager extends BaseAgentManager<
 
     // Check if MCP config has changed since worker was initialized
     // If changed, kill old worker and re-bootstrap with fresh config
-    // 检查 MCP 配置是否在 worker 初始化后发生变更
-    // 若变更则终止旧 worker 并使用最新配置重新初始化
     await this.refreshWorkerIfMcpChanged();
     this.status = 'pending';
     cronBusyGuard.setProcessing(this.conversation_id, true);
@@ -708,7 +703,6 @@ export class GeminiAgentManager extends BaseAgentManager<
         const hasOptions = options && options.length > 0;
         if (!question && !hasDetails) {
           // Fallback confirmation when tool is waiting but missing details
-          // 当工具处于确认状态但缺少详情时，提供兜底确认
           this.addConfirmation({
             title: 'Awaiting Confirmation',
             id: content.callId,
@@ -764,7 +758,7 @@ export class GeminiAgentManager extends BaseAgentManager<
       teamEventBus.emit('responseStream', crashMessage);
     });
 
-    // 接受来子进程的对话消息
+    // Receive conversation messages from the child process
     this.on('gemini.message', (data) => {
       // Mark as finished when content is output (visible to user)
       // Gemini uses: content, tool_group
@@ -807,9 +801,9 @@ export class GeminiAgentManager extends BaseAgentManager<
         });
       }
 
-      // 处理预览打开事件（chrome-devtools 导航触发）/ Handle preview open event (triggered by chrome-devtools navigation)
+      // Handle preview open event (triggered by chrome-devtools navigation)
       if (handlePreviewOpenEvent(data)) {
-        return; // 不需要继续处理 / No need to continue processing
+        return; // No need to continue processing
       }
 
       data.conversation_id = this.conversation_id;
@@ -984,7 +978,6 @@ export class GeminiAgentManager extends BaseAgentManager<
 
   /**
    * Get the current session mode.
-   * 获取当前会话模式。
    */
   getMode(): { mode: string; initialized: boolean } {
     return { mode: this.currentMode, initialized: true };
@@ -992,7 +985,6 @@ export class GeminiAgentManager extends BaseAgentManager<
 
   /**
    * Set the session mode (e.g., default, autoEdit).
-   * 设置会话模式（如 default、autoEdit）。
    *
    * Unlike ACP agents, Gemini mode affects approval behavior at the manager layer,
    * not via a protocol-level session/set_mode call.
@@ -1022,7 +1014,6 @@ export class GeminiAgentManager extends BaseAgentManager<
 
   /**
    * Save session mode to database for resume support.
-   * 保存会话模式到数据库以支持恢复。
    */
   private async saveSessionMode(mode: string): Promise<void> {
     try {
@@ -1064,7 +1055,6 @@ export class GeminiAgentManager extends BaseAgentManager<
 
   confirm(id: string, callId: string, data: string) {
     // Store "always allow" decision before removing confirmation from cache
-    // 在从缓存中移除确认之前，存储 "always allow" 决策
     if (data === ToolConfirmationOutcome.ProceedAlways) {
       const confirmation = this.confirmations.find((c) => c.callId === callId);
       if (confirmation?.action) {
@@ -1074,7 +1064,6 @@ export class GeminiAgentManager extends BaseAgentManager<
     }
 
     super.confirm(id, callId, data);
-    // 发送确认到 worker，使用 callId 作为消息类型
     // Send confirmation to worker, using callId as message type
     return this.postMessagePromise(callId, data);
   }
@@ -1160,8 +1149,6 @@ export class GeminiAgentManager extends BaseAgentManager<
     // Filter content messages: only strip complete <think>...</think> blocks.
     // Orphaned </think> tags must be preserved so the frontend can detect them
     // in accumulated content and strip all preceding thinking content.
-    // 仅剔除完整的 <think>...</think> 块。
-    // 保留孤立的 </think> 标签，让前端在累积内容中检测并过滤思考内容。
     if (message.type === 'content' && typeof message.data === 'string') {
       const content = message.data;
       const completeBlockRegex = /<\s*think(?:ing)?\s*>[\s\S]*?<\s*\/\s*think(?:ing)?\s*>/i;

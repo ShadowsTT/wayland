@@ -10,51 +10,50 @@ import classNames from 'classnames';
 import React from 'react';
 
 /**
- * 步骤条组件属性 / Steps component props
+ * Steps component props
  */
 export interface WaylandStepsProps extends StepsProps {
-  /** 额外的类名 / Additional class name */
+  /** Additional class name */
   className?: string;
 }
 
 /**
- * 步骤条组件 / Steps component
+ * Steps component
  *
- * 基于 Arco Design Steps 的封装，提供统一的样式主题
  * Wrapper around Arco Design Steps with unified theme styling
  *
  * @features
- * - 自定义品牌色主题 / Custom brand color theme
- * - 完成态的特殊样式处理 / Special styling for finished state
- * - 完整的 Arco Steps API 支持 / Full Arco Steps API support
+ * - Custom brand color theme
+ * - Special styling for finished state
+ * - Full Arco Steps API support
  *
  * @example
  * ```tsx
- * // 基本用法 / Basic usage
+ * // Basic usage
  * <WaylandSteps current={1}>
- *   <WaylandSteps.Step title="步骤1" description="这是描述" />
- *   <WaylandSteps.Step title="步骤2" description="这是描述" />
- *   <WaylandSteps.Step title="步骤3" description="这是描述" />
+ *   <WaylandSteps.Step title="Step 1" description="Description" />
+ *   <WaylandSteps.Step title="Step 2" description="Description" />
+ *   <WaylandSteps.Step title="Step 3" description="Description" />
  * </WaylandSteps>
  *
- * // 垂直步骤条 / Vertical steps
+ * // Vertical steps
  * <WaylandSteps current={1} direction="vertical">
- *   <WaylandSteps.Step title="步骤1" description="描述" />
- *   <WaylandSteps.Step title="步骤2" description="描述" />
+ *   <WaylandSteps.Step title="Step 1" description="Description" />
+ *   <WaylandSteps.Step title="Step 2" description="Description" />
  * </WaylandSteps>
  *
- * // 带图标的步骤条 / Steps with icons
+ * // Steps with icons
  * <WaylandSteps current={1}>
- *   <WaylandSteps.Step title="完成" icon={<IconCheck />} />
- *   <WaylandSteps.Step title="进行中" icon={<IconLoading />} />
- *   <WaylandSteps.Step title="待处理" icon={<IconClock />} />
+ *   <WaylandSteps.Step title="Done" icon={<IconCheck />} />
+ *   <WaylandSteps.Step title="In progress" icon={<IconLoading />} />
+ *   <WaylandSteps.Step title="Pending" icon={<IconClock />} />
  * </WaylandSteps>
  *
- * // 迷你版步骤条 / Mini steps
+ * // Mini steps
  * <WaylandSteps current={1} size="small" type="dot">
- *   <WaylandSteps.Step title="步骤1" />
- *   <WaylandSteps.Step title="步骤2" />
- *   <WaylandSteps.Step title="步骤3" />
+ *   <WaylandSteps.Step title="Step 1" />
+ *   <WaylandSteps.Step title="Step 2" />
+ *   <WaylandSteps.Step title="Step 3" />
  * </WaylandSteps>
  * ```
  *
@@ -66,7 +65,7 @@ const WaylandSteps: React.FC<WaylandStepsProps> & { Step: typeof Steps.Step } = 
 
 WaylandSteps.displayName = 'WaylandSteps';
 
-// 导出子组件 / Export sub-component
+// Export sub-component
 WaylandSteps.Step = Steps.Step;
 
 export default WaylandSteps;

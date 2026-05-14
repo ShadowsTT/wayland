@@ -5,10 +5,8 @@
  */
 
 /**
- * 渲染器组件导出
  * Renderer components exports
  *
- * 特殊渲染逻辑组件
  * Components with special rendering logic
  */
 

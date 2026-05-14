@@ -95,7 +95,6 @@ const useFormatContent = (content: string) => {
 
 const MessageText: React.FC<{ message: IMessageText }> = ({ message }) => {
   // Filter think tags from content before rendering
-  // 在渲染前过滤 think 标签
   const contentToRender = useMemo(() => {
     let content = message.content.content;
     if (typeof content === 'string') {
@@ -128,7 +127,7 @@ const MessageText: React.FC<{ message: IMessageText }> = ({ message }) => {
   const hasVisibleContent =
     !!message.content.content && (typeof message.content.content !== 'string' || !!message.content.content.trim());
 
-  // 过滤空内容，避免渲染空DOM (truncation warning is the exception — render the
+  // Filter empty content to avoid rendering empty DOM (truncation warning is the exception — render the
   // banner even when content is empty, e.g. Gemini Pro reasoning-token bug.)
   if (!hasVisibleContent && !isTruncated) {
     return null;
@@ -209,7 +208,7 @@ const MessageText: React.FC<{ message: IMessageText }> = ({ message }) => {
                 : undefined),
           }}
         >
-          {/* JSON 内容使用折叠组件 Use CollapsibleContent for JSON content */}
+          {/* Use CollapsibleContent for JSON content */}
           {hasVisibleContent &&
             (shouldRenderPlainText ? (
               <div className='whitespace-pre-wrap break-words' data-testid='message-text-content'>

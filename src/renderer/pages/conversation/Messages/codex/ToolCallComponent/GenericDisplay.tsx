@@ -89,7 +89,7 @@ const GenericDisplay: React.FC<{ content: GenericUpdate }> = ({ content }) => {
             </div>
           )}
 
-          {/* Display content if available 显示内容 */}
+          {/* Display content if available */}
           {contentArray && contentArray.length > 0 && (
             <div>
               {contentArray.map((content, index) => (

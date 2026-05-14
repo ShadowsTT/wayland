@@ -61,7 +61,7 @@ const ContentView: React.FC<{ content: IMessageAcpToolCall['content']['update'][
     );
   }
 
-  // 处理 content 类型，包含 text 内容
+  // Handle content type with embedded text content
   if (content.type === 'content' && content.content && content.content.type === 'text' && content.content.text) {
     return (
       <div className='mt-3'>

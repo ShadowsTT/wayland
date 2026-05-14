@@ -134,7 +134,6 @@ const _AddNewConversation: React.FC<{ conversation: TChatConversation }> = ({ co
   );
 };
 
-// 仅抽取 Gemini 会话，确保包含模型信息
 // Narrow to Gemini conversations so model field is always available
 type GeminiConversation = Extract<TChatConversation, { type: 'gemini' }>;
 
@@ -157,7 +156,7 @@ const GeminiConversationPanel: React.FC<{
   const modelSelection = useGeminiModelSelection({ initialModel: conversation.model, onSelectModel });
   const workspaceEnabled = Boolean(conversation.extra?.workspace);
 
-  // 使用统一的 Hook 获取预设助手信息 / Use unified hook for preset assistant info
+  // Use unified hook for preset assistant info
   const { info: presetAssistantInfo } = usePresetAssistantInfo(conversation);
   const geminiAssistantId = resolveAssistantConfigId(conversation) ?? undefined;
 
@@ -264,7 +263,6 @@ const ChatConversation: React.FC<{
   // Dual-read: post-E new conversations get type='wcore'; legacy rows are still 'aionrs'.
   const isAionrsConversation = conversation?.type === 'wcore' || conversation?.type === 'aionrs';
 
-  // 使用统一的 Hook 获取预设助手信息（ACP/Codex 会话）
   // Use unified hook for preset assistant info (ACP/Codex conversations)
   const acpConversation = isGeminiConversation || isAionrsConversation ? undefined : conversation;
   const { info: presetAssistantInfo, isLoading: isLoadingPreset } = usePresetAssistantInfo(acpConversation);
@@ -376,7 +374,6 @@ const ChatConversation: React.FC<{
   }
 
   if (conversation && conversation.type === 'gemini') {
-    // Gemini 会话独立渲染，带右上角模型选择
     // Render Gemini layout with dedicated top-right model selector
     return (
       <GeminiConversationPanel
@@ -388,7 +385,6 @@ const ChatConversation: React.FC<{
     );
   }
 
-  // 如果有预设助手信息，使用预设助手的 logo 和名称；加载中时不进入 fallback；否则使用 backend 的 logo
   // If preset assistant info exists, use preset logo/name; while loading, avoid fallback; otherwise use backend logo
   const chatLayoutProps = presetAssistantInfo
     ? {

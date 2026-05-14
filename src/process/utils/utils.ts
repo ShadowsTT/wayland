@@ -36,10 +36,6 @@ export const getTempPath = () => {
  * Ensure CLI-safe symlink exists and return the symlink path.
  * On macOS, creates a symlink in home directory to avoid spaces in paths.
  * CLI tools like Qwen can't handle spaces in paths properly.
- *
- * 确保 CLI 安全符号链接存在并返回符号链接路径。
- * 在 macOS 上，在用户目录创建符号链接以避免路径中的空格。
- * CLI 工具如 Qwen 无法正确处理路径中的空格。
  */
 const ensureCliSafeSymlink = (targetPath: string, symlinkName: string): string => {
   // Only needed when the platform explicitly requires CLI-safe symlinks
@@ -92,8 +88,6 @@ const ensureCliSafeSymlink = (targetPath: string, symlinkName: string): string =
 /**
  * Get data path, using CLI-safe symlink on macOS.
  * Release builds use ~/.wayland; dev builds use ~/.wayland-dev.
- * 获取数据目录路径，macOS 上使用符号链接。
- * Release 使用 ~/.wayland，Dev 模式使用 ~/.wayland-dev。
  */
 export const getDataPath = (): string => {
   const rootPath = getElectronPathOrFallback('userData');
@@ -104,8 +98,6 @@ export const getDataPath = (): string => {
 /**
  * Get config path, using CLI-safe symlink on macOS.
  * Release builds use ~/.wayland-config; dev builds use ~/.wayland-config-dev.
- * 获取配置目录路径，macOS 上使用符号链接。
- * Release 使用 ~/.wayland-config，Dev 模式使用 ~/.wayland-config-dev。
  */
 export const getConfigPath = (): string => {
   const rootPath = getElectronPathOrFallback('userData');
@@ -119,9 +111,6 @@ export const getConfigPath = (): string => {
  * On macOS the file picker resolves symlinks, so a round-trip migration
  * (away → back) would store the real path (with spaces) instead of the
  * symlink path. This function detects that and returns the symlink path.
- *
- * 当用户选择的路径与默认路径的真实目标相同时，返回 symlink 路径。
- * macOS 文件选择器会解析 symlink，导致来回迁移后存储的是带空格的真实路径。
  */
 export const resolveCliSafePath = (inputPath: string, defaultPath: string): string => {
   try {
@@ -143,11 +132,11 @@ export const generateHashWithFullName = (fullName: string): string => {
     hash = (hash << 5) - hash + char;
     hash = hash & hash; // Convert to 32bit integer
   }
-  // 取绝对值并转换为16进制，然后取前8位
+  // Take absolute value, convert to hex, then keep the first 8 chars
   return Math.abs(hash).toString(16).padStart(8, '0'); //.slice(0, 8);
 };
 
-// 递归读取目录内容，返回树状结构
+// Recursively read directory contents and return a tree structure
 export async function readDirectoryRecursive(
   dirPath: string,
   options?: {
@@ -276,8 +265,9 @@ export async function readDirectoryRecursive(
 }
 
 /**
- * 递归复制目录
- * 注意：包含路径验证，防止复制到自身或子目录导致无限递归（修复 Windows 下 cache 目录循环创建的 bug）
+ * Recursively copy a directory.
+ * Note: includes path validation to prevent copying into self or a subdirectory,
+ * which would cause infinite recursion (fixes the Windows cache-dir loop bug).
  */
 interface CopyOptions {
   overwrite?: boolean;
@@ -286,22 +276,22 @@ interface CopyOptions {
 export async function copyDirectoryRecursively(src: string, dest: string, options: CopyOptions = {}) {
   const { overwrite = true } = options;
 
-  // 标准化路径：Windows 转小写（不区分大小写），Unix/macOS 保持原样（区分大小写）
+  // Normalize paths: lowercase on Windows (case-insensitive); leave Unix/macOS alone (case-sensitive)
   const isWindows = process.platform === 'win32';
   const normalizedSrc = isWindows ? path.resolve(src).toLowerCase() : path.resolve(src);
   const normalizedDest = isWindows ? path.resolve(dest).toLowerCase() : path.resolve(dest);
 
-  // 防止复制到自身 (F:\code -> F:\code)
+  // Prevent copying into self (F:\code -> F:\code)
   if (normalizedSrc === normalizedDest) {
     throw new Error(`Cannot copy directory into itself: ${src}`);
   }
 
-  // 防止复制到子目录 (F:\code -> F:\code\cache) - 会导致无限递归
+  // Prevent copying into a subdirectory (F:\code -> F:\code\cache) - would cause infinite recursion
   if (normalizedDest.startsWith(normalizedSrc + path.sep)) {
     throw new Error(`Cannot copy directory into its subdirectory: ${src} -> ${dest}`);
   }
 
-  // 防止复制到父目录 (F:\code\cache -> F:\code)
+  // Prevent copying into a parent directory (F:\code\cache -> F:\code)
   if (normalizedSrc.startsWith(normalizedDest + path.sep)) {
     throw new Error(`Cannot copy parent directory into child directory: ${src} -> ${dest}`);
   }
@@ -322,7 +312,7 @@ export async function copyDirectoryRecursively(src: string, dest: string, option
       }
       await copyDirectoryRecursively(srcPath, destPath, options);
     } else {
-      // 如果不覆盖且目标文件已存在，跳过
+      // If overwrite is off and the destination already exists, skip
       if (!overwrite && existsSync(destPath)) {
         continue;
       }
@@ -332,8 +322,6 @@ export async function copyDirectoryRecursively(src: string, dest: string, option
 }
 
 /**
- * 递归删除 dest 中在 src 中不存在的条目（按同名匹配）。
- * 与 copyDirectoryRecursively 搭配使用，用于把 dest 同步成与 src 一致的结构。
  * Recursively prune entries in `dest` that no longer exist in `src` (matched by name).
  * Pair with copyDirectoryRecursively to make `dest` structurally match `src`.
  */
@@ -365,7 +353,7 @@ export async function pruneDirectoryToMatch(src: string, dest: string): Promise<
   }
 }
 
-// 验证两个目录的文件名结构是否相同
+// Verify two directories have the same filename structure
 export async function verifyDirectoryFiles(dir1: string, dir2: string): Promise<boolean> {
   try {
     if (!existsSync(dir1) || !existsSync(dir2)) {
@@ -419,33 +407,30 @@ export const copyFilesToDirectory = async (
   const resolvedDir = path.resolve(dir);
 
   for (const file of files) {
-    // 确保文件路径是绝对路径
+    // Ensure the file path is absolute
     const absoluteFilePath = path.isAbsolute(file) ? file : path.resolve(file);
 
-    // 检查源文件是否存在
+    // Check whether the source file exists
     try {
       await fs.access(absoluteFilePath);
     } catch (error) {
       console.warn(`[Wayland] Source file does not exist, skipping: ${absoluteFilePath}`);
       console.warn(`[Wayland] Original path: ${file}`);
-      // 跳过不存在的文件，而不是抛出错误
+      // Skip missing files instead of throwing
       continue;
     }
 
     // Skip files that are already inside the target directory to avoid duplicates
-    // 跳过已在目标目录中的文件，避免创建重复副本
     const resolvedFile = path.resolve(absoluteFilePath);
     if (resolvedFile.startsWith(resolvedDir + path.sep)) {
       copiedFiles.push(absoluteFilePath);
       continue;
     }
 
-    // 使用原始文件名，只在目标文件已存在时才添加唯一后缀
     // Use original filename, only add unique suffix when destination exists
     let fileName = path.basename(absoluteFilePath);
     let destPath = path.join(dir, fileName);
 
-    // 如果目标文件已存在，添加时间戳后缀避免覆盖
     // If destination exists, add timestamp suffix to avoid overwriting
     if (existsSync(destPath)) {
       const ext = path.extname(fileName);
@@ -459,10 +444,10 @@ export const copyFilesToDirectory = async (
       copiedFiles.push(destPath);
     } catch (error) {
       console.error(`[Wayland] Failed to copy file from ${absoluteFilePath} to ${destPath}:`, error);
-      // 继续处理其他文件，而不是完全失败
+      // Continue with other files instead of failing the entire operation
     }
 
-    // 如果是临时文件，复制完成后删除
+    // If it's a temp file, delete after the copy completes
     if (tempDir && absoluteFilePath.startsWith(tempDir) && !skipCleanup) {
       try {
         await fs.unlink(absoluteFilePath);

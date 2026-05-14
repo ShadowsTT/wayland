@@ -123,7 +123,7 @@ describe('handleDescribeAssistant', () => {
       custom_agent_id: 'builtin-word-creator',
       locale: 'zh-CN',
     });
-    // The Chinese example prompt distinctly contains "季度报告".
+    // The Chinese example prompt distinctly contains "quarterly report" (季度报告).
     expect(zh).toContain('季度报告');
   });
 

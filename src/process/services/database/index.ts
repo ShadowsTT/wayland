@@ -285,13 +285,11 @@ export class WaylandUIDatabase {
   /**
    * ==================
    * User operations
-   * 用户操作
    * ==================
    */
 
   /**
    * Create a new user in the database
-   * 在数据库中创建新用户
    *
    * @param username - Username (unique identifier)
    * @param email - User email (optional)
@@ -332,7 +330,6 @@ export class WaylandUIDatabase {
 
   /**
    * Get user by user ID
-   * 通过用户 ID 获取用户信息
    *
    * @param userId - User ID to query
    * @returns Query result with user data or error if not found
@@ -362,7 +359,6 @@ export class WaylandUIDatabase {
 
   /**
    * Get user by username (used for authentication)
-   * 通过用户名获取用户信息（用于身份验证）
    *
    * @param username - Username to query
    * @returns Query result with user data or null if not found
@@ -386,7 +382,6 @@ export class WaylandUIDatabase {
 
   /**
    * Get all users (excluding system default user)
-   * 获取所有用户（排除系统默认用户）
    *
    * @returns Query result with array of all users ordered by creation time
    */
@@ -410,7 +405,6 @@ export class WaylandUIDatabase {
 
   /**
    * Get total count of users (excluding system default user)
-   * 获取用户总数（排除系统默认用户）
    *
    * @returns Query result with user count
    */
@@ -434,13 +428,11 @@ export class WaylandUIDatabase {
 
   /**
    * Check if any users exist in the database
-   * 检查数据库中是否存在用户
    *
    * @returns Query result with boolean indicating if users exist
    */
   hasUsers(): IQueryResult<boolean> {
     try {
-      // 只统计已设置密码的账户，排除尚未完成初始化的占位行
       // Count only accounts with a non-empty password to ignore placeholder entries
       const stmt = this.db.prepare(
         `SELECT COUNT(*) as count FROM users WHERE password_hash IS NOT NULL AND TRIM(password_hash) != ''`
@@ -460,7 +452,6 @@ export class WaylandUIDatabase {
 
   /**
    * Update user's last login timestamp
-   * 更新用户的最后登录时间戳
    *
    * @param userId - User ID to update
    * @returns Query result with success status
@@ -484,7 +475,6 @@ export class WaylandUIDatabase {
 
   /**
    * Update user's password hash
-   * 更新用户的密码哈希
    *
    * @param userId - User ID to update
    * @param newPasswordHash - New hashed password (use bcrypt)
@@ -511,7 +501,6 @@ export class WaylandUIDatabase {
 
   /**
    * Update user's JWT secret
-   * 更新用户的 JWT secret
    */
   updateUserJwtSecret(userId: string, jwtSecret: string): IQueryResult<boolean> {
     try {
@@ -1060,7 +1049,6 @@ export class WaylandUIDatabase {
   /**
    * ==================
    * Channel Plugin operations
-   * 个人助手插件操作
    * ==================
    */
 
@@ -1230,7 +1218,6 @@ export class WaylandUIDatabase {
   /**
    * ==================
    * Channel User operations
-   * 个人助手用户操作
    * ==================
    */
 
@@ -1317,7 +1304,6 @@ export class WaylandUIDatabase {
   /**
    * ==================
    * Channel Session operations
-   * 个人助手会话操作
    * ==================
    */
 
@@ -1398,7 +1384,6 @@ export class WaylandUIDatabase {
   /**
    * ==================
    * Channel Pairing Code operations
-   * 个人助手配对码操作
    * ==================
    */
 

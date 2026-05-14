@@ -6,7 +6,6 @@
 
 /**
  * Workspace utility functions
- * 工作空间工具函数
  */
 
 /**
@@ -20,7 +19,6 @@ const splitPathSegments = (targetPath: string): string[] => targetPath.split(/[\
 
 /**
  * Check if a workspace path is a temporary workspace
- * 检查工作空间路径是否为临时工作空间
  */
 export const isTemporaryWorkspace = (workspacePath: string): boolean => {
   // Extract the last path segment (directory name)
@@ -33,7 +31,6 @@ export const isTemporaryWorkspace = (workspacePath: string): boolean => {
 
 /**
  * Get the display name for a workspace path
- * 获取工作空间的显示名称
  *
  * @param workspacePath - The full workspace path
  * @param t - Optional i18n translation function
@@ -64,7 +61,6 @@ export const getWorkspaceDisplayName = (workspacePath: string, t?: (key: string)
 
 /**
  * Get the last directory name from a path
- * 从路径中获取最后一级目录名
  */
 export const getLastDirectoryName = (path: string): string => {
   const parts = splitPathSegments(path);

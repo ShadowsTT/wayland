@@ -146,7 +146,6 @@ export function createToolConfirmationKeyboard(
   options: Array<{ label: string; value: string }>
 ): InlineKeyboard {
   const keyboard = new InlineKeyboard();
-  // 每行最多显示 2 个按钮
   // Show at most 2 buttons per row
   for (let i = 0; i < options.length; i += 2) {
     if (i > 0) keyboard.row();

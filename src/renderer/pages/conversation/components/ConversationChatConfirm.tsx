@@ -28,9 +28,7 @@ const ConversationChatConfirm: React.FC<PropsWithChildren<{ conversation_id: str
   }, [conversation_id]);
 
   // Check if confirmation should be auto-confirmed via backend approval store
-  // 通过后端 approval store 检查是否应该自动确认
   // Keys are parsed in backend (single source of truth)
-  // Keys 在后端解析（单一数据源）
   const checkAndAutoConfirm = useCallback(
     async (confirmation: StoredConfirmation): Promise<boolean> => {
       // Only check agent types that have approval store
@@ -133,7 +131,6 @@ const ConversationChatConfirm: React.FC<PropsWithChildren<{ conversation_id: str
   }, [listenConversationIds, checkAndAutoConfirm]);
 
   // Handle keyboard shortcuts for confirmation actions
-  // 处理确认操作的键盘快捷键
   useEffect(() => {
     if (!confirmations.length) return;
 
@@ -206,25 +203,24 @@ const ConversationChatConfirm: React.FC<PropsWithChildren<{ conversation_id: str
       window.removeEventListener('keydown', handleKeyDown);
     };
   }, [confirmations, conversation_id]);
-  // 修复 #475: 如果加载出错，显示错误信息和重试按钮
   // Fix #475: If loading fails, show error message and retry button
   if (loadError && !confirmations.length) {
     return (
       <div>
-        {/* 错误提示卡片 / Error notification card */}
+        {/* Error notification card */}
         <div
           className={`relative p-16px bg-dialog-fill-0 flex flex-col overflow-hidden m-b-20px rd-20px max-w-800px w-full mx-auto box-border`}
           style={{
             boxShadow: '0px 2px 20px 0px rgba(74, 88, 250, 0.1)',
           }}
         >
-          {/* 错误标题 / Error title */}
+          {/* Error title */}
           <div className='color-[var(--danger)] text-14px font-medium mb-8px'>
             {t('conversation.chat.confirmationLoadError', 'Failed to load confirmation dialog')}
           </div>
-          {/* 错误详情 / Error details */}
+          {/* Error details */}
           <div className='text-12px color-[var(--text-secondary)] mb-12px'>{loadError}</div>
-          {/* 手动重试按钮 / Manual retry button */}
+          {/* Manual retry button */}
           <button
             onClick={() => {
               setLoadError(null);
@@ -291,7 +287,6 @@ const ConversationChatConfirm: React.FC<PropsWithChildren<{ conversation_id: str
                 <div
                   onClick={() => {
                     // Note: "always allow" is stored by backend when proceed_always is confirmed
-                    // 注意：后端会在确认 proceed_always 时自动存储权限
                     setConfirmations((prev) => prev.filter((p) => p.id !== confirmation.id));
                     void ipcBridge.conversation.confirmation.confirm.invoke({
                       conversation_id: confirmation.conversation_id,

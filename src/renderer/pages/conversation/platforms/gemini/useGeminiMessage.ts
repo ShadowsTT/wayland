@@ -8,9 +8,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 export const useGeminiMessage = (conversation_id: string, onError?: (message: IResponseMessage) => void) => {
   const addOrUpdateMessage = useAddOrUpdateMessage();
-  const [streamRunning, setStreamRunning] = useState(false); // API 流是否在运行
-  const [hasActiveTools, setHasActiveTools] = useState(false); // 是否有工具在执行或等待确认
-  const [waitingResponse, setWaitingResponse] = useState(false); // 等待后端响应（发送消息后到收到 start 之前）
+  const [streamRunning, setStreamRunning] = useState(false); // Whether the API stream is running
+  const [hasActiveTools, setHasActiveTools] = useState(false); // Whether tools are executing or awaiting confirmation
+  const [waitingResponse, setWaitingResponse] = useState(false); // Awaiting backend response (after send, before 'start')
   const [hasHydratedRunningState, setHasHydratedRunningState] = useState(false);
   const [thought, setThought] = useState<ThoughtData>({
     description: '',

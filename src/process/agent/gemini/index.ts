@@ -57,13 +57,10 @@ import os from 'os';
 let currentGeminiAgent: GeminiAgent | null = null;
 
 /**
- * Check if Google OAuth credentials exist
- * 检查 Google OAuth 凭证是否存在
+ * Check if Google OAuth credentials exist.
  *
- * Gemini CLI stores OAuth credentials in ~/.gemini/oauth_creds.json
- * If this file doesn't exist or is empty, OAuth hasn't been configured
- * Gemini CLI 将 OAuth 凭证存储在 ~/.gemini/oauth_creds.json
- * 如果此文件不存在或为空，则表示 OAuth 尚未配置
+ * Gemini CLI stores OAuth credentials in ~/.gemini/oauth_creds.json.
+ * If this file doesn't exist or is empty, OAuth hasn't been configured.
  */
 function hasGoogleOAuthCredentials(): boolean {
   try {
@@ -74,7 +71,6 @@ function hasGoogleOAuthCredentials(): boolean {
     const content = fs.readFileSync(credentialsPath, 'utf-8');
     const creds = JSON.parse(content);
     // Check if credentials have the required fields
-    // 检查凭证是否包含必要字段
     return !!(creds && (creds.access_token || creds.refresh_token));
   } catch {
     return false;
@@ -91,12 +87,12 @@ interface GeminiAgent2Options {
   mcpServers?: Record<string, unknown>;
   contextFileName?: string;
   onStreamEvent: (event: { type: string; data: unknown; msg_id: string }) => void;
-  // 系统规则，在初始化时注入到 userMemory / System rules, injected into userMemory at initialization
+  // System rules, injected into userMemory at initialization
   presetRules?: string;
-  contextContent?: string; // 向后兼容 / Backward compatible
-  /** 内置 skills 目录路径，使用 aioncli-core SkillManager 加载 / Builtin skills directory path, loaded by aioncli-core SkillManager */
+  contextContent?: string; // Backward compatible
+  /** Builtin skills directory path, loaded by aioncli-core SkillManager */
   skillsDir?: string;
-  /** 启用的 skills 列表，用于过滤 SkillManager 中的 skills / Enabled skills list for filtering skills in SkillManager */
+  /** Enabled skills list for filtering skills in SkillManager */
   enabledSkills?: string[];
 }
 
@@ -116,19 +112,19 @@ export class GeminiAgent {
   private abortController: AbortController | null = null;
   private activeMsgId: string | null = null;
   private onStreamEvent: (event: { type: string; data: unknown; msg_id: string }) => void;
-  // 系统规则，在初始化时注入 / System rules, injected at initialization
+  // System rules, injected at initialization
   private presetRules?: string;
-  private contextContent?: string; // 向后兼容 / Backward compatible
-  private toolConfig: ConversationToolConfig; // 对话级别的工具配置
-  private apiKeyManager: ApiKeyManager | null = null; // 多API Key管理器
+  private contextContent?: string; // Backward compatible
+  private toolConfig: ConversationToolConfig; // Conversation-level tool configuration
+  private apiKeyManager: ApiKeyManager | null = null; // Multi-API-key manager
   private settings: Settings | null = null;
   private historyPrefix: string | null = null;
   private historyUsedOnce = false;
   private skillsIndexPrependedOnce = false; // Track if we've prepended skills index to first message
   private contextFileName: string | undefined;
-  /** 内置 skills 目录路径 / Builtin skills directory path */
+  /** Builtin skills directory path */
   private skillsDir?: string;
-  /** 启用的 skills 列表 / Enabled skills list */
+  /** Enabled skills list */
   private enabledSkills?: string[];
   bootstrap: Promise<void>;
   static buildFileServer(workspace: string) {
@@ -143,13 +139,13 @@ export class GeminiAgent {
     this.googleCloudProject = options.GOOGLE_CLOUD_PROJECT;
     this.mcpServers = options.mcpServers || {};
     this.contextFileName = options.contextFileName;
-    // 使用统一的工具函数获取认证类型
+    // Use the shared helper to resolve the auth type
     this.authType = getProviderAuthType(options.model);
     this.onStreamEvent = options.onStreamEvent;
     this.presetRules = options.presetRules;
     this.skillsDir = options.skillsDir;
     this.enabledSkills = options.enabledSkills;
-    // 向后兼容：优先使用 presetRules，其次 contextContent / Backward compatible: prefer presetRules, fallback to contextContent
+    // Backward compatible: prefer presetRules, fallback to contextContent
     this.contextContent = options.contextContent || options.presetRules;
     this.initClientEnv();
     this.toolConfig = new ConversationToolConfig({
@@ -188,7 +184,6 @@ export class GeminiAgent {
       return this.model.apiKey;
     };
 
-    // 清除所有认证相关的环境变量，避免不同认证类型之间的干扰
     // Clear all auth-related env vars to avoid interference between different auth types
     const clearAllAuthEnvVars = () => {
       delete process.env.GEMINI_API_KEY;
@@ -206,7 +201,6 @@ export class GeminiAgent {
 
     clearAllAuthEnvVars();
 
-    // 对 new-api 网关进行 URL 规范化（不同协议需要不同的 URL 格式）
     // Normalize URL for new-api gateway (different protocols need different URL formats)
     const isNewApi = isNewApiPlatform(this.model.platform);
     const getBaseUrl = () =>
@@ -223,16 +217,12 @@ export class GeminiAgent {
       return;
     }
     if (this.authType === AuthType.LOGIN_WITH_GOOGLE) {
-      // 对于个人 OAuth 认证，不需要 GOOGLE_CLOUD_PROJECT
-      // 如果用户配置了无效的项目 ID，会导致 403 权限错误
-      // For personal OAuth auth, GOOGLE_CLOUD_PROJECT is not needed
-      // Invalid project ID will cause 403 permission error
-      // 只有当用户明确配置了有效的项目 ID 时才设置
-      // Only set if user explicitly configured a valid project ID
+      // For personal OAuth auth, GOOGLE_CLOUD_PROJECT is not needed.
+      // Invalid project ID will cause 403 permission error.
+      // Only set if user explicitly configured a valid project ID.
       if (this.googleCloudProject && this.googleCloudProject.trim()) {
         process.env.GOOGLE_CLOUD_PROJECT = this.googleCloudProject.trim();
       }
-      // 注意：LOGIN_WITH_GOOGLE 使用 OAuth，不需要设置任何 API Key
       // Note: LOGIN_WITH_GOOGLE uses OAuth, no API Key needed
       return;
     }
@@ -359,7 +349,7 @@ export class GeminiAgent {
     // 使用传入的 YOLO 设置
     const yoloMode = this.yoloMode;
 
-    // 初始化对话级别的工具配置
+    // Initialize the conversation-level tool configuration
     await this.toolConfig.initializeForConversation(this.authType!);
 
     const extensions = loadExtensions(path);
@@ -389,8 +379,6 @@ export class GeminiAgent {
       }
     }
 
-    // aioncli-core 的 SkillManager.discoverSkills() 会重新从用户 skills 目录加载所有 skills
-    // 覆盖了 loadCliConfig 中的过滤，需要在这里重新应用 enabledSkills 过滤
     // aioncli-core's SkillManager.discoverSkills() reloads all skills from user directory,
     // overriding our filtering in loadCliConfig, so we need to re-apply enabledSkills filter here
     if (this.enabledSkills && this.enabledSkills.length > 0) {
@@ -402,14 +390,11 @@ export class GeminiAgent {
       this.config.getSkillManager().filterSkills(() => false);
     }
 
-    // 对于 Google OAuth 认证，先检查凭证是否存在，避免触发浏览器授权弹窗
     // For Google OAuth auth, check if credentials exist first to avoid triggering browser auth popup
     if (this.authType === AuthType.LOGIN_WITH_GOOGLE) {
-      // 检查 OAuth 凭证是否存在 / Check if OAuth credentials exist
+      // Check if OAuth credentials exist
       if (!hasGoogleOAuthCredentials()) {
-        // 抛出认证错误，让 UI 层处理自动切换
-        // Throw auth error to let UI layer handle auto-switching
-        // 错误信息包含 "authentication" 关键字以触发 GeminiSendBox 的 API 错误检测和自动切换
+        // Throw auth error to let UI layer handle auto-switching.
         // Error message contains "authentication" keyword to trigger GeminiSendBox API error detection and auto-switch
         console.error(
           '[GeminiAgent] Google OAuth credentials not found. User needs to authenticate via Gemini CLI first.'
@@ -418,17 +403,13 @@ export class GeminiAgent {
           'Google OAuth authentication not configured. Please run "gemini" CLI to authenticate first, or switch to an API key-based agent.'
         );
       }
-      // 凭证存在时才清除缓存并刷新
       // Only clear cache and refresh when credentials exist
       clearOauthClientCache();
     }
 
-    // refreshAuth 是初始化 contentGenerator 的必要步骤，所有认证类型都需要调用
-    // refreshAuth is necessary to initialize contentGenerator, required for all auth types
-    // 注意：OAuth 只在 LOGIN_WITH_GOOGLE 时被触发（通过 createCodeAssistContentGenerator）
-    // Note: OAuth is only triggered for LOGIN_WITH_GOOGLE (via createCodeAssistContentGenerator)
-    // 对于 USE_OPENAI, USE_GEMINI, USE_ANTHROPIC 等，会创建相应的 Generator 但不会触发 OAuth
-    // For USE_OPENAI, USE_GEMINI, USE_ANTHROPIC, etc., corresponding Generator is created without OAuth
+    // refreshAuth is necessary to initialize contentGenerator, required for all auth types.
+    // Note: OAuth is only triggered for LOGIN_WITH_GOOGLE (via createCodeAssistContentGenerator).
+    // For USE_OPENAI, USE_GEMINI, USE_ANTHROPIC, etc., corresponding Generator is created without OAuth.
     await this.config.refreshAuth(this.authType);
     console.log(
       `[GeminiAgent] After refreshAuth — config.getModel(): "${this.config.getModel()}", authType used: ${this.authType}`
@@ -436,10 +417,8 @@ export class GeminiAgent {
 
     this.geminiClient = this.config.getGeminiClient();
 
-    // 在初始化时注入 presetRules 到 userMemory
-    // Inject presetRules into userMemory at initialization
-    // Rules 定义系统行为规则，在会话开始时就应该生效
-    // Rules define system behavior, should be effective from session start
+    // Inject presetRules into userMemory at initialization.
+    // Rules define system behavior, should be effective from session start.
     console.log(`[GeminiAgent] presetRules length: ${this.presetRules?.length || 0}`);
     if (this.presetRules) {
       const currentMemory = this.config.getUserMemory();
@@ -451,18 +430,16 @@ export class GeminiAgent {
       console.log(`[GeminiAgent] No presetRules to inject`);
     }
 
-    // Note: Skills (技能定义) are prepended to the first message in send() method
-    // Skills provide capabilities/tools descriptions, injected at runtime
-    // 注意：Skills 在 send() 方法中 prepend 到第一条消息
-    // Skills 提供能力/工具描述，在运行时注入
+    // Note: Skills (skill definitions) are prepended to the first message in send() method.
+    // Skills provide capabilities/tools descriptions, injected at runtime.
 
-    // 注册对话级别的自定义工具
+    // Register conversation-level custom tools
     await this.toolConfig.registerCustomTools(this.config, this.geminiClient);
 
     this.initToolScheduler(settings);
   }
 
-  // 初始化调度工具
+  // Initialize the tool scheduler
   private initToolScheduler(_settings: Settings) {
     this.scheduler = new CoreToolScheduler({
       onAllToolCallsComplete: async (completedToolCalls: CompletedToolCall[]) => {
@@ -470,10 +447,8 @@ export class GeminiAgent {
         try {
           if (completedToolCalls.length > 0) {
             const refreshMemory = async () => {
-              // 直接使用 aioncli-core 提供的 refreshServerHierarchicalMemory
-              // Directly use refreshServerHierarchicalMemory from aioncli-core
-              // 它会自动从 config 获取 ExtensionLoader 并更新 memory
-              // It automatically gets ExtensionLoader from config and updates memory
+              // Directly use refreshServerHierarchicalMemory from aioncli-core;
+              // it automatically gets ExtensionLoader from config and updates memory
               await refreshServerHierarchicalMemory(this.config);
             };
             const response = handleCompletedTools(completedToolCalls, this.geminiClient, refreshMemory);
@@ -529,7 +504,7 @@ export class GeminiAgent {
           });
         }
       },
-      // onEditorClose 回调在 aioncli-core v0.18.4 中已移除 / callback was removed in aioncli-core v0.18.4
+      // onEditorClose callback was removed in aioncli-core v0.18.4
       // approvalMode: this.config.getApprovalMode(),
       getPreferredEditor() {
         return 'vscode';
@@ -539,7 +514,6 @@ export class GeminiAgent {
   }
 
   /**
-   * 处理消息流（带弹性监控）
    * Handle message stream with resilience monitoring
    *
    * InvalidStream retry is handled by aioncli-core (geminiChat.ts streamWithRetries
@@ -554,7 +528,6 @@ export class GeminiAgent {
     const toolCallRequests: ToolCallRequestInfo[] = [];
     let heartbeatWarned = false;
 
-    // 流连接事件处理
     // Stream connection event handler
     const onConnectionEvent = (event: StreamConnectionEvent) => {
       if (event.type === 'heartbeat_timeout') {
@@ -579,7 +552,6 @@ export class GeminiAgent {
         if (data.type === 'tool_call_request') {
           const toolRequest = data.data as ToolCallRequestInfo;
           toolCallRequests.push(toolRequest);
-          // 立即保护工具调用，防止被取消
           // Immediately protect tool call to prevent cancellation
           globalToolCallGuard.protect(toolRequest.callId);
           return;
@@ -608,14 +580,11 @@ export class GeminiAgent {
     )
       .then(async () => {
         if (toolCallRequests.length > 0) {
-          // Emit preview_open for navigation tools, but don't block execution
-          // 对导航工具发送 preview_open 事件，但不阻止执行
-          // Agent needs chrome-devtools to fetch web page content
-          // Agent 需要 chrome-devtools 来获取网页内容
+          // Emit preview_open for navigation tools, but don't block execution.
+          // Agent needs chrome-devtools to fetch web page content.
           this.emitPreviewForNavigationTools(toolCallRequests, msg_id);
 
           // Schedule ALL tool requests including chrome-devtools
-          // 调度所有工具请求，包括 chrome-devtools
           await this.scheduler.schedule(toolCallRequests, abortController.signal);
         } else {
           // Agentic loop finished (no pending tool calls).
@@ -629,7 +598,6 @@ export class GeminiAgent {
       .catch((e: unknown) => {
         const rawMessage = e instanceof Error ? e.message : JSON.stringify(e);
         const errorMessage = this.enrichErrorMessage(rawMessage);
-        // 清理受保护的工具调用
         // Clean up protected tool calls on error
         for (const req of toolCallRequests) {
           globalToolCallGuard.unprotect(req.callId);
@@ -645,23 +613,19 @@ export class GeminiAgent {
   }
 
   /**
-   * 检查是否为导航工具调用（支持带MCP前缀和不带前缀的工具名）
-   * Check if it's a navigation tool call (supports both with and without MCP prefix)
+   * Check if it's a navigation tool call (supports both with and without MCP prefix).
    *
-   * Delegates to NavigationInterceptor for unified logic
+   * Delegates to NavigationInterceptor for unified logic.
    */
   private isNavigationTool(toolName: string): boolean {
     return NavigationInterceptor.isNavigationTool(toolName);
   }
 
   /**
-   * Emit preview_open events for navigation tools without blocking execution
-   * 对导航工具发送 preview_open 事件，但不阻止执行
+   * Emit preview_open events for navigation tools without blocking execution.
    *
    * Agent needs chrome-devtools to fetch web page content, so we only emit
    * preview events to show URL in preview panel, while letting tools execute normally.
-   * Agent 需要 chrome-devtools 来获取网页内容，所以我们只发送预览事件在预览面板中显示 URL，
-   * 同时让工具正常执行。
    */
   private emitPreviewForNavigationTools(toolCallRequests: ToolCallRequestInfo[], _msg_id: string): void {
     for (const request of toolCallRequests) {
@@ -672,7 +636,6 @@ export class GeminiAgent {
         const url = NavigationInterceptor.extractUrl({ arguments: args as Record<string, unknown> });
         if (url) {
           // Emit preview_open event to show URL in preview panel
-          // 发送 preview_open 事件在预览面板中显示 URL
           this.onStreamEvent({
             type: 'preview_open',
             data: {
@@ -710,8 +673,7 @@ export class GeminiAgent {
 
       const stream = this.geminiClient.sendMessageStream(query, abortController.signal, prompt_id);
 
-      // Send start event immediately when stream is created
-      // 流创建后立即发送 start 事件，确保 UI 显示停止按钮
+      // Send start event immediately when stream is created so the UI shows the stop button
       this.onStreamEvent({ type: 'start', data: '', msg_id });
 
       this.handleMessage(stream, msg_id, abortController)
@@ -767,7 +729,6 @@ export class GeminiAgent {
       message = stripFilesMarker(message);
     }
 
-    // 将 files 参数中的文件路径作为 @ 引用添加到消息末尾
     // Append files from files parameter as @ references to the message
     if (files && files.length > 0) {
       const fileRefs = files.map((filePath) => `@${filePath}`).join(' ');
@@ -780,7 +741,6 @@ export class GeminiAgent {
       }
     }
 
-    // OAuth Token 预检查（仅对 OAuth 模式生效）
     // Preemptive OAuth Token check (only for OAuth mode)
     if (this.authType === AuthType.LOGIN_WITH_GOOGLE) {
       try {
@@ -791,7 +751,7 @@ export class GeminiAgent {
         }
       } catch (tokenError) {
         console.warn('[GeminiAgent] OAuth token check error:', tokenError);
-        // 继续执行，让后续流程处理认证错误
+        // Continue execution and let the downstream flow handle auth errors
       }
     }
 
@@ -807,12 +767,10 @@ export class GeminiAgent {
       this.historyUsedOnce = true;
     }
 
-    // Skills 通过 SkillManager 加载，索引已在系统指令中
     // Skills are loaded via SkillManager, index is already in system instruction
     let skillsPrefix = '';
 
     if (!this.skillsIndexPrependedOnce) {
-      // 优先使用 presetRules，否则回退到 contextContent
       // Prefer presetRules, fallback to contextContent
       const rulesContent = this.presetRules || this.contextContent;
       if (rulesContent) {
@@ -820,7 +778,7 @@ export class GeminiAgent {
       }
       this.skillsIndexPrependedOnce = true;
 
-      // 注入前缀到消息 / Inject prefix into message
+      // Inject prefix into message
       if (skillsPrefix) {
         const prefix = skillsPrefix + '[User Request]\n';
         if (Array.isArray(message)) {
@@ -847,18 +805,16 @@ export class GeminiAgent {
         }
       },
       onDebugMessage() {
-        // 调试回调留空以避免日志噪声 / Debug hook intentionally left blank to avoid noisy logging
+        // Debug hook intentionally left blank to avoid noisy logging
       },
       messageId: Date.now(),
       signal: abortController.signal,
-      // 有 files 时启用懒加载：不立即读取文件内容
-      // Enable lazy loading only when files are provided
+      // Enable lazy loading only when files are provided; do not read file content immediately
       lazyFileLoading: !!(files && files.length > 0),
     });
 
     if (!shouldProceed || processedQuery === null || abortController.signal.aborted) {
       // Send error message to user if @ command processing failed
-      // 如果 @ 命令处理失败，向用户发送错误消息
       if (atCommandError) {
         this.onStreamEvent({
           type: 'error',
@@ -899,7 +855,6 @@ export class GeminiAgent {
       this.historyPrefix = `Conversation history (recent):\n${text}\n\n`;
       this.historyUsedOnce = false;
       this.skillsIndexPrependedOnce = false;
-      // 使用 refreshServerHierarchicalMemory 刷新 memory，然后追加聊天历史
       // Use refreshServerHierarchicalMemory to refresh memory, then append chat history
       const { memoryContent } = await refreshServerHierarchicalMemory(this.config);
       const combined = `${memoryContent}\n\n[Recent Chat]\n${text}`;

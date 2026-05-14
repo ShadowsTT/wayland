@@ -79,28 +79,28 @@ for (const { leaderType, teamName } of LEADER_CONFIGS) {
 
     const tabBar = page.locator('[data-testid="team-tab-bar"]');
 
-    // [操作] 通过 leader 添加成员
+    // [action] add member via the leader
     const memberName = `E2E-member-${Date.now()}`;
     await chatInput.fill(`Add a claude type member named ${memberName}`);
     await chatInput.press('Enter');
 
-    // [断言] 新成员 tab 出现在 tab bar 里
+    // [assert] new member tab appears in the tab bar
     await expect(tabBar.locator(`text=${memberName}`)).toBeVisible({ timeout: 120000 });
 
-    // [等待] 成员初始化完成（active badge 消失）再发 fire，否则 shutdown_request 会被忽略
+    // [wait] for member initialization to complete (active badge disappears) before sending fire; otherwise shutdown_request is ignored
     const memberActiveBadge = tabBar
       .locator('span')
       .filter({ hasText: memberName })
       .locator('xpath=following-sibling::span[@aria-label="active"]');
     await expect(memberActiveBadge).not.toBeVisible({ timeout: 60000 });
 
-    // [操作] 先点 leader tab 确保 chatInput 是 leader 的
+    // [action] click the leader tab first to ensure chatInput belongs to the leader
     await tabBar.locator('span').filter({ hasText: 'Leader' }).first().click();
 
-    // [等待] 处理所有挂起的 MCP tool confirmation dialogs（auto-approve "Yes, allow always"）
-    // Gemini leader 调用 MCP 工具时会弹出确认弹窗，必须确认后 leader 才能继续/完成
+    // [wait] handle all pending MCP tool confirmation dialogs (auto-approve "Yes, allow always")
+    // When the Gemini leader calls an MCP tool a confirmation dialog appears; the leader cannot continue/finish until it is confirmed
     const mcpConfirmBtn = page.locator('button').filter({ hasText: /Yes.*allow always|是.*始终允许/i });
-    // 轮询点击，直到没有确认按钮可见（最多等 60 秒）
+    // Poll-click until no confirmation button is visible (wait up to 60s)
     const mcpConfirmDeadline = Date.now() + 60_000;
     while (Date.now() < mcpConfirmDeadline) {
       const visible = await mcpConfirmBtn
@@ -115,27 +115,27 @@ for (const { leaderType, teamName } of LEADER_CONFIGS) {
       await page.waitForTimeout(500);
     }
 
-    // [等待] leader 空闲（没有正在运行的推理）再发 fire，否则 Enter 会被 sendbox 屏蔽
+    // [wait] for the leader to be idle (no in-flight inference) before sending fire; otherwise Enter is blocked by sendbox
     const leaderActiveBadge = tabBar
       .locator('span')
       .filter({ hasText: 'Leader' })
       .locator('xpath=following-sibling::span[@aria-label="active"]');
     await expect(leaderActiveBadge).not.toBeVisible({ timeout: 60000 });
 
-    // [截图] fire 前状态
+    // [screenshot] state before fire
     await page.screenshot({ path: 'tests/e2e/results/lifecycle-before-fire.png' });
 
-    // [操作] 通过 leader 解雇成员
+    // [action] fire the member via the leader
     await chatInput.fill(`Fire the member named ${memberName}`);
     await chatInput.press('Enter');
 
-    // [验证] 消息已发出（输入框清空），如果 Enter 被屏蔽则消息会停留
+    // [verify] message was sent (input is cleared); if Enter is blocked the message will linger
     await expect(chatInput).toHaveValue('', { timeout: 5000 });
 
-    // [截图] fire 指令发送后状态
+    // [screenshot] state after the fire command is sent
     await page.screenshot({ path: 'tests/e2e/results/lifecycle-after-fire.png' });
 
-    // [等待] 处理 fire 过程中弹出的 MCP tool confirmation dialogs
+    // [wait] handle MCP tool confirmation dialogs that pop up during fire
     const mcpConfirmBtn2 = page.locator('button').filter({ hasText: /Yes.*allow always|是.*始终允许/i });
     const mcpConfirmDeadline2 = Date.now() + 60_000;
     while (Date.now() < mcpConfirmDeadline2) {
@@ -151,7 +151,7 @@ for (const { leaderType, teamName } of LEADER_CONFIGS) {
       await page.waitForTimeout(500);
     }
 
-    // [断言] 成员 tab 从 tab bar 消失（leader 推理 + 2-phase shutdown 协议，需要更多时间）
+    // [assert] member tab disappears from the tab bar (leader inference + 2-phase shutdown protocol takes longer)
     await expect(tabBar.locator(`text=${memberName}`)).not.toBeVisible({ timeout: 120000 });
   });
 }

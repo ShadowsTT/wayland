@@ -12,12 +12,10 @@ import { useTranslation } from 'react-i18next';
 import { SNAPSHOT_DEBOUNCE_TIME } from '../constants';
 
 /**
- * 预览历史 Hook 配置
  * Preview history hook configuration
  */
 interface UsePreviewHistoryOptions {
   /**
-   * 当前活动 Tab
    * Current active tab
    */
   activeTab: {
@@ -34,87 +32,73 @@ interface UsePreviewHistoryOptions {
   } | null;
 
   /**
-   * 更新内容回调
    * Update content callback
    */
   updateContent: (content: string) => void;
 }
 
 /**
- * 预览历史 Hook 返回值
  * Preview history hook return value
  */
 interface UsePreviewHistoryReturn {
   /**
-   * 历史版本列表
    * History versions list
    */
   historyVersions: PreviewSnapshotInfo[];
 
   /**
-   * 是否正在加载历史
    * Whether history is loading
    */
   historyLoading: boolean;
 
   /**
-   * 是否正在保存快照
    * Whether snapshot is saving
    */
   snapshotSaving: boolean;
 
   /**
-   * 历史加载错误信息
    * History loading error message
    */
   historyError: string | null;
 
   /**
-   * 历史目标（用于 IPC 调用）
    * History target (for IPC calls)
    */
   historyTarget: PreviewHistoryTarget | null;
 
   /**
-   * 刷新历史列表
    * Refresh history list
    */
   refreshHistory: () => Promise<void>;
 
   /**
-   * 保存快照
    * Save snapshot
    */
   handleSaveSnapshot: () => Promise<void>;
 
   /**
-   * 选择历史快照
    * Select history snapshot
    */
   handleSnapshotSelect: (snapshot: PreviewSnapshotInfo) => Promise<void>;
 
   /**
-   * Message API 实例（用于显示提示信息）
    * Message API instance (for displaying notifications)
    */
   messageApi: ReturnType<typeof Message.useMessage>[0];
 
   /**
-   * Message Context Holder（需要渲染在组件中）
    * Message Context Holder (needs to be rendered in component)
    */
   messageContextHolder: ReturnType<typeof Message.useMessage>[1];
 }
 
 /**
- * 预览历史管理 Hook
  * Preview history management hook
  *
- * 处理历史版本的加载、保存和选择
  * Handles loading, saving, and selecting history versions
  *
- * @param options - 配置选项 / Configuration options
- * @returns 历史管理相关状态和方法 / History management related states and methods
+ * @param options - Configuration options
+ * @returns History management related states and methods
  */
 export const usePreviewHistory = ({ activeTab, updateContent }: UsePreviewHistoryOptions): UsePreviewHistoryReturn => {
   const { t } = useTranslation();
@@ -123,9 +107,9 @@ export const usePreviewHistory = ({ activeTab, updateContent }: UsePreviewHistor
   const [snapshotSaving, setSnapshotSaving] = useState(false);
   const [historyError, setHistoryError] = useState<string | null>(null);
   const [messageApi, messageContextHolder] = Message.useMessage();
-  const lastSnapshotTimeRef = useRef<number>(0); // 记录上次快照保存时间 / Track last snapshot save time
+  const lastSnapshotTimeRef = useRef<number>(0); // Track last snapshot save time
 
-  // 构建历史目标对象 / Build history target object
+  // Build history target object
   const historyTarget = useMemo<PreviewHistoryTarget | null>(() => {
     if (!activeTab) return null;
     const meta = activeTab.metadata;
@@ -140,7 +124,7 @@ export const usePreviewHistory = ({ activeTab, updateContent }: UsePreviewHistor
     };
   }, [activeTab]);
 
-  // 刷新历史列表 / Refresh history list
+  // Refresh history list
   const refreshHistory = useCallback(async () => {
     if (!historyTarget) {
       setHistoryVersions([]);
@@ -162,19 +146,19 @@ export const usePreviewHistory = ({ activeTab, updateContent }: UsePreviewHistor
     }
   }, [historyTarget, t]);
 
-  // 当 historyTarget 变化时自动刷新历史 / Auto refresh history when historyTarget changes
+  // Auto refresh history when historyTarget changes
   useEffect(() => {
     void refreshHistory().catch((): void => undefined);
   }, [refreshHistory]);
 
-  // 保存快照 / Save snapshot
+  // Save snapshot
   const handleSaveSnapshot = useCallback(async () => {
     if (!historyTarget || !activeTab) {
       return;
     }
     if (snapshotSaving) return;
 
-    // 防抖检查：如果距离上次保存快照时间小于1秒，则忽略 / Debounce check: Ignore if less than 1 second since last save
+    // Debounce check: Ignore if less than 1 second since last save
     const now = Date.now();
     if (now - lastSnapshotTimeRef.current < SNAPSHOT_DEBOUNCE_TIME) {
       messageApi.info(t('preview.tooFrequent'));
@@ -183,7 +167,7 @@ export const usePreviewHistory = ({ activeTab, updateContent }: UsePreviewHistor
 
     try {
       setSnapshotSaving(true);
-      lastSnapshotTimeRef.current = now; // 更新最后保存时间 / Update last save time
+      lastSnapshotTimeRef.current = now; // Update last save time
       await ipcBridge.previewHistory.save.invoke({ target: historyTarget, content: activeTab.content });
       messageApi.success(t('preview.snapshotSaved'));
       await refreshHistory();
@@ -195,7 +179,7 @@ export const usePreviewHistory = ({ activeTab, updateContent }: UsePreviewHistor
     }
   }, [historyTarget, activeTab, snapshotSaving, messageApi, refreshHistory, t]);
 
-  // 选择历史快照 / Select history snapshot
+  // Select history snapshot
   const handleSnapshotSelect = useCallback(
     async (snapshot: PreviewSnapshotInfo) => {
       if (!historyTarget) {

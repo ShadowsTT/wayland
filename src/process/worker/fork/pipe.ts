@@ -126,10 +126,10 @@ export class Pipe {
     else this.listener[name] = this.listener[name].filter((h) => h !== handler);
   }
   /**
-   * 向主线程发起通知
-   * @param name 通知名称
-   * @param data 通知数据
-   * @param extPrams 扩展参数
+   * Send a notification to the main process
+   * @param name notification name
+   * @param data notification payload
+   * @param extPrams extension parameters
    */
   call(name: string, data: any, extPrams: any = {}) {
     if (this.isClose) {
@@ -147,7 +147,7 @@ export class Pipe {
       console.error('---非子线程，无法使用主线程事件机制');
     }
   }
-  // 向主线程发起通知,并建立响应机制
+  // Send a notification to the main process and set up a response mechanism
   callPromise<T = any>(name: string, data: any) {
     const pipeId = uuid(8);
     this.call(name, data, {

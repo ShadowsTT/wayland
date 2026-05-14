@@ -1,58 +1,58 @@
 /**
  * E2E: Ambient Mode — M1 Bubble State.
  *
- * 覆盖 docs/product/ambient-mode-requirements.md 的 AC-M1-1 ~ AC-M1-15。
+ * Covers AC-M1-1 through AC-M1-15 from docs/product/ambient-mode-requirements.md.
  *
- * ── 目录位置说明 ─────────────────────────────────────────────────────────
- * 本 spec 放在 `tests/e2e/specs/ambient-mode/`（按功能名，不按实现路径）。
- * 项目已有 `src/process/pet/` + `src/renderer/pet/` 的悬浮球实现；用户 2026-05-11
- * 裁决 **U-1 = A（Ambient 是 Pet 的演进）**——不是并行互斥，而是启动期二选一。
- * 本 spec **不依赖任何实现目录路径**——通过 (1) BrowserWindow title/url 过滤
- * (2) data-testid（AC-M1-9 强约束）两种手段定位。
+ * -- Directory location notes ---------------------------------------------
+ * This spec lives in `tests/e2e/specs/ambient-mode/` (organized by feature name, not by implementation path).
+ * The project already has a floating-ball implementation under `src/process/pet/` + `src/renderer/pet/`; on 2026-05-11
+ * the user ruled **U-1 = A (Ambient is the evolution of Pet)** — not parallel/mutually exclusive, but a startup-time choice.
+ * This spec **does not depend on any implementation directory path** — it locates the bubble via (1) BrowserWindow title/url filtering
+ * and (2) data-testid (AC-M1-9 hard constraint).
  *
- * 文件名 `bubble.e2e.ts`（非 PM 建议的 `.spec.ts`）——因为 playwright.config.ts
- * 的 `testMatch: '{specs,features}/**\/*.e2e.ts'` 只认 `.e2e.ts` 后缀。
+ * File name `bubble.e2e.ts` (not the PM-suggested `.spec.ts`) — because playwright.config.ts
+ * `testMatch: '{specs,features}/**\/*.e2e.ts'` only recognizes the `.e2e.ts` suffix.
  *
- * ── 需求状态（[REQ-CHANGE-v3] 全面定稿 2026-05-11）────────────────────────
+ * -- Requirements status ([REQ-CHANGE-v3] fully ratified 2026-05-11) ------
  *
- * 硬口径（定稿）：
- *   AC-M1-1 位置基准 = `getPrimaryDisplay().workAreaSize`（扣 Dock/任务栏），不用 screen.width
- *           → 左上角 x = workArea.width - 24 - 64，y = workArea.height - 24 - 64
- *   AC-M1-2 透明度 = BrowserWindow.setOpacity(0.85)（Arch 定稿，不再是"暂定"）
- *     复位 1.0 三处硬约束（漏即 bug）：① drag-end（AC-M1-2b）② watchdog 超时 DRAG_WATCHDOG_MS=8000
- *     （AC-M1-2d）③ drag 被 resize/状态切换中断（AC-M1-2e）
- *   AC-M1-2 吸附 = 只吸左右；基准用气泡当前所在显示器的 workArea（用 getDisplayNearestPoint 定位）
- *   AC-M1-5 持久化 = ConfigStorage（key: ambient.bubblePosition / ambient.enabled /
- *           ambient.onboardingHintShown / ambient.lastSessionClosedExplicitly）
- *   AC-M1-6 拖出屏幕 = 由 AC-M1-2 y-clamp + AC-M1-13 startup validate 覆盖
- *   AC-M1-7 多显示器 = 永久 skip（hardware-required；登记 manual-checklist.md）
- *   AC-M1-8 点击 = mouseup 触发，5 px 阈值
- *   AC-M1-9 DOM 必用 data-testid（ambient-bubble / ambient-input / ambient-chat）
- *   AC-M1-10 ambient 启用 → ambient 窗口创建，legacy pet 路径跳过（U-1=A 演进，[REQ-CHANGE-v5] 改写）
- *   AC-M1-11 WAYLAND_AMBIENT env var 优先级 > settings 开关
- *   AC-M1-12 settings 切换需重启 + toast "Restart required to apply"
- *   AC-M1-13（新增）displayId validate + position clamp 边界保护
- *   AC-M1-14（新增）E2E fixture 契约：launchAppWithEnv + ambientTest fixture
- *   AC-M1-15（[REQ-CHANGE-v5] 新增）存量 Pet 用户迁移：pet.enabled=true → ambient 迁移 + 幂等标记
+ * Hard rules (ratified):
+ *   AC-M1-1 Position baseline = `getPrimaryDisplay().workAreaSize` (subtract Dock/taskbar), not screen.width
+ *           -> top-left x = workArea.width - 24 - 64, y = workArea.height - 24 - 64
+ *   AC-M1-2 Opacity = BrowserWindow.setOpacity(0.85) (Arch-ratified, no longer "tentative")
+ *     Three hard constraints for resetting to 1.0 (missing any = bug): (1) drag-end (AC-M1-2b) (2) watchdog timeout DRAG_WATCHDOG_MS=8000
+ *     (AC-M1-2d) (3) drag interrupted by resize/state switch (AC-M1-2e)
+ *   AC-M1-2 Snap = left/right only; baseline uses the workArea of the display the bubble is currently on (located via getDisplayNearestPoint)
+ *   AC-M1-5 Persistence = ConfigStorage (keys: ambient.bubblePosition / ambient.enabled /
+ *           ambient.onboardingHintShown / ambient.lastSessionClosedExplicitly)
+ *   AC-M1-6 Dragged off-screen = covered by AC-M1-2 y-clamp + AC-M1-13 startup validate
+ *   AC-M1-7 Multi-monitor = permanently skipped (hardware-required; tracked in manual-checklist.md)
+ *   AC-M1-8 Click = mouseup-triggered, 5 px threshold
+ *   AC-M1-9 DOM must use data-testid (ambient-bubble / ambient-input / ambient-chat)
+ *   AC-M1-10 ambient enabled -> ambient window created, legacy pet path skipped (U-1=A evolution, [REQ-CHANGE-v5] rewritten)
+ *   AC-M1-11 WAYLAND_AMBIENT env var has priority over the settings toggle
+ *   AC-M1-12 Settings toggle requires restart + toast "Restart required to apply"
+ *   AC-M1-13 (new) displayId validate + position clamp boundary protection
+ *   AC-M1-14 (new) E2E fixture contract: launchAppWithEnv + ambientTest fixture
+ *   AC-M1-15 ([REQ-CHANGE-v5] new) Existing Pet user migration: pet.enabled=true -> ambient migration + idempotent marker
  *
- * ── 测试启动策略（AC-M1-14 定稿）────────────────────────────────────────
- * Arch 指定方案：新增 `launchAppWithEnv(extraEnv)` helper（不改 singleton），导出
- * `ambientTest` fixture，ambient spec 用 `import { ambientTest as test }`。
+ * -- Test launch strategy (AC-M1-14 ratified) -----------------------------
+ * Arch-specified approach: add a `launchAppWithEnv(extraEnv)` helper (without modifying the singleton), export
+ * the `ambientTest` fixture, and have the ambient spec use `import { ambientTest as test }`.
  *
- * **当前状态**：`ambientTest` fixture 尚未在 `tests/e2e/fixtures.ts` 中实现。
- * 本 spec 仍 import 现有 `test`；beforeAll 通过寻找 ambient 气泡窗口决定是否
- * 全体 skip，skip 原因 = `AC-M1-14 fixture not yet implemented (pending Arch/Dev)`。
- * 实现后 import 切 `ambientTest`，全部用例自动 unskip。
+ * **Current status**: the `ambientTest` fixture has not yet been implemented in `tests/e2e/fixtures.ts`.
+ * This spec still imports the existing `test`; beforeAll decides whether to skip the whole suite by
+ * looking for the ambient bubble window, with skip reason = `AC-M1-14 fixture not yet implemented (pending Arch/Dev)`.
+ * Once implemented, switching the import to `ambientTest` automatically unskips every case.
  *
- * ── U-1 = A（Ambient 是 Pet 的演进，[REQ-CHANGE-v5]）──────────────────
- * 用户裁决：Ambient 演进 Pet，不互斥、不并存。启动期二选一的语义形态。
- * AC-M1-10 从"pet count=0 互斥"改写为"ambient 窗口 ≥ 1 + 单悬浮气泡"替代断言。
- * AC-M1-15 覆盖存量 pet 用户迁移路径。
+ * -- U-1 = A (Ambient is the evolution of Pet, [REQ-CHANGE-v5]) -----------
+ * User ruling: Ambient evolves Pet — not mutually exclusive, not coexistent. A startup-time semantic either/or.
+ * AC-M1-10 rewritten from "pet count=0 exclusivity" to "ambient windows >= 1 + single floating bubble" as the replacement assertion.
+ * AC-M1-15 covers the existing pet user migration path.
  *
- * ── AC-M3-12 前瞻（[FYI] 2026-05-11）─────────────────────────────────
- * M3 沉浸聊天态将切换渲染模式为 { transparent:false, backgroundColor:'rgba(0,0,0,0.85)' }
- * 以规避 Windows DWM frequent resize 闪烁。本 spec 把 M1 的 transparent:true
- * 抽成 `BUBBLE_RENDER_MODE` 常量，M3 spec 将定义 `CHAT_RENDER_MODE` 常量对应。
+ * -- AC-M3-12 forecast ([FYI] 2026-05-11) ---------------------------------
+ * M3 immersive-chat state will switch render mode to { transparent:false, backgroundColor:'rgba(0,0,0,0.85)' }
+ * to avoid Windows DWM frequent-resize flicker. This spec extracts M1's transparent:true
+ * into the `BUBBLE_RENDER_MODE` constant; the M3 spec will define the corresponding `CHAT_RENDER_MODE` constant.
  */
 // AC-M1-14 fixture: use ambientTest (independent WAYLAND_AMBIENT=1 Electron process,
 // `electronApp` / `page` are aliases pointing to the ambient app / bubble page).
@@ -60,49 +60,49 @@ import { ambientTest as test, expect } from '../../fixtures';
 import { invokeBridge } from '../../helpers';
 import type { ElectronApplication } from '@playwright/test';
 
-// ── 常量（与需求口径对齐）────────────────────────────────────────────────
+// -- Constants (aligned with requirements) -------------------------------
 const BUBBLE_SIZE = 64; // px
-const SCREEN_MARGIN = 24; // px（AC-M1-1）
-const DRAG_OPACITY = 0.85; // AC-M1-2 定稿
+const SCREEN_MARGIN = 24; // px (AC-M1-1)
+const DRAG_OPACITY = 0.85; // AC-M1-2 ratified
 const DEFAULT_OPACITY = 1.0;
-// AC-M1-8 点击 vs 拖动阈值（unskip 后用于 bubblePage.mouse.move(dx, 0)）
-// 当前 AC-M1-8 系列全 skip pending AC-M1-14 fixture，故暂 `_` 前缀避免 unused warning
-const _CLICK_VS_DRAG_THRESHOLD_UPPER = 6; // > 5px 视为拖动
-const _CLICK_VS_DRAG_THRESHOLD_LOWER = 4; // <= 5px 视为点击
+// AC-M1-8 click vs drag threshold (used after unskip with bubblePage.mouse.move(dx, 0))
+// Currently the entire AC-M1-8 series is skipped pending AC-M1-14 fixture; prefix with `_` to avoid unused warnings for now
+const _CLICK_VS_DRAG_THRESHOLD_UPPER = 6; // > 5px counts as drag
+const _CLICK_VS_DRAG_THRESHOLD_LOWER = 4; // <= 5px counts as click
 void _CLICK_VS_DRAG_THRESHOLD_UPPER;
 void _CLICK_VS_DRAG_THRESHOLD_LOWER;
 
 /**
- * 气泡/输入态渲染模式（AC-M1-4 + AC-M3-12 前瞻，2026-05-11 [FYI]）。
+ * Render mode for the bubble/input state (AC-M1-4 + AC-M3-12 forecast, 2026-05-11 [FYI]).
  *
- * AC-M3-12（P0，渲染模式切换硬约束）：
- *   - M1 气泡 / M2 输入态：transparent: true（沿用 pet 方案）
- *   - M3 沉浸聊天及以上：transparent: false + backgroundColor: 'rgba(0,0,0,0.85)'
- *     （规避 Windows DWM frequent resize 闪烁）
- *   - 切换时机：M2 → M3 首次发送消息时，fade 动画掩盖
+ * AC-M3-12 (P0, render-mode switch hard constraint):
+ *   - M1 bubble / M2 input state: transparent: true (carrying over the pet approach)
+ *   - M3 immersive chat and above: transparent: false + backgroundColor: 'rgba(0,0,0,0.85)'
+ *     (avoids Windows DWM frequent-resize flicker)
+ *   - Switch timing: M2 -> M3 on first message send, masked by the fade animation
  *
- * 本 spec（M1）用 `BUBBLE_RENDER_MODE`；M3 spec 里会定义
- * `CHAT_RENDER_MODE = { transparent: false, backgroundColor: 'rgba(0,0,0,0.85)' } as const`。
+ * This spec (M1) uses `BUBBLE_RENDER_MODE`; the M3 spec will define
+ * `CHAT_RENDER_MODE = { transparent: false, backgroundColor: 'rgba(0,0,0,0.85)' } as const`.
  */
 const BUBBLE_RENDER_MODE = { transparent: true } as const;
 
 // ── Helpers ──────────────────────────────────────────────────────────────
 
-/** 气泡当前所在显示器的 workArea，不含 Dock / 任务栏。 */
+/** workArea of the display the bubble is currently on, excluding Dock / taskbar. */
 type WorkArea = { x: number; y: number; width: number; height: number };
 
 type BubbleWindowInfo = {
   bounds: { x: number; y: number; width: number; height: number };
   alwaysOnTop: boolean;
-  /** 气泡当前所在显示器的 workArea（由 getDisplayNearestPoint 决定） */
+  /** workArea of the display the bubble is currently on (determined via getDisplayNearestPoint) */
   workArea: WorkArea;
-  /** 主显示器 workArea — 用于 AC-M1-1 首启位置断言 */
+  /** primary display workArea — used for the AC-M1-1 first-launch position assertion */
   primaryWorkArea: WorkArea;
 };
 
 /**
- * 在主进程里查找 ambient 气泡 BrowserWindow，返回关键属性。
- * 约定：气泡窗口的 title / webContents URL 包含 "ambient" 或 "bubble"。
+ * Locate the ambient bubble BrowserWindow in the main process and return key properties.
+ * Convention: the bubble window's title / webContents URL contains "ambient" or "bubble".
  */
 async function getAmbientBubbleInfo(app: ElectronApplication): Promise<BubbleWindowInfo | null> {
   return app.evaluate(({ BrowserWindow, screen }) => {
@@ -120,7 +120,7 @@ async function getAmbientBubbleInfo(app: ElectronApplication): Promise<BubbleWin
     if (!bubbleWin) return null;
 
     const bounds = bubbleWin.getBounds();
-    // 气泡当前所在显示器（AC-M1-2 吸附基准）
+    // Display the bubble is currently on (AC-M1-2 snap baseline)
     const centerPt = { x: Math.round(bounds.x + bounds.width / 2), y: Math.round(bounds.y + bounds.height / 2) };
     const nearest = screen.getDisplayNearestPoint(centerPt);
     const primary = screen.getPrimaryDisplay();
@@ -134,13 +134,13 @@ async function getAmbientBubbleInfo(app: ElectronApplication): Promise<BubbleWin
 }
 
 /**
- * 读取气泡窗口的创建选项（frame / transparent / alwaysOnTop）。
+ * Read the bubble window's create options (frame / transparent / alwaysOnTop).
  *
- * Electron 不保留原始 BrowserWindowConstructorOptions，故通过两条途径：
- *   (A) Dev 暴露 `ambient.debug.getWindowOptions` IPC → 返回 { frame, transparent, alwaysOnTop }
- *   (B) 间接指纹：isOpaque() / alwaysOnTop() —— isOpaque=false 约等同 transparent=true
+ * Electron does not retain the original BrowserWindowConstructorOptions, so we use two approaches:
+ *   (A) Dev exposes `ambient.debug.getWindowOptions` IPC -> returns { frame, transparent, alwaysOnTop }
+ *   (B) Indirect fingerprint: isOpaque() / alwaysOnTop() — isOpaque=false approximately equals transparent=true
  *
- * 当前骨架走 (B)，Dev 实现 (A) 后把 invokeBridge 调用替换进来。
+ * The current skeleton uses (B); once Dev implements (A), swap in the invokeBridge call here.
  */
 async function getAmbientBubbleCreateOptions(
   app: ElectronApplication
@@ -161,10 +161,10 @@ async function getAmbientBubbleCreateOptions(
 }
 
 /**
- * 读取气泡当前展示层的不透明度（AC-M1-2 定稿：`BrowserWindow.setOpacity(0.85)`）。
+ * Read the bubble's current display-layer opacity (AC-M1-2 ratified: `BrowserWindow.setOpacity(0.85)`).
  *
- * 封装理由：若未来实现改走 IPC event 抽象（`ambient.getDisplayOpacity`），
- * 只需改这里的一行，所有 AC-M1-2 用例自动跟随。
+ * Why wrap it: if the implementation later switches to an IPC event abstraction (`ambient.getDisplayOpacity`),
+ * we only need to change this one line and every AC-M1-2 case follows automatically.
  */
 async function getBubbleOpacity(app: ElectronApplication): Promise<number | null> {
   return app.evaluate(({ BrowserWindow }) => {
@@ -178,8 +178,8 @@ async function getBubbleOpacity(app: ElectronApplication): Promise<number | null
 }
 
 /**
- * 统计当前存在的 "悬浮圆气泡" 窗口数量——用于 AC-M1-10（ambient/pet 互斥）。
- * 策略：BrowserWindow 里 title 含 ambient|bubble|pet 且 alwaysOnTop + 宽高≈64 的窗口。
+ * Count the currently existing "floating round bubble" windows — used for AC-M1-10 (ambient/pet exclusivity).
+ * Strategy: BrowserWindows whose title contains ambient|bubble|pet, are alwaysOnTop, and have width/height approx. 64.
  */
 async function countFloatingBubbleWindows(app: ElectronApplication): Promise<{ ambient: number; pet: number }> {
   return app.evaluate(({ BrowserWindow }) => {
@@ -189,7 +189,7 @@ async function countFloatingBubbleWindows(app: ElectronApplication): Promise<{ a
       if (w.isDestroyed()) continue;
       if (!w.isAlwaysOnTop()) continue;
       const b = w.getBounds();
-      if (b.width > 100 || b.height > 100) continue; // 只统计悬浮小圆，排除主窗口 / 输入窗口
+      if (b.width > 100 || b.height > 100) continue; // Only count small floating circles; exclude the main window / input window
       const title = w.getTitle().toLowerCase();
       const url = w.webContents.getURL().toLowerCase();
       if (title.includes('pet') || url.includes('pet.html')) pet += 1;
@@ -200,24 +200,24 @@ async function countFloatingBubbleWindows(app: ElectronApplication): Promise<{ a
 }
 
 /**
- * 点击 / 拖动触发方式：PM [TEST-REVIEW-APPROVED] 明确要求走**黑盒 API**，
- * 不依赖 debug IPC：用 `bubblePage.mouse.down/move/up` 拟真。
- * State 推断同样走黑盒：`bubblePage.locator('[data-testid="ambient-input"]').isVisible()`
- * 代替 `ambient.getState` IPC。
+ * Click / drag triggering: PM [TEST-REVIEW-APPROVED] explicitly requires going through the **black-box API**,
+ * not relying on debug IPC: use `bubblePage.mouse.down/move/up` to simulate.
+ * State inference also stays black-box: `bubblePage.locator('[data-testid="ambient-input"]').isVisible()`
+ * replaces the `ambient.getState` IPC.
  *
- * 所有依赖 bubblePage 的用例当前 skip pending AC-M1-14 fixture（ambientTest.bubblePage accessor）。
+ * All cases that depend on bubblePage are currently skipped pending the AC-M1-14 fixture (ambientTest.bubblePage accessor).
  */
 
 // ── Spec ─────────────────────────────────────────────────────────────────
 
 test.describe('Ambient Mode — M1 Bubble', () => {
-  // 本 suite 共享一个会话，所有 test 按顺序跑（拖动位置累积会污染下个 case，
-  // 因此每个 test 的 beforeEach 里用 IPC 把气泡位置 reset 到默认）。
+  // This suite shares a single session and every test runs sequentially (accumulated drag positions
+  // would pollute the next case, so each test's beforeEach resets the bubble position to default via IPC).
   test.describe.configure({ mode: 'serial' });
 
   test.beforeAll(async ({ electronApp }) => {
-    // 目前 ambient 功能未实现 + Q7 启动路径未敲定，整 suite 先 skip。
-    // Dev 实现 + Q7 REQ-CLARIFY-REPLY 后移除此 guard。
+    // Ambient feature is not implemented yet + Q7 launch path is not finalized, so skip the whole suite for now.
+    // Remove this guard once Dev implements it + Q7 REQ-CLARIFY-REPLY lands.
     const info = await getAmbientBubbleInfo(electronApp);
     test.skip(
       info === null,
@@ -228,8 +228,8 @@ test.describe('Ambient Mode — M1 Bubble', () => {
   });
 
   test.beforeEach(async ({ electronApp }) => {
-    // 每个 case 开始前把气泡位置 reset 到默认右下角（Dev 暴露 `ambient.resetBubblePosition`）。
-    // 没实现前空实现，suite 因为 beforeAll skip 也跑不到这里。
+    // Before each case, reset the bubble position to the default bottom-right (Dev exposes `ambient.resetBubblePosition`).
+    // No-op until implemented; the suite is skipped via beforeAll, so this never runs anyway.
     await electronApp
       .evaluate(({ BrowserWindow }) => {
         const bubbleWin = BrowserWindow.getAllWindows().find((w) => {
@@ -237,14 +237,14 @@ test.describe('Ambient Mode — M1 Bubble', () => {
           return w.getTitle().toLowerCase().includes('ambient');
         });
         if (!bubbleWin) return;
-        // 重置到右下角的默认位置由 Dev 暴露的 IPC 负责；骨架里先留空
+        // Resetting to the default bottom-right is owned by Dev-exposed IPC; leave empty in the skeleton for now
       })
       .catch(() => {
         /* best-effort */
       });
   });
 
-  // ── AC-M1-1: 启动 2s 内气泡可见，位于主显示器 workArea 右下角距边 24 px ──
+  // -- AC-M1-1: Bubble visible within 2s of startup, located at the primary-display workArea bottom-right with a 24 px margin --
   test('AC-M1-1: bubble visible within 2s at primary-workArea bottom-right with 24px margin', async ({
     electronApp,
   }) => {
@@ -255,22 +255,22 @@ test.describe('Ambient Mode — M1 Bubble', () => {
     expect(info, 'ambient bubble window must appear within 2s').not.toBeNull();
     const { bounds, primaryWorkArea } = info!;
 
-    // AC-M1-1 定稿：用 getPrimaryDisplay().workAreaSize（扣 Dock/任务栏），不用 screen.width
-    // 气泡左上角 = workArea 右下角 - 24 margin - 64 bubble size（同时加上 workArea 的 x/y 偏移）
+    // AC-M1-1 ratified: use getPrimaryDisplay().workAreaSize (subtract Dock/taskbar), not screen.width
+    // Bubble top-left = workArea bottom-right - 24 margin - 64 bubble size (plus the workArea x/y offset)
     const expectedX = primaryWorkArea.x + primaryWorkArea.width - SCREEN_MARGIN - BUBBLE_SIZE;
     const expectedY = primaryWorkArea.y + primaryWorkArea.height - SCREEN_MARGIN - BUBBLE_SIZE;
 
     expect(bounds.width).toBe(BUBBLE_SIZE);
     expect(bounds.height).toBe(BUBBLE_SIZE);
-    // 容差 ±2 px：OS 级 DPI rounding
+    // Tolerance +/- 2 px: OS-level DPI rounding
     expect(Math.abs(bounds.x - expectedX), `bubble.x ${bounds.x} vs expected ${expectedX}`).toBeLessThanOrEqual(2);
     expect(Math.abs(bounds.y - expectedY), `bubble.y ${bounds.y} vs expected ${expectedY}`).toBeLessThanOrEqual(2);
   });
 
-  // ── AC-M1-2a: 拖动中透明度降到 0.85 ─────────────────────────────────────
+  // -- AC-M1-2a: Opacity drops to 0.85 while dragging --------------------
   test('AC-M1-2a: opacity drops to 0.85 while dragging', async ({ electronApp }) => {
-    // 通过 IPC 进入"拖动中"状态（Dev 暴露 `ambient.debug.beginDrag`）。
-    // 骨架里用 setOpacity 直接模拟，断言走 getBubbleOpacity helper。
+    // Enter the "dragging" state via IPC (Dev exposes `ambient.debug.beginDrag`).
+    // In the skeleton we simulate directly via setOpacity; assertion goes through the getBubbleOpacity helper.
     await electronApp.evaluate(({ BrowserWindow }, dragOpacity) => {
       const bubbleWin = BrowserWindow.getAllWindows().find(
         (w) => !w.isDestroyed() && w.getTitle().toLowerCase().includes('ambient')
@@ -282,11 +282,11 @@ test.describe('Ambient Mode — M1 Bubble', () => {
     expect(opacity, 'bubble opacity during drag').toBeCloseTo(DRAG_OPACITY, 2);
   });
 
-  // ── AC-M1-2b: 松手后恢复不透明 + 吸附到所在显示器 workArea 右边 ──────
+  // -- AC-M1-2b: After mouseup, restore opaque + snap to the current display's workArea right edge --
   test('AC-M1-2b: after drop on right half, bubble snaps to workArea right edge + opacity restores', async ({
     electronApp,
   }) => {
-    // 把气泡拖到所在显示器 workArea 右半边，松手
+    // Drag the bubble to the right half of the current display's workArea and release
     await electronApp.evaluate(({ BrowserWindow, screen }) => {
       const bubbleWin = BrowserWindow.getAllWindows().find(
         (w) => !w.isDestroyed() && w.getTitle().toLowerCase().includes('ambient')
@@ -301,22 +301,22 @@ test.describe('Ambient Mode — M1 Bubble', () => {
         width: 64,
         height: 64,
       });
-      // Dev 的吸附逻辑应在 mouseup 后触发；骨架这里依赖实现自动吸附。
+      // Dev's snap logic should fire after mouseup; the skeleton relies on the implementation auto-snapping.
     });
 
     const info = await getAmbientBubbleInfo(electronApp);
     const { bounds, workArea } = info!;
     const expectedRightX = workArea.x + workArea.width - SCREEN_MARGIN - BUBBLE_SIZE;
 
-    // AC-M1-2 吸附：气泡中心 x > workArea.x + workArea.width/2 → 吸右边
+    // AC-M1-2 snap: bubble center x > workArea.x + workArea.width/2 -> snap to right edge
     expect(
       Math.abs(bounds.x - expectedRightX),
       `snapped.x ${bounds.x} vs expected ${expectedRightX}`
     ).toBeLessThanOrEqual(2);
-    // y 保留在松手时位置（workArea y clamp 内）
+    // y is preserved at the release position (within workArea y clamp)
     expect(bounds.y).toBeGreaterThanOrEqual(workArea.y + SCREEN_MARGIN - 2);
     expect(bounds.y + bounds.height).toBeLessThanOrEqual(workArea.y + workArea.height - SCREEN_MARGIN + 2);
-    // opacity 恢复到 1.0
+    // opacity is restored to 1.0
     const opacity = await getBubbleOpacity(electronApp);
     expect(opacity, 'bubble opacity after drop').toBeCloseTo(DEFAULT_OPACITY, 2);
   });
@@ -341,17 +341,17 @@ test.describe('Ambient Mode — M1 Bubble', () => {
     const info = await getAmbientBubbleInfo(electronApp);
     const { bounds, workArea } = info!;
     const expectedLeftX = workArea.x + SCREEN_MARGIN;
-    // AC-M1-2 吸附：气泡中心 x < workArea.x + workArea.width/2 → 吸左边
+    // AC-M1-2 snap: bubble center x < workArea.x + workArea.width/2 -> snap to left edge
     expect(
       Math.abs(bounds.x - expectedLeftX),
       `snapped.x ${bounds.x} vs expected ${expectedLeftX}`
     ).toBeLessThanOrEqual(2);
   });
 
-  // ── AC-M1-2d: 透明度复位之 watchdog 超时（8s DRAG_WATCHDOG_MS）────────
-  // AC-M1-2 硬约束 case 2/3：drag-start 后若 renderer 丢 pointerup，必须靠
-  // watchdog（复用 pet 的 DRAG_WATCHDOG_MS = 8000ms）把 opacity 复位到 1.0，
-  // 否则气泡永久 0.85 半透只能重启。
+  // -- AC-M1-2d: Opacity reset via watchdog timeout (8s DRAG_WATCHDOG_MS) --
+  // AC-M1-2 hard-constraint case 2/3: if renderer drops pointerup after drag-start, the watchdog
+  // (reusing pet's DRAG_WATCHDOG_MS = 8000ms) must reset opacity to 1.0;
+  // otherwise the bubble stays permanently at 0.85 semi-transparent and only a restart fixes it.
   test('AC-M1-2d: opacity restores to 1.0 after drag watchdog timeout', async () => {
     test.skip(
       true,
@@ -362,9 +362,10 @@ test.describe('Ambient Mode — M1 Bubble', () => {
     );
   });
 
-  // ── AC-M1-2e: 透明度复位之 drag 被状态切换 / resize 中断 ─────────────
-  // AC-M1-2 硬约束 case 3/3：drag 进行中若窗口被 resize 或状态切换（hover 超时、
-  // 点窗口外、Esc）打断，复位 1.0 必须触发。PM 建议 interrupt case 用真 user event 直测。
+  // -- AC-M1-2e: Opacity reset when drag is interrupted by state switch / resize --
+  // AC-M1-2 hard-constraint case 3/3: if the window is resized or its state switches (hover timeout,
+  // click outside the window, Esc) mid-drag, resetting to 1.0 must still fire. PM recommends testing
+  // the interrupt case directly with a real user event.
   test('AC-M1-2e: opacity restores to 1.0 when drag interrupted by state transition', async () => {
     test.skip(
       true,
@@ -382,32 +383,32 @@ test.describe('Ambient Mode — M1 Bubble', () => {
   });
 
   // ── AC-M1-4: frameless + transparent ─────────────────────────────────
-  // AC-M3-12 前瞻：M1 气泡用 BUBBLE_RENDER_MODE（transparent:true）；M3 将切到
-  // CHAT_RENDER_MODE（transparent:false + rgba 背景）。写 M3 spec 时换常量即可。
+  // AC-M3-12 forecast: M1 bubble uses BUBBLE_RENDER_MODE (transparent:true); M3 will switch to
+  // CHAT_RENDER_MODE (transparent:false + rgba background). Swap the constant when writing the M3 spec.
   test('AC-M1-4: bubble window is frameless + transparent (BUBBLE_RENDER_MODE)', async ({ electronApp }) => {
     const opts = await getAmbientBubbleCreateOptions(electronApp);
     expect(opts, 'bubble window must exist').not.toBeNull();
-    // transparent 指纹：isOpaque() === false
+    // transparent fingerprint: isOpaque() === false
     expect(
       opts!.isTransparent,
       `bubble window should be transparent (BUBBLE_RENDER_MODE.transparent=${BUBBLE_RENDER_MODE.transparent})`
     ).toBe(BUBBLE_RENDER_MODE.transparent);
     expect(opts!.alwaysOnTop).toBe(true);
-    // frame:false 无 runtime 直接 API，建议 Dev 暴露 `ambient.debug.getWindowOptions` IPC
-    // 返回 { frame, transparent, alwaysOnTop } 用于精确断言。Dev 实现后把下行换成
-    // invokeBridge 调用。
+    // frame:false has no direct runtime API; suggest Dev expose `ambient.debug.getWindowOptions` IPC
+    // returning { frame, transparent, alwaysOnTop } for precise assertions. Once Dev implements it,
+    // replace the line below with an invokeBridge call.
   });
 
-  // ── AC-M1-5: 位置持久化到 ConfigStorage（走 bridge read 断言）────────
-  // 注意：这里**不能**只用 BrowserWindow.getBounds() 做黑盒断言——因为本条测的是
-  // "位置已写入 ConfigStorage 持久化层"，不是"当前窗口位置"。getBounds() 只反映
-  // 运行时状态，不能证明值落盘。所以必须通过 bridge 读 ConfigStorage。
+  // -- AC-M1-5: Position persisted to ConfigStorage (asserted via bridge read) --
+  // Note: here we **cannot** rely on BrowserWindow.getBounds() alone as the black-box assertion — this AC checks
+  // "position has been written to the ConfigStorage persistence layer", not "current window position". getBounds() only
+  // reflects runtime state and cannot prove the value was flushed. So we must read ConfigStorage via the bridge.
   //
-  // PM [TEST-REVIEW-APPROVED] 黑盒原则在这条的正确应用是：读 bridge（已有公开
-  // 的 Config bridge，不是开后门 debug IPC）。`ambient.getBubblePosition` 属于
-  // 需要 Dev 在 systemSettingsBridge 里暴露的公开 getter（参考 pet.* 模板）。
+  // PM [TEST-REVIEW-APPROVED] black-box correctness here means: read via the bridge (an existing public
+  // Config bridge, not a backdoor debug IPC). `ambient.getBubblePosition` is a public getter that
+  // Dev needs to expose in systemSettingsBridge (see the pet.* template).
   test('AC-M1-5: position is persisted to ConfigStorage (ambient.bubblePosition)', async ({ page, electronApp }) => {
-    // 把气泡移到右半屏中部
+    // Move the bubble to the middle of the right half of the screen
     await electronApp.evaluate(({ BrowserWindow, screen }) => {
       const bubbleWin = BrowserWindow.getAllWindows().find(
         (w) => !w.isDestroyed() && w.getTitle().toLowerCase().includes('ambient')
@@ -422,7 +423,7 @@ test.describe('Ambient Mode — M1 Bubble', () => {
       });
     });
 
-    // 等实现持久化完成（可能是 debounce 写盘），poll 到 bubblePosition 与当前 bounds 一致
+    // Wait for the implementation to finish persisting (likely debounced disk write); poll until bubblePosition matches current bounds
     await expect
       .poll(
         async () => {
@@ -445,7 +446,7 @@ test.describe('Ambient Mode — M1 Bubble', () => {
         },
       });
 
-    // 精确一致性断言
+    // Exact consistency assertion
     const info = await getAmbientBubbleInfo(electronApp);
     const persisted = await invokeBridge<{ x: number; y: number; displayId: number }>(
       page,
@@ -456,40 +457,40 @@ test.describe('Ambient Mode — M1 Bubble', () => {
     expect(persisted.displayId).toBeGreaterThan(0);
   });
 
-  // ── AC-M1-6: 拖到屏幕外自动拉回可见区域 ─────────────────────────────
+  // -- AC-M1-6: Bubble dragged off-screen is automatically pulled back into the visible area --
   test('AC-M1-6: bubble dragged off-screen is pulled back to visible area', async ({ electronApp }) => {
-    // 模拟把气泡 setBounds 到屏幕外（x=-500, y=-500）
+    // Simulate setBounds-ing the bubble off-screen (x=-500, y=-500)
     await electronApp.evaluate(({ BrowserWindow }) => {
       const bubbleWin = BrowserWindow.getAllWindows().find(
         (w) => !w.isDestroyed() && w.getTitle().toLowerCase().includes('ambient')
       );
       bubbleWin?.setBounds({ x: -500, y: -500, width: 64, height: 64 });
-      // Dev 的 mouseup 处理应做 clamp，触发方式取决于实现；这里依赖自动矫正。
+      // Dev's mouseup handler should clamp; the trigger mechanism depends on the implementation, so we rely on auto-correction here.
     });
 
     const info = await getAmbientBubbleInfo(electronApp);
     const { bounds, workArea } = info!;
-    // AC-M1-2 y-clamp + AC-M1-13 position clamp：回到 workArea 边界内
+    // AC-M1-2 y-clamp + AC-M1-13 position clamp: returns within the workArea bounds
     expect(bounds.x).toBeGreaterThanOrEqual(workArea.x);
     expect(bounds.y).toBeGreaterThanOrEqual(workArea.y);
     expect(bounds.x + bounds.width).toBeLessThanOrEqual(workArea.x + workArea.width);
     expect(bounds.y + bounds.height).toBeLessThanOrEqual(workArea.y + workArea.height);
   });
 
-  // ── AC-M1-7: 多显示器（定稿 permanent skip）──────────────────────────
-  // [REQ-CHANGE-v3] Arch 确认 Electron screen 模块是 native module，monkey-patch
-  // 对 BrowserWindow 不生效。直接 permanent skip，登记 manual-checklist。
+  // -- AC-M1-7: Multi-monitor (ratified as permanent skip) ----------------
+  // [REQ-CHANGE-v3] Arch confirmed that Electron's screen module is native; monkey-patching
+  // does not affect BrowserWindow. Permanent skip, tracked in manual-checklist.
   test('AC-M1-7: multi-display first-launch uses primary display bottom-right', async () => {
     test.skip(true, 'Multi-monitor scenarios require hardware; tracked in manual-checklist');
   });
 
-  // ── AC-M1-8: 点击 = hover 展开（mouseup 触发，拖动阈值 5 px）─────────
-  // PM [TEST-REVIEW-APPROVED] 新指引：走黑盒 API（page.mouse + data-testid），
-  // 不依赖 debug IPC。触发：bubblePage.mouse.down → move(dx,0) → up。
-  // 状态推断：bubblePage.locator('[data-testid="ambient-input"]').isVisible() = true → state='input'。
+  // -- AC-M1-8: Click = hover-expand (mouseup-triggered, 5 px drag threshold) --
+  // PM [TEST-REVIEW-APPROVED] new guidance: go through the black-box API (page.mouse + data-testid),
+  // not the debug IPC. Trigger: bubblePage.mouse.down -> move(dx,0) -> up.
+  // State inference: bubblePage.locator('[data-testid="ambient-input"]').isVisible() = true -> state='input'.
   //
-  // 所有 AC-M1-8 case 依赖 ambientPage（AC-M1-14 fixture 的 bubblePage accessor），
-  // 当前 singleton fixture 无法拿到气泡窗对应的 Page → 整 AC-M1-8 skip pending fixture。
+  // Every AC-M1-8 case depends on ambientPage (the AC-M1-14 fixture's bubblePage accessor);
+  // the current singleton fixture cannot retrieve the Page bound to the bubble window, so the entire AC-M1-8 group is skipped pending the fixture.
 
   test('AC-M1-8a: click (0px movement) triggers M2 expand via mouseup', async () => {
     test.skip(
@@ -517,30 +518,30 @@ test.describe('Ambient Mode — M1 Bubble', () => {
     );
   });
 
-  // ── AC-M1-10: ambient 启用 → ambient 窗口创建，legacy pet 路径跳过（替代）──
-  // [REQ-CHANGE-v5] U-1 = A：Ambient 是 Pet 的演进，不是并行互斥。启动期二选一：
-  // ambient 启用 → 创建 ambient 窗口；未启用 → 走 legacy pet 路径。
+  // -- AC-M1-10: ambient enabled -> ambient window created, legacy pet path skipped (replacement) --
+  // [REQ-CHANGE-v5] U-1 = A: Ambient is the evolution of Pet, not parallel/exclusive. Startup-time either/or:
+  // ambient enabled -> create ambient window; disabled -> go through the legacy pet path.
   //
-  // 原断言"pet 窗口数=0"失效：A 演进下 pet 窗口的概念可能被改名 / 代码路径消失，
-  // "pet-titled window" 不再是稳定的负面信号。改为：
-  //   (1) 有且仅有 1 个悬浮气泡窗口（ambient 语义）
-  //   (2) ambient 窗口存在（title/url 匹配 ambient|bubble）
+  // The original "pet window count = 0" assertion is invalid: under the A evolution, the pet window concept may be renamed
+  // or the code path may disappear, so "pet-titled window" is no longer a stable negative signal. Replaced with:
+  //   (1) Exactly 1 floating bubble window (ambient semantics)
+  //   (2) An ambient window exists (title/url matches ambient|bubble)
   test('AC-M1-10: ambient enabled → ambient window created, legacy pet path skipped', async ({ electronApp }) => {
     const info = await getAmbientBubbleInfo(electronApp);
     expect(info, 'ambient bubble window must exist when ambient is enabled').not.toBeNull();
 
-    // 统计所有悬浮小圆窗口（宽高 ≤ 100 + alwaysOnTop），应当有且仅有 1 个
+    // Count all small floating-circle windows (width/height <= 100 + alwaysOnTop); there must be exactly 1
     const counts = await countFloatingBubbleWindows(electronApp);
     const totalFloating = counts.ambient + counts.pet;
     expect(
       totalFloating,
       `exactly one floating bubble window expected (U-1=A evolution); got ambient=${counts.ambient}, pet=${counts.pet}`
     ).toBe(1);
-    // 存在的那一个应当是 ambient 语义（非 legacy pet title）
+    // The one that exists must be ambient-semantic (not a legacy pet title)
     expect(counts.ambient, 'the single bubble must be ambient-titled, not legacy pet').toBe(1);
   });
 
-  // ── AC-M1-11: WAYLAND_AMBIENT env var 优先级高于 settings 开关 ─────────
+  // -- AC-M1-11: WAYLAND_AMBIENT env var takes priority over the settings switch --
   test('AC-M1-11: WAYLAND_AMBIENT env var overrides settings switch', async ({ electronApp }) => {
     test.skip(
       true,
@@ -551,7 +552,7 @@ test.describe('Ambient Mode — M1 Bubble', () => {
     void electronApp;
   });
 
-  // ── AC-M1-12: settings 开关切换模式需要重启 ──────────────────────────
+  // -- AC-M1-12: Toggling the settings switch to change mode requires a restart --
   test('AC-M1-12: toggling ambient via settings requires restart and shows toast', async ({ electronApp, page }) => {
     test.skip(
       true,
@@ -563,9 +564,9 @@ test.describe('Ambient Mode — M1 Bubble', () => {
     void page;
   });
 
-  // ── AC-M1-13: displayId / position validate 边界保护 ─────────────────
-  // 单显示器下可测：模拟 ConfigStorage 里 `ambient.bubblePosition` 的 displayId = 999
-  // (不存在)，重启后断言气泡落到主显示器右下角默认位置。
+  // -- AC-M1-13: displayId / position validate boundary protection --------
+  // Testable on a single monitor: simulate ConfigStorage's `ambient.bubblePosition` having displayId = 999
+  // (which does not exist), then assert after restart that the bubble lands at the primary display's default bottom-right.
   test('AC-M1-13: invalid persisted displayId falls back to primary display default', async () => {
     test.skip(
       true,
@@ -585,9 +586,9 @@ test.describe('Ambient Mode — M1 Bubble', () => {
     );
   });
 
-  // ── AC-M1-14: E2E fixture 契约（meta test，确认 fixture 存在）────────
-  // 这条不是验证业务逻辑，而是验证"我们有 ambientTest fixture 可用"——Arch/Dev
-  // 实现 launchAppWithEnv + ambientTest 后，此用例 unskip 并改成 import check。
+  // -- AC-M1-14: E2E fixture contract (meta test, confirms the fixture exists) --
+  // This is not a business-logic check but a verification that "we have the ambientTest fixture available" — once Arch/Dev
+  // implements launchAppWithEnv + ambientTest, unskip this case and change it into an import check.
   test('AC-M1-14: ambientTest fixture is exported from tests/e2e/fixtures.ts', async () => {
     test.skip(
       true,
@@ -597,12 +598,12 @@ test.describe('Ambient Mode — M1 Bubble', () => {
     );
   });
 
-  // ── AC-M1-15: 存量 Pet 用户迁移（U-1=A 伴生，2026-05-11）─────────────
-  // [REQ-CHANGE-v5] 预设 `pet.enabled=true` 且 `ambient.*` 未设置的老用户，首次
-  // 启动 A 演进版本时必须自动迁移：
+  // -- AC-M1-15: Existing Pet user migration (paired with U-1=A, 2026-05-11) --
+  // [REQ-CHANGE-v5] Legacy users with `pet.enabled=true` and no `ambient.*` keys set must be migrated automatically
+  // on the first launch of the A-evolution build:
   //   - ambient.enabled := true
-  //   - ambient.bubblePosition := 沿用 pet 的位置（含 displayId，若 pet 有）
-  //   - ambient._migratedFromPet := true（幂等标记，第二次启动不重复迁移）
+  //   - ambient.bubblePosition := inherits pet's position (including displayId, if pet had one)
+  //   - ambient._migratedFromPet := true (idempotent marker; the second launch must not re-migrate)
   test('AC-M1-15: legacy pet user is migrated to ambient on first launch', async () => {
     test.skip(
       true,
@@ -614,8 +615,8 @@ test.describe('Ambient Mode — M1 Bubble', () => {
     );
   });
 
-  // ── 视觉回归快照 ─────────────────────────────────────────────────────
-  // 最少 2 张：气泡初始态 + 拖动中态（opacity 0.85）
+  // -- Visual regression snapshots ----------------------------------------
+  // At least 2 frames: initial bubble state + dragging state (opacity 0.85)
   test('visual: bubble initial state snapshot', async ({ electronApp, page }) => {
     test.skip(
       true,

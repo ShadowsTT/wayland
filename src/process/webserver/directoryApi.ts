@@ -12,13 +12,11 @@ import { fileOperationLimiter } from './middleware/security';
 
 // Allow browsing within the running workspace, current user's home directory,
 // the filesystem root (/) on Unix-like systems, and all drive letters on Windows
-// 允许在工作目录、用户主目录、Unix-like 系统根目录（/），以及 Windows 所有盘符中浏览
 // @exported for testing
 export const DEFAULT_ALLOWED_DIRECTORIES = (() => {
   const baseDirs = [process.cwd(), os.homedir()];
 
   // On Windows, add all available drive letters (C:, D:, E:, etc.)
-  // 在 Windows 上，添加所有可用的驱动器盘符
   if (process.platform === 'win32') {
     // Check common drive letters A-Z
     for (let charCode = 65; charCode <= 90; charCode++) {
@@ -35,7 +33,6 @@ export const DEFAULT_ALLOWED_DIRECTORIES = (() => {
   }
 
   // On Unix-like systems (macOS, Linux, WSL), add root to allow browsing the entire filesystem
-  // 在类 Unix 系统（macOS、Linux、WSL）上，添加根目录以允许浏览整个文件系统
   if (process.platform === 'darwin' || process.platform === 'linux') {
     baseDirs.push('/');
   }
@@ -107,13 +104,11 @@ export function isPathAllowed(targetPath: string, allowedBasePaths = DEFAULT_ALL
 /**
  * Validate and sanitize user-provided file paths to prevent directory traversal attacks
  * This function serves as a path sanitizer for CodeQL security analysis
- * 验证和清理用户提供的文件路径，防止目录遍历攻击
- * 此函数作为 CodeQL 安全分析的路径清洗器
  *
- * @param userPath - User-provided path / 用户提供的路径
- * @param allowedBasePaths - Optional array of allowed base directories / 可选的允许的基础目录列表
- * @returns Validated absolute path / 验证后的绝对路径
- * @throws Error if path is invalid or outside allowed directories / 如果路径无效或在允许目录之外则抛出错误
+ * @param userPath - User-provided path
+ * @param allowedBasePaths - Optional array of allowed base directories
+ * @returns Validated absolute path
+ * @throws Error if path is invalid or outside allowed directories
  */
 function validatePath(userPath: string, allowedBasePaths = DEFAULT_ALLOWED_DIRECTORIES): string {
   if (!userPath || typeof userPath !== 'string') {
@@ -124,23 +119,19 @@ function validatePath(userPath: string, allowedBasePaths = DEFAULT_ALLOWED_DIREC
   const expandedPath = trimmedPath.startsWith('~') ? path.join(os.homedir(), trimmedPath.slice(1)) : trimmedPath;
 
   // First normalize to remove any .., ., and redundant separators
-  // 首先规范化以移除任何 .., ., 和多余的分隔符
   const normalizedPath = path.normalize(expandedPath);
 
   const useWin32PathOps = shouldUseWin32PathOps(normalizedPath, allowedBasePaths);
 
   // Then resolve to absolute path (resolves symbolic links and relative paths)
-  // 然后解析为绝对路径（解析符号链接和相对路径）
   const resolvedPath = resolveForComparison(normalizedPath, useWin32PathOps);
 
   // Check for null bytes (prevents null byte injection attacks)
-  // 检查空字节（防止空字节注入攻击）
   if (resolvedPath.includes('\0')) {
     throw new Error('Invalid path: null bytes detected');
   }
 
   // If no allowed base paths specified, allow any valid absolute path
-  // 如果没有指定允许的基础路径，则允许任何有效的绝对路径
   const sanitizedBasePaths = allowedBasePaths
     .map((basePath) => basePath && basePath.trim())
     .filter((basePath): basePath is string => Boolean(basePath))
@@ -152,7 +143,6 @@ function validatePath(userPath: string, allowedBasePaths = DEFAULT_ALLOWED_DIREC
   }
 
   // Ensure resolved path is within one of the allowed base directories
-  // 确保解析后的路径在允许的基础目录之一内
   const isAllowed = sanitizedBasePaths.some((basePath) => isSubPath(resolvedPath, basePath, useWin32PathOps));
 
   if (!isAllowed) {
@@ -164,7 +154,6 @@ function validatePath(userPath: string, allowedBasePaths = DEFAULT_ALLOWED_DIREC
 
 /**
  * Get available Windows drive letters
- * 获取 Windows 可用的驱动器盘符列表
  */
 function getWindowsDrives(): Array<{ name: string; path: string; isDirectory: boolean; isFile: boolean }> {
   const drives: Array<{ name: string; path: string; isDirectory: boolean; isFile: boolean }> = [];
@@ -188,16 +177,14 @@ function getWindowsDrives(): Array<{ name: string; path: string; isDirectory: bo
 }
 
 /**
- * 获取目录列表
+ * Get directory listing
  */
 // Rate limit directory browsing to mitigate brute-force scanning
-// 为目录浏览接口增加限流，避免暴力扫描
 router.get('/browse', fileOperationLimiter, (req, res) => {
   try {
     const queryPath = req.query.path as string;
 
     // On Windows, when path is empty or '__ROOT__', return drive list
-    // 在 Windows 上，当路径为空或 '__ROOT__' 时，返回驱动器列表
     if (process.platform === 'win32' && (!queryPath || queryPath === '__ROOT__')) {
       const drives = getWindowsDrives();
       return res.json({
@@ -209,16 +196,14 @@ router.get('/browse', fileOperationLimiter, (req, res) => {
       });
     }
 
-    // 默认打开 Wayland 运行目录，而不是用户 home 目录
+    // Default to the Wayland working directory rather than user's home
     const rawPath = queryPath || process.cwd();
 
-    // Validate path to prevent directory traversal / 验证路径以防止目录遍历
+    // Validate path to prevent directory traversal
     const validatedPath = validatePath(rawPath);
 
     // Use fs.realpathSync to resolve all symbolic links and get canonical path
     // This breaks the taint flow for CodeQL analysis
-    // 使用 fs.realpathSync 解析所有符号链接并获取规范路径
-    // 这会打破 CodeQL 分析的污点流
     let dirPath: string;
     try {
       const canonicalPath = fs.realpathSync(validatedPath);
@@ -229,11 +214,9 @@ router.get('/browse', fileOperationLimiter, (req, res) => {
 
     // Break taint flow by creating a new sanitized string
     // CodeQL treats String() conversion as a sanitizer
-    // 通过创建新的清洗字符串来打断污点流
-    // CodeQL 将 String() 转换视为清洗器
     const safeDir = String(dirPath);
 
-    // 安全检查：确保路径是目录
+    // Safety check: ensure the path is a directory
     let stats: fs.Stats;
     try {
       stats = fs.statSync(safeDir);
@@ -245,24 +228,23 @@ router.get('/browse', fileOperationLimiter, (req, res) => {
       return res.status(400).json({ error: 'Path is not a directory' });
     }
 
-    // 获取查询参数，确定是否显示文件
+    // Read query param to decide whether to show files
     const showFiles = req.query.showFiles === 'true';
 
-    // 读取目录内容，过滤隐藏文件/目录
+    // Read directory contents, filter out hidden files/dirs
     const items = fs
       .readdirSync(safeDir)
-      .filter((name) => !name.startsWith('.')) // 过滤隐藏文件/目录
+      .filter((name) => !name.startsWith('.')) // filter hidden files/dirs
       .map((name) => {
         try {
           const itemPath = validatePath(path.join(safeDir, name), [safeDir]);
           // Apply String() conversion to break taint flow for CodeQL
-          // 使用 String() 转换打断 CodeQL 的污点流
           const safeItemPath = String(itemPath);
           const itemStats = fs.statSync(safeItemPath);
           const isDirectory = itemStats.isDirectory();
           const isFile = itemStats.isFile();
 
-          // 根据模式过滤：如果不显示文件，则只显示目录
+          // Filter by mode: if not showing files, only show directories
           if (!showFiles && !isDirectory) {
             return null;
           }
@@ -282,7 +264,7 @@ router.get('/browse', fileOperationLimiter, (req, res) => {
       })
       .filter(Boolean);
 
-    // 按类型和名称排序（目录在前）
+    // Sort by type then name (directories first)
     items.sort((a, b) => {
       if (a.isDirectory && !b.isDirectory) return -1;
       if (!a.isDirectory && b.isDirectory) return 1;
@@ -294,7 +276,6 @@ router.get('/browse', fileOperationLimiter, (req, res) => {
     const limitedItems = truncated ? items.slice(0, MAX_DIRECTORY_ITEMS) : items;
 
     // On Windows, check if we're at a drive root (e.g., C:\)
-    // 在 Windows 上，检查是否在驱动器根目录
     const parentDir = path.dirname(safeDir);
     const isAtDriveRoot = process.platform === 'win32' && parentDir === safeDir;
     const canGoUp = isAtDriveRoot || (parentDir !== safeDir && isPathAllowed(parentDir));
@@ -302,7 +283,6 @@ router.get('/browse', fileOperationLimiter, (req, res) => {
     res.json({
       currentPath: safeDir,
       // On Windows drive root, parent should be '__ROOT__' to show drive list
-      // 在 Windows 驱动器根目录，父目录应为 '__ROOT__' 以显示驱动器列表
       parentPath: isAtDriveRoot ? '__ROOT__' : parentDir,
       items: limitedItems,
       canGoUp,
@@ -315,10 +295,9 @@ router.get('/browse', fileOperationLimiter, (req, res) => {
 });
 
 /**
- * 验证路径是否有效
+ * Validate a path
  */
 // Rate limit directory validation endpoint as well
-// 同样为目录验证接口增加限流
 router.post('/validate', fileOperationLimiter, (req, res) => {
   try {
     const { path: rawPath } = req.body;
@@ -327,11 +306,10 @@ router.post('/validate', fileOperationLimiter, (req, res) => {
       return res.status(400).json({ error: 'Path is required' });
     }
 
-    // Validate path to prevent directory traversal / 验证路径以防止目录遍历
+    // Validate path to prevent directory traversal
     const validatedPath = validatePath(rawPath);
 
     // Use fs.realpathSync to get canonical path (acts as sanitizer for CodeQL)
-    // 使用 fs.realpathSync 获取规范路径（作为 CodeQL 的清洗器）
     let dirPath: string;
     try {
       const canonicalPath = fs.realpathSync(validatedPath);
@@ -342,11 +320,9 @@ router.post('/validate', fileOperationLimiter, (req, res) => {
 
     // Break taint flow by creating a new sanitized string
     // CodeQL treats String() conversion as a sanitizer
-    // 通过创建新的清洗字符串来打断污点流
-    // CodeQL 将 String() 转换视为清洗器
     const safeValidatedPath = String(dirPath);
 
-    // 检查是否为目录
+    // Check whether it is a directory
     let stats: fs.Stats;
     try {
       stats = fs.statSync(safeValidatedPath);
@@ -358,7 +334,7 @@ router.post('/validate', fileOperationLimiter, (req, res) => {
       return res.status(400).json({ error: 'Path is not a directory' });
     }
 
-    // 检查是否可读
+    // Check whether it is readable
     try {
       fs.accessSync(safeValidatedPath, fs.constants.R_OK);
     } catch {
@@ -380,10 +356,9 @@ router.post('/validate', fileOperationLimiter, (req, res) => {
 });
 
 /**
- * 获取常用目录快捷方式
+ * Get common directory shortcuts
  */
 // Rate limit shortcut fetching to keep behavior consistent
-// 快捷目录获取接口也使用相同的限流策略
 router.get('/shortcuts', fileOperationLimiter, (_req, res) => {
   try {
     const shortcuts = [

@@ -271,7 +271,6 @@ export function initConversationBridge(
       workerTaskManager.kill(id);
 
       // If source is not 'wayland' (e.g., telegram), cleanup channel resources
-      // 如果来源不是 wayland（如 telegram），需要清理 channel 相关资源
       if (source && source !== 'wayland') {
         try {
           // Dynamic import to avoid circular dependency
@@ -413,7 +412,7 @@ export function initConversationBridge(
         root: workspace,
         fileService,
         abortController: buildLastAbortController(),
-        maxDepth: 10, // 支持更深的目录结构 / Support deeper directory structures
+        maxDepth: 10, // Support deeper directory structures
         search: {
           text: search,
           onProcess(result) {
@@ -491,7 +490,6 @@ export function initConversationBridge(
     }
   });
 
-  // 通用 sendMessage 实现 - 统一调用 IAgentManager.sendMessage
   // Generic sendMessage - dispatches via IAgentManager.sendMessage interface
   ipcBridge.conversation.sendMessage.provider(async (params) => {
     // Notify pet of user sending message (pre-emptive thinking)
@@ -628,7 +626,7 @@ export function initConversationBridge(
     }
   });
 
-  // 通用 confirmMessage 实现 - 自动根据 conversation 类型分发
+  // Generic confirmMessage - dispatches based on conversation type
 
   ipcBridge.conversation.confirmation.confirm.provider(async ({ conversation_id, msg_id, data, callId }) => {
     const task = workerTaskManager.getTask(conversation_id);
@@ -642,10 +640,8 @@ export function initConversationBridge(
     return task.getConfirmations();
   });
 
-  // Session-level approval memory for "always allow" decisions
-  // 会话级别的权限记忆，用于 "always allow" 决策
-  // Keys are parsed from raw action+commandType here (single source of truth)
-  // Keys 在此处从原始 action+commandType 解析（单一数据源）
+  // Session-level approval memory for "always allow" decisions.
+  // Keys are parsed from raw action+commandType here (single source of truth).
   ipcBridge.conversation.approval.check.provider(async ({ conversation_id, action, commandType }) => {
     const task = workerTaskManager.getTask(conversation_id) as unknown as
       | GeminiAgentManager

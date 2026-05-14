@@ -32,13 +32,13 @@ export const useModelProviderList = (): ModelProviderListResult => {
   // Mutable cache for available-model filtering
   const availableModelsCacheRef = useRef(new Map<string, string[]>());
 
-  // 当 modelConfig 变化时清除缓存
+  // Clear cache when modelConfig changes
   useEffect(() => {
     availableModelsCacheRef.current.clear();
   }, [modelConfig]);
 
   const getAvailableModels = useCallback((provider: IProvider): string[] => {
-    // 包含 modelEnabled 状态到缓存 key 中
+    // Include modelEnabled state in the cache key
     const modelEnabledKey = provider.modelEnabled ? JSON.stringify(provider.modelEnabled) : 'all-enabled';
     const cacheKey = `${provider.id}-${(provider.model || []).join(',')}-${modelEnabledKey}`;
     const cache = availableModelsCacheRef.current;
@@ -47,7 +47,7 @@ export const useModelProviderList = (): ModelProviderListResult => {
     }
     const result: string[] = [];
     for (const modelName of provider.model || []) {
-      // 检查模型是否被禁用（默认为启用）
+      // Check whether the model is disabled (enabled by default)
       const isModelEnabled = provider.modelEnabled?.[modelName] !== false;
       if (!isModelEnabled) continue;
 
@@ -63,7 +63,7 @@ export const useModelProviderList = (): ModelProviderListResult => {
 
   const providers = useMemo(() => {
     let list: IProvider[] = Array.isArray(modelConfig) ? modelConfig : [];
-    // 过滤掉被禁用的 provider（默认为启用）
+    // Filter out disabled providers (enabled by default)
     list = list.filter((p) => p.enabled !== false);
 
     if (isGoogleAuth) {
@@ -75,11 +75,11 @@ export const useModelProviderList = (): ModelProviderListResult => {
         apiKey: '',
         model: geminiModeOptions.map((v) => v.value),
         capabilities: [{ type: 'text' }, { type: 'vision' }, { type: 'function_calling' }],
-        enabled: true, // Google Auth provider 始终启用
+        enabled: true, // Google Auth provider is always enabled
       } as unknown as IProvider;
       list = [googleProvider, ...list];
     }
-    // 过滤掉没有可用模型的 provider
+    // Filter out providers with no available models
     return list.filter((p) => getAvailableModels(p).length > 0);
   }, [geminiModeOptions, getAvailableModels, isGoogleAuth, modelConfig]);
 

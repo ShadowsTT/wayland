@@ -10,35 +10,35 @@ import type { IMcpServer } from '@/common/config/storage';
 import { ProcessConfig } from '@process/utils/initStorage';
 
 /**
- * Wayland 本地 MCP 代理实现
+ * Wayland local MCP agent implementation
  *
- * 专门用于管理通过 @office-ai/aioncli-core 运行的本地 Gemini CLI 的 MCP 配置
+ * Manages MCP configuration for the local Gemini CLI running via @office-ai/aioncli-core
  *
- * 工作原理：
- * 1. MCP 配置存储在 ProcessConfig 的 'mcp.config' 中
- * 2. GeminiAgentManager 在启动时从 mcp.config 读取并转换为 @office-ai/aioncli-core 格式
- * 3. @office-ai/aioncli-core 在运行时使用这些 MCP servers
+ * How it works:
+ * 1. MCP configuration is stored in ProcessConfig under 'mcp.config'
+ * 2. GeminiAgentManager reads from mcp.config at startup and converts it to @office-ai/aioncli-core format
+ * 3. @office-ai/aioncli-core uses these MCP servers at runtime
  *
- * 与其他 ACP Backend MCP Agents 的区别：
- * - ACP Backend Agents: 管理真实的 CLI 工具的 MCP 配置 (如 claude mcp, qwen mcp 命令)
- * - WaylandMcpAgent: 管理 Wayland 本地 @office-ai/aioncli-core 的运行时 MCP 配置
+ * Differences vs. other ACP Backend MCP Agents:
+ * - ACP Backend Agents: manage MCP configuration of real CLI tools (e.g. claude mcp, qwen mcp commands)
+ * - WaylandMcpAgent: manages runtime MCP configuration for Wayland's local @office-ai/aioncli-core
  */
 export class WaylandMcpAgent extends AbstractMcpAgent {
   constructor() {
-    // 使用 'wayland' 作为 backend type 来区分真实的 Gemini CLI
-    // 虽然配置最终被 GeminiAgentManager 使用，但在 MCP 管理层面它是独立的 agent
+    // Use 'wayland' as the backend type to distinguish from the real Gemini CLI
+    // Even though config is consumed by GeminiAgentManager, at the MCP management layer it's a separate agent
     super('wayland');
   }
 
   getSupportedTransports(): string[] {
-    // @office-ai/aioncli-core 支持 stdio, sse, http (streamable_http maps to http)
-    // 参考: node_modules/@office-ai/aioncli-core/dist/src/config/config.d.ts -> MCPServerConfig
+    // @office-ai/aioncli-core supports stdio, sse, http (streamable_http maps to http)
+    // Reference: node_modules/@office-ai/aioncli-core/dist/src/config/config.d.ts -> MCPServerConfig
     return ['stdio', 'sse', 'http', 'streamable_http'];
   }
 
   /**
-   * 检测 Wayland 管理的 MCP 配置
-   * 从 ProcessConfig 的统一配置中读取
+   * Detect MCP configuration managed by Wayland
+   * Reads from the unified ProcessConfig
    */
   async detectMcpServers(_cliPath?: string): Promise<IMcpServer[]> {
     try {
@@ -47,8 +47,8 @@ export class WaylandMcpAgent extends AbstractMcpAgent {
         return [];
       }
 
-      // 返回所有配置的 MCP servers
-      // 过滤出 @office-ai/aioncli-core 支持的传输类型
+      // Return all configured MCP servers
+      // Filter to those with transport types supported by @office-ai/aioncli-core
       return mcpConfig.filter((server: IMcpServer) => {
         const supportedTypes = this.getSupportedTransports();
         return supportedTypes.includes(server.transport.type);
@@ -60,26 +60,26 @@ export class WaylandMcpAgent extends AbstractMcpAgent {
   }
 
   /**
-   * 安装 MCP 服务器到 Wayland 配置
-   * 实际上是将配置合并到 ProcessConfig 的统一配置中
+   * Install MCP servers into the Wayland configuration
+   * In practice, merges the entries into the unified ProcessConfig
    */
   async installMcpServers(mcpServers: IMcpServer[]): Promise<McpOperationResult> {
     try {
-      // 读取当前配置
+      // Read current configuration
       const currentConfig = (await ProcessConfig.get('mcp.config')) || [];
       const existingServers = Array.isArray(currentConfig) ? currentConfig : [];
 
-      // 合并新服务器（去重，以 name 为key）
+      // Merge new servers (deduped by name)
       const serverMap = new Map<string, IMcpServer>();
 
-      // 先添加现有服务器
+      // Seed with existing servers first
       existingServers.forEach((server: IMcpServer) => {
         serverMap.set(server.name, server);
       });
 
-      // 添加或更新新服务器
+      // Add or update incoming servers
       mcpServers.forEach((server) => {
-        // 只安装支持的传输类型
+        // Only install supported transport types
         if (this.getSupportedTransports().includes(server.transport.type)) {
           serverMap.set(server.name, {
             ...server,
@@ -90,7 +90,7 @@ export class WaylandMcpAgent extends AbstractMcpAgent {
         }
       });
 
-      // 转换回数组并保存
+      // Convert back to an array and save
       const mergedServers = Array.from(serverMap.values());
       await ProcessConfig.set('mcp.config', mergedServers);
 
@@ -103,15 +103,16 @@ export class WaylandMcpAgent extends AbstractMcpAgent {
   }
 
   /**
-   * 从 Wayland 配置中移除 MCP 服务器
+   * Remove an MCP server from the Wayland configuration
    *
-   * 注意：Wayland 的 MCP 配置由前端（renderer 层）统一管理
-   * 这里不做任何操作，因为：
-   * 1. Toggle 关闭时：前端已经设置 enabled: false，不需要后端再次修改
-   * 2. 删除服务器时：前端已经从配置中删除，不需要后端再次删除
+   * Note: Wayland's MCP configuration is managed centrally by the renderer (frontend).
+   * This method is intentionally a no-op because:
+   * 1. When toggled off: the frontend already sets enabled: false; no backend mutation needed
+   * 2. When deleted: the frontend already removed it from config; no backend mutation needed
    *
-   * WaylandMcpAgent 只负责读取配置（detectMcpServers）和添加配置（installMcpServers），
-   * 不应该在 remove 流程中修改配置，避免与前端的配置管理产生冲突
+   * WaylandMcpAgent is only responsible for reading config (detectMcpServers) and adding
+   * config (installMcpServers). It should not mutate config during remove to avoid
+   * conflicting with the frontend's configuration management.
    */
   removeMcpServer(mcpServerName: string): Promise<McpOperationResult> {
     console.log(`[WaylandMcpAgent] Skip removing '${mcpServerName}' - config managed by renderer`);

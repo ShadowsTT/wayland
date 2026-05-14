@@ -7,7 +7,6 @@
 import type { ErrorRequestHandler, Response } from 'express';
 
 /**
- * 应用错误类 - 自定义错误类，包含状态码和错误代码
  * Application Error Class - Custom error class with status code and error code
  */
 export class AppError extends Error {
@@ -22,7 +21,6 @@ export class AppError extends Error {
 }
 
 /**
- * 错误命令接口 - 定义错误响应的执行方式
  * Error Command Interface - Define how error responses are executed
  */
 interface ErrorCommand {
@@ -30,7 +28,6 @@ interface ErrorCommand {
 }
 
 /**
- * JSON 错误命令 - 返回 JSON 格式的错误响应
  * JSON Error Command - Return error response in JSON format
  */
 class JsonErrorCommand implements ErrorCommand {
@@ -45,10 +42,8 @@ class JsonErrorCommand implements ErrorCommand {
 }
 
 /**
- * 全局错误处理中间件
  * Global error handling middleware
  *
- * 处理所有未被捕获的错误，统一返回格式化的错误响应
  * Handles all uncaught errors and returns formatted error responses
  */
 export const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
@@ -57,7 +52,7 @@ export const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
   const code = isAppError ? err.code : 'internal_error';
   const message = isAppError ? err.message : 'Internal server error';
 
-  // 仅记录非预期错误 / Only log unexpected errors
+  // Only log unexpected errors
   if (!isAppError) {
     console.error('[Error]', err);
   }
@@ -71,12 +66,11 @@ export const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
 };
 
 /**
- * 创建应用错误
  * Create application error
- * @param message - 错误消息 / Error message
- * @param statusCode - HTTP 状态码 / HTTP status code
- * @param code - 错误代码 / Error code
- * @returns AppError 实例 / AppError instance
+ * @param message - Error message
+ * @param statusCode - HTTP status code
+ * @param code - Error code
+ * @returns AppError instance
  */
 export const createAppError = (message: string, statusCode = 400, code = 'bad_request'): AppError => {
   return new AppError(message, statusCode, code);

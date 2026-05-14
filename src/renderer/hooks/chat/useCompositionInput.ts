@@ -1,8 +1,8 @@
 import { useRef, useState } from 'react';
 
 /**
- * 共享的输入法合成事件处理hook
- * 消除SendBox组件和GUID页面中的IME处理重复代码
+ * Shared IME composition event handler hook.
+ * Eliminates duplicated IME handling code between the SendBox component and GUID pages.
  */
 export const useCompositionInput = () => {
   const isComposing = useRef(false);

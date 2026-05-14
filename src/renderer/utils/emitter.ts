@@ -46,13 +46,13 @@ interface EventTypes {
   'remote.selected.file.clear': void;
   'remote.workspace.refresh': void;
   'chat.history.refresh': void;
-  // 会话删除事件 / Conversation deletion event
+  // Conversation deletion event
   'conversation.deleted': [string]; // conversationId
-  // 预览面板事件 / Preview panel events
+  // Preview panel events
   'preview.open': [
     { content: string; contentType: PreviewContentType; metadata?: { title?: string; fileName?: string } },
   ];
-  // 填充输入框事件 / Fill sendbox input event
+  // Fill sendbox input event
   'sendbox.fill': [string]; // prompt text to fill
   'sendbox.reply': [ReplyQuote]; // reply/quote a message
   'sendbox.reply.clear': void; // clear reply quote

@@ -4,7 +4,6 @@
  * SPDX-License-Identifier: Apache-2.0
  *
  * Reset password CLI utility for packaged applications
- * 打包应用的密码重置命令行工具
  */
 
 import crypto from 'crypto';
@@ -13,7 +12,7 @@ import { getDataPath } from '@process/utils';
 import { closeDatabase, getDatabase } from '@process/services/database/export';
 import path from 'path';
 
-// 颜色输出 / Color output
+// Color output
 const colors = {
   reset: '\x1b[0m',
   bright: '\x1b[1m',
@@ -44,12 +43,11 @@ const hashPasswordAsync = (password: string, saltRounds: number): Promise<string
   });
 
 // Hash password using bcrypt
-// 使用 bcrypt 哈希密码
 async function hashPassword(password: string): Promise<string> {
   return await hashPasswordAsync(password, 10);
 }
 
-// 生成随机密码 / Generate random password
+// Generate random password
 function generatePassword(): string {
   const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
   let password = '';
@@ -71,7 +69,6 @@ export function resolveResetPasswordUsername(argv: string[]): string {
 
 /**
  * Reset password for a user (CLI mode, works in packaged apps)
- * 重置用户密码（CLI模式,在打包应用中可用）
  *
  * @param username - Username to reset password for
  */

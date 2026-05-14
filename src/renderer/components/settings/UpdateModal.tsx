@@ -122,8 +122,6 @@ const UpdateModal: React.FC = () => {
       // Prefer the manual path so the URL is the CDN-rewritten asset.url.
       // Fall back to electron-updater (GitHub) only when the GitHub API manual check failed
       // but the yml-based auto-update check succeeded — a rare edge case.
-      // 优先走手动路径（URL 是重写后的 CDN 地址）。仅当 GitHub API 失败但 electron-updater 检查成功时，
-      // 回退到 electron-updater 的下载（走 GitHub），保证用户能升级。
       if (updateInfo?.recommendedAsset) {
         const asset = updateInfo.recommendedAsset;
         const res = await ipcBridge.update.download.invoke({

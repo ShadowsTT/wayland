@@ -28,7 +28,7 @@ test.describe('F-SESSION-02 进入会话并建立连接', () => {
 
     await expect(page).toHaveURL(/\/conversation\//);
 
-    // AC: 连接过程中显示状态指示（状态 badge 或 AI 回复均算有效信号）
+    // AC: status indicator shown during connection (either the status badge or an AI reply counts as a valid signal)
     const statusOrReply = page.locator(`${AGENT_STATUS_MESSAGE}, .message-item.text.justify-start`);
     await expect(statusOrReply.first()).toBeVisible({ timeout: 30_000 });
 

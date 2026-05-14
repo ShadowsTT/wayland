@@ -11,7 +11,6 @@ import type { Message } from '@arco-design/web-react';
 export type MessageApi = ReturnType<typeof Message.useMessage>[0];
 
 /**
- * Workspace 组件的 Props 定义
  * Props definition for Workspace component
  */
 export interface WorkspaceProps {
@@ -23,7 +22,6 @@ export interface WorkspaceProps {
 }
 
 /**
- * 右键菜单状态
  * Context menu state
  */
 export interface ContextMenuState {
@@ -34,7 +32,6 @@ export interface ContextMenuState {
 }
 
 /**
- * 重命名弹窗状态
  * Rename modal state
  */
 export interface RenameModalState {
@@ -44,7 +41,6 @@ export interface RenameModalState {
 }
 
 /**
- * 删除确认弹窗状态
  * Delete confirmation modal state
  */
 export interface DeleteModalState {
@@ -54,7 +50,6 @@ export interface DeleteModalState {
 }
 
 /**
- * 粘贴确认弹窗状态
  * Paste confirmation modal state
  */
 export interface PasteConfirmState {
@@ -66,7 +61,6 @@ export interface PasteConfirmState {
 }
 
 /**
- * 工作空间树的状态
  * Workspace tree state
  */
 export interface WorkspaceTreeState {
@@ -79,7 +73,6 @@ export interface WorkspaceTreeState {
 }
 
 /**
- * 节点选择引用，用于跟踪最后选中的文件夹节点
  * Node selection reference for tracking the last selected folder node
  */
 export interface SelectedNodeRef {
@@ -88,7 +81,6 @@ export interface SelectedNodeRef {
 }
 
 /**
- * 目标文件夹路径信息
  * Target folder path information
  */
 export interface TargetFolderPath {
@@ -97,7 +89,6 @@ export interface TargetFolderPath {
 }
 
 /**
- * 从 Tree 节点提取数据的辅助函数类型
  * Helper function types for extracting data from Tree nodes
  */
 export type ExtractNodeDataFn = (node: NodeInstance | null | undefined) => IDirOrFile | null;

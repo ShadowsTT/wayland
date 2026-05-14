@@ -7,10 +7,9 @@
 import { useEffect, useState } from 'react';
 
 /**
- * 检测并监听主题变化
  * Detect and monitor theme changes
  *
- * @returns 当前主题 / Current theme
+ * @returns Current theme
  */
 export const useThemeDetection = (): 'light' | 'dark' => {
   const [currentTheme, setCurrentTheme] = useState<'light' | 'dark'>(() => {

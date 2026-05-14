@@ -93,7 +93,7 @@ const ChatHistory: React.FC<{ onSessionClick?: () => void; collapsed?: boolean }
     Promise.resolve(navigate(`/conversation/${conversation.id}`)).catch((error) => {
       console.error('Navigation failed:', error);
     });
-    // 点击session后自动隐藏sidebar
+    // Auto-hide sidebar after clicking a session
     if (onSessionClick) {
       onSessionClick();
     }

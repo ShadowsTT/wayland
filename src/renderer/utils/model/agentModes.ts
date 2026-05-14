@@ -12,14 +12,13 @@ import {
 
 /**
  * Agent mode option interface
- * 代理模式选项接口
  */
 export interface AgentModeOption {
-  /** Mode value sent to agent / 发送给代理的模式值 */
+  /** Mode value sent to agent */
   value: string;
-  /** Display label matching CLI display / 与 CLI 显示一致的标签 */
+  /** Display label matching CLI display */
   label: string;
-  /** Optional description / 可选描述 */
+  /** Optional description */
   description?: string;
 }
 

@@ -9,76 +9,63 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 
 /**
- * 关闭 Tab 确认状态
  * Close tab confirmation state
  */
 export interface CloseTabConfirmState {
   /**
-   * 是否显示确认对话框
    * Whether to show confirmation dialog
    */
   show: boolean;
 
   /**
-   * 要关闭的 Tab ID
    * Tab ID to close
    */
   tabId: string | null;
 }
 
 /**
- * PreviewConfirmModals 组件属性
  * PreviewConfirmModals component props
  */
 interface PreviewConfirmModalsProps {
   /**
-   * 是否显示退出编辑确认对话框
    * Whether to show exit edit confirmation dialog
    */
   showExitConfirm: boolean;
 
   /**
-   * 关闭 Tab 确认状态
    * Close tab confirmation state
    */
   closeTabConfirm: CloseTabConfirmState;
 
   /**
-   * 确认退出编辑
    * Confirm exit edit
    */
   onConfirmExit: () => void;
 
   /**
-   * 取消退出编辑
    * Cancel exit edit
    */
   onCancelExit: () => void;
 
   /**
-   * 保存并关闭 Tab
    * Save and close tab
    */
   onSaveAndCloseTab: () => void;
 
   /**
-   * 不保存直接关闭 Tab
    * Close tab without saving
    */
   onCloseWithoutSave: () => void;
 
   /**
-   * 取消关闭 Tab
    * Cancel close tab
    */
   onCancelCloseTab: () => void;
 }
 
 /**
- * 预览面板确认对话框组件
  * Preview panel confirmation modals component
  *
- * 包含退出编辑确认和关闭 Tab 确认两个对话框
  * Contains exit edit confirmation and close tab confirmation dialogs
  */
 const PreviewConfirmModals: React.FC<PreviewConfirmModalsProps> = ({
@@ -94,7 +81,7 @@ const PreviewConfirmModals: React.FC<PreviewConfirmModalsProps> = ({
 
   return (
     <>
-      {/* 退出编辑确认对话框 / Exit edit confirmation modal */}
+      {/* Exit edit confirmation modal */}
       <Modal
         visible={showExitConfirm}
         title={t('preview.unsavedChangesTitle')}
@@ -109,7 +96,7 @@ const PreviewConfirmModals: React.FC<PreviewConfirmModalsProps> = ({
         <div className='text-14px text-t-secondary'>{t('preview.unsavedChangesMessage')}</div>
       </Modal>
 
-      {/* 关闭tab确认对话框 / Close tab confirmation modal */}
+      {/* Close tab confirmation modal */}
       <Modal
         visible={closeTabConfirm.show}
         title={t('preview.closeTabTitle')}

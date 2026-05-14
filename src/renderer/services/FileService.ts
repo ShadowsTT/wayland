@@ -80,17 +80,17 @@ function formatBytes(bytes: number, decimals = 2): string {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
 }
 
-// ===== 文件类型支持配置 =====
-// 注意：当前为预先设计的架构，支持所有文件类型
-// 以下常量为将来可能的文件类型过滤功能预留
+// ===== File type support config =====
+// Note: current design accepts all file types; constants below are reserved
+// for a future file-type filtering feature.
 
-/** 支持的图片文件扩展名 */
+/** Supported image file extensions */
 export const imageExts = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.svg'];
 
-/** 支持的文档文件扩展名 */
+/** Supported document file extensions */
 export const documentExts = ['.pdf', '.doc', '.docx', '.pptx', '.xlsx', '.odt', '.odp', '.ods'];
 
-/** 支持的文本文件扩展名 */
+/** Supported text file extensions */
 export const textExts = [
   '.txt',
   '.md',
@@ -120,10 +120,10 @@ export const textExts = [
   '.config',
 ];
 
-/** 所有支持的文件扩展名（预先设计，当前实际接受所有文件类型） */
+/** All supported file extensions (designed ahead; currently all file types are accepted) */
 export const allSupportedExts = [...imageExts, ...documentExts, ...textExts];
 
-// 文件元数据接口
+// File metadata interface
 export interface FileMetadata {
   name: string;
   path: string;
@@ -133,19 +133,19 @@ export interface FileMetadata {
 }
 
 /**
- * 检查文件是否被支持
- * 注意：当前实现为预先设计的架构，支持所有文件类型
- * supportedExts 参数预留给将来的文件类型过滤功能
+ * Check whether a file is supported.
+ * Note: current implementation is designed ahead and accepts all file types;
+ * supportedExts is reserved for a future file-type filtering feature.
  *
- * @param _fileName 文件名（预留参数）
- * @param _supportedExts 支持的文件扩展名数组（预留参数）
- * @returns 总是返回 true，表示支持所有文件类型
+ * @param _fileName File name (reserved)
+ * @param _supportedExts Supported extensions array (reserved)
+ * @returns Always true; all file types are supported
  */
 export function isSupportedFile(_fileName: string, _supportedExts: string[]): boolean {
-  return true; // 预先设计：当前支持所有文件类型
+  return true; // Designed ahead: all file types are currently supported
 }
 
-// 获取文件扩展名
+// Get file extension
 export function getFileExtension(fileName: string): string {
   const lastDotIndex = fileName.lastIndexOf('.');
   return lastDotIndex > -1 ? fileName.substring(lastDotIndex).toLowerCase() : '';
@@ -153,36 +153,36 @@ export function getFileExtension(fileName: string): string {
 
 import { WAYLAND_TIMESTAMP_REGEX } from '@/common/config/constants';
 
-// 清理Wayland时间戳后缀，返回原始文件名
+// Strip Wayland timestamp suffix to return the original file name
 export function cleanAionUITimestamp(fileName: string): string {
   return fileName.replace(WAYLAND_TIMESTAMP_REGEX, '$1');
 }
 
-// 从文件路径获取清理后的文件名（用于UI显示）
+// Get the cleaned file name from a file path (used for UI display)
 export function getCleanFileName(filePath: string): string {
   const fileName = filePath.split(/[\\/]/).pop() || '';
   return cleanAionUITimestamp(fileName);
 }
 
-// 从文件路径数组获取清理后的文件名数组（用于消息格式化）
+// Get cleaned file names for an array of file paths (used in message formatting)
 export function getCleanFileNames(filePaths: string[]): string[] {
   return filePaths.map(getCleanFileName);
 }
 
 /**
- * 过滤支持的文件
- * 注意：由于 isSupportedFile 当前总是返回 true，此函数实际不会过滤任何文件
- * 这是预先设计的架构，为将来的文件类型过滤功能预留
+ * Filter supported files.
+ * Note: since isSupportedFile currently always returns true, this function does not actually filter anything.
+ * Designed ahead, reserved for a future file-type filtering feature.
  *
- * @param files 文件元数据数组
- * @param supportedExts 支持的文件扩展名数组（预留参数）
- * @returns 当前返回所有文件，未进行过滤
+ * @param files Array of file metadata
+ * @param supportedExts Supported extensions array (reserved)
+ * @returns Currently returns all files without filtering
  */
 export function filterSupportedFiles(files: FileMetadata[], supportedExts: string[]): FileMetadata[] {
   return files.filter((file) => isSupportedFile(file.name, supportedExts));
 }
 
-// 从拖拽事件中提取文件 (纯工具函数，不处理业务逻辑)
+// Extract files from a drag event (pure utility; no business logic)
 export function getFilesFromDropEvent(event: DragEvent): FileMetadata[] {
   const files: FileMetadata[] = [];
 
@@ -192,12 +192,12 @@ export function getFilesFromDropEvent(event: DragEvent): FileMetadata[] {
 
   for (let i = 0; i < event.dataTransfer.files.length; i++) {
     const file = event.dataTransfer.files[i];
-    // 在 Electron 环境中，拖拽文件会有额外的 path 属性
+    // In Electron, dragged files carry an extra `path` property
     const electronFile = file as File & { path?: string };
 
     files.push({
       name: file.name,
-      path: electronFile.path || '', // 原始路径，可能为空
+      path: electronFile.path || '', // Original path; may be empty
       size: file.size,
       type: file.type,
       lastModified: file.lastModified,
@@ -207,41 +207,41 @@ export function getFilesFromDropEvent(event: DragEvent): FileMetadata[] {
   return files;
 }
 
-// 从拖拽事件中提取文本
+// Extract text from a drag event
 export function getTextFromDropEvent(event: DragEvent): string {
   return event.dataTransfer?.getData('text/plain') || '';
 }
 
-// 格式化文件大小（使用统一的formatBytes实现）
+// Format file size (uses the shared formatBytes implementation)
 export function formatFileSize(bytes: number): string {
-  return formatBytes(bytes, 2); // 保持2位精度以兼容之前的行为
+  return formatBytes(bytes, 2); // Keep 2-digit precision for backward compatibility
 }
 
 /**
- * 检查是否为图片文件
- * 注意：由于 isSupportedFile 当前总是返回 true，此函数实际总是返回 true
- * 预先设计的架构，为将来的文件类型判断功能预留
- * 当前未被使用，保留供将来扩展
+ * Check whether a file is an image file.
+ * Note: since isSupportedFile currently always returns true, this also always returns true.
+ * Designed ahead, reserved for a future file-type detection feature.
+ * Currently unused; kept for future extension.
  */
 export function isImageFile(fileName: string): boolean {
   return isSupportedFile(fileName, imageExts);
 }
 
 /**
- * 检查是否为文档文件
- * 注意：由于 isSupportedFile 当前总是返回 true，此函数实际总是返回 true
- * 预先设计的架构，为将来的文件类型判断功能预留
- * 当前未被使用，保留供将来扩展
+ * Check whether a file is a document file.
+ * Note: since isSupportedFile currently always returns true, this also always returns true.
+ * Designed ahead, reserved for a future file-type detection feature.
+ * Currently unused; kept for future extension.
  */
 export function isDocumentFile(fileName: string): boolean {
   return isSupportedFile(fileName, documentExts);
 }
 
 /**
- * 检查是否为文本文件
- * 注意：由于 isSupportedFile 当前总是返回 true，此函数实际总是返回 true
- * 预先设计的架构，为将来的文件类型判断功能预留
- * 当前未被使用，保留供将来扩展
+ * Check whether a file is a text file.
+ * Note: since isSupportedFile currently always returns true, this also always returns true.
+ * Designed ahead, reserved for a future file-type detection feature.
+ * Currently unused; kept for future extension.
  */
 export function isTextFile(fileName: string): boolean {
   return isSupportedFile(fileName, textExts);

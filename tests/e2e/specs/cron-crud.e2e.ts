@@ -54,7 +54,7 @@ function startAutoApproveConfirmations(page: import('@playwright/test').Page): (
       try {
         // ConversationChatConfirm renders option buttons as divs with
         // shortcut badge + label. The "Always Allow" option has shortcut "A".
-        // We look for any confirmation option containing "始终允许" or "Always"
+        // We look for any confirmation option containing "Always allow" (or its localized equivalent)
         // and click it. Fallback: click the first option (Enter = allow once).
         const alwaysBtn = page
           .locator('div.cursor-pointer')

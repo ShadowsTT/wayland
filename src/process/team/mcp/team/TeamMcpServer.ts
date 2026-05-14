@@ -160,7 +160,7 @@ export class TeamMcpServer {
    * wakeAgent() can legitimately reject (e.g. dead ACP process, mailbox DB error)
    * but the MCP tool call must still return to the caller, so we can't await it.
    * Without this guard the error vanishes silently and the would-be wake target
-   * never runs — which is one of the ways "codex 空转" used to present.
+   * never runs — which is one of the ways "codex idle-spin" used to present.
    */
   private safeWake(slotId: string, context: string): void {
     this.params.wakeAgent(slotId).catch((err) => {

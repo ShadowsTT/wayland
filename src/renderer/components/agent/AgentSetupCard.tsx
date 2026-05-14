@@ -152,7 +152,6 @@ const AgentSetupCard: React.FC<AgentSetupCardProps> = ({
         }
 
         // Store initial message for the new conversation to send automatically
-        // 存储初始消息，让新会话自动发送
         if (initialMessage) {
           const messageData = { input: initialMessage, files: [] as string[] };
           if (isGemini) {
@@ -205,14 +204,14 @@ const AgentSetupCard: React.FC<AgentSetupCardProps> = ({
     switchingRef.current = false;
   }, [conversationId]);
 
-  // 是否有可用的 agent 且正在切换 / Has available agent and is switching
+  // Has available agent and is switching
   const hasAvailableAndSwitching = !isChecking && availableCount > 0 && (switching || (autoSwitch && bestAgent));
 
   return (
     <div className='mb-12px'>
-      {/* Main Card - 主卡片 */}
+      {/* Main Card */}
       <div className='relative rounded-12px p-16px bg-bg-2 border-1 border-solid border-border-2'>
-        {/* Collapsed View - 收起状态：一行提示 + 展开按钮 */}
+        {/* Collapsed View - single-line hint + expand button */}
         {!expanded && !hasAvailableAndSwitching && (
           <div className='flex items-center justify-between cursor-pointer' onClick={() => setExpanded(true)}>
             <div className='flex items-center gap-8px'>
@@ -227,10 +226,10 @@ const AgentSetupCard: React.FC<AgentSetupCardProps> = ({
           </div>
         )}
 
-        {/* Expanded View - 展开状态 */}
+        {/* Expanded View */}
         {(expanded || hasAvailableAndSwitching) && (
           <>
-            {/* Header with collapse button - 带收起按钮的头部 */}
+            {/* Header with collapse button */}
             {!hasAvailableAndSwitching && (
               <div className='flex items-center justify-between mb-12px'>
                 <div className='flex items-center gap-8px'>
@@ -261,7 +260,7 @@ const AgentSetupCard: React.FC<AgentSetupCardProps> = ({
               </div>
             )}
 
-            {/* Success Message - 连接成功提示 */}
+            {/* Success Message - connection succeeded */}
             {hasAvailableAndSwitching && (
               <div className='flex items-center gap-8px mb-12px'>
                 <CheckOne theme='filled' size={16} className='text-success-6' />
@@ -271,7 +270,7 @@ const AgentSetupCard: React.FC<AgentSetupCardProps> = ({
               </div>
             )}
 
-            {/* Agent Cards - Agent 卡片列表 */}
+            {/* Agent Cards - list of agent cards */}
             {availableAgents.length > 0 && (
               <div className='overflow-x-auto pb-4px -mx-4px px-4px'>
                 <div className='flex gap-10px' style={{ width: 'max-content' }}>
@@ -369,7 +368,7 @@ const AgentSetupCard: React.FC<AgentSetupCardProps> = ({
               </div>
             )}
 
-            {/* Connection Progress - 连接进度条 */}
+            {/* Connection Progress - connection progress bar */}
             {hasAvailableAndSwitching && bestAgent && (
               <div className='mt-12px'>
                 <Progress percent={switching ? 50 : 100} size='small' status='success' showText={false} />

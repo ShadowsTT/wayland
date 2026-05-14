@@ -246,9 +246,9 @@ const fetchWithAllowlistedRedirects = async (rawUrl: string, signal: AbortSignal
 const fetchGitHubReleases = async (repo: string): Promise<GitHubReleaseApi[]> => {
   const url = `https://api.github.com/repos/${repo}/releases`;
 
-  // 添加超时控制，防止网络问题导致无限等待 / Add timeout to prevent infinite wait on network issues
+  // Add timeout to prevent infinite wait on network issues
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 秒超时 / 30 second timeout
+  const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
 
   try {
     const res = await fetch(url, {
@@ -531,12 +531,6 @@ export function initUpdateBridge(): void {
         // If you want dev/prerelease updates to work reliably, CI must inject a prerelease semver into
         // `package.json#version` for dev builds (e.g. `1.7.2-dev.1234+sha.abcdef0`) so semver ordering holds.
         // We intentionally avoid heuristics based on tag strings when the app version is a stable semver.
-        //
-        // 中文：版本号说明
-        // 更新比较严格使用 semver：`app.getVersion()`（应用自身版本号）对比 Release 的 `tag_name`。
-        // 若要 dev/预发布版本更新可靠生效，需要 CI 在 dev 构建时把 `package.json#version`
-        // 注入为带 prerelease 的 semver（如 `1.7.2-dev.1234+sha.abcdef0`），以保证比较顺序正确。
-        // 这里刻意不对“当前是稳定版版本号但用户勾选了 prerelease”做字符串猜测。
 
         const releases = await fetchGitHubReleases(repo);
         const candidates = releases
@@ -583,7 +577,6 @@ export function initUpdateBridge(): void {
         // Defense-in-depth: do not allow arbitrary downloads from renderer.
         // EN: Only allowlisted hosts (CDN + GitHub release hosts) are permitted;
         // each redirect hop is re-validated against the allowlist.
-        // 中文：仅允许白名单内的域名（CDN + GitHub release 相关），并手动处理重定向，每一跳都校验白名单。
         await assertAllowedUrl(params.url);
         if (params.fallbackUrl) {
           await assertAllowedUrl(params.fallbackUrl);

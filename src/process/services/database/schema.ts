@@ -24,7 +24,7 @@ export function initSchema(db: ISqliteDriver): void {
     // Continue with default journal mode if WAL fails
   }
 
-  // Users table (账户系统)
+  // Users table (account system)
   db.exec(`CREATE TABLE IF NOT EXISTS users (
     id TEXT PRIMARY KEY,
     username TEXT UNIQUE NOT NULL,
@@ -39,7 +39,7 @@ export function initSchema(db: ISqliteDriver): void {
   db.exec('CREATE INDEX IF NOT EXISTS idx_users_username ON users(username)');
   db.exec('CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)');
 
-  // Conversations table (会话表 - 存储TChatConversation)
+  // Conversations table (stores TChatConversation)
   db.exec(`CREATE TABLE IF NOT EXISTS conversations (
     id TEXT PRIMARY KEY,
     user_id TEXT NOT NULL,
@@ -57,7 +57,7 @@ export function initSchema(db: ISqliteDriver): void {
   db.exec('CREATE INDEX IF NOT EXISTS idx_conversations_type ON conversations(type)');
   db.exec('CREATE INDEX IF NOT EXISTS idx_conversations_user_updated ON conversations(user_id, updated_at DESC)');
 
-  // Messages table (消息表 - 存储TMessage)
+  // Messages table (stores TMessage)
   db.exec(`CREATE TABLE IF NOT EXISTS messages (
     id TEXT PRIMARY KEY,
     conversation_id TEXT NOT NULL,
@@ -75,7 +75,7 @@ export function initSchema(db: ISqliteDriver): void {
   db.exec('CREATE INDEX IF NOT EXISTS idx_messages_msg_id ON messages(msg_id)');
   db.exec('CREATE INDEX IF NOT EXISTS idx_messages_conversation_created ON messages(conversation_id, created_at)');
 
-  // Teams table (团队模式)
+  // Teams table (team mode)
   db.exec(`CREATE TABLE IF NOT EXISTS teams (
     id TEXT PRIMARY KEY,
     user_id TEXT NOT NULL,
@@ -91,7 +91,7 @@ export function initSchema(db: ISqliteDriver): void {
   db.exec('CREATE INDEX IF NOT EXISTS idx_teams_user_id ON teams(user_id)');
   db.exec('CREATE INDEX IF NOT EXISTS idx_teams_updated_at ON teams(updated_at)');
 
-  // Mailbox table (团队消息邮箱)
+  // Mailbox table (team message mailbox)
   db.exec(`CREATE TABLE IF NOT EXISTS mailbox (
     id TEXT PRIMARY KEY,
     team_id TEXT NOT NULL,
@@ -106,7 +106,7 @@ export function initSchema(db: ISqliteDriver): void {
   )`);
   db.exec('CREATE INDEX IF NOT EXISTS idx_mailbox_to ON mailbox(team_id, to_agent_id, read)');
 
-  // Team tasks table (团队任务)
+  // Team tasks table (team tasks)
   db.exec(`CREATE TABLE IF NOT EXISTS team_tasks (
     id TEXT PRIMARY KEY,
     team_id TEXT NOT NULL,

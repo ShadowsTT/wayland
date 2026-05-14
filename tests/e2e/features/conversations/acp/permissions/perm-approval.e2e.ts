@@ -178,7 +178,7 @@ test.describe('F-PERM-01 AI 操作权限审批', () => {
 
 test.describe('F-PERM-02 权限确认操作', () => {
   test('点击确认按钮后卡片立即消失（复用 F-PERM-01 允许测试验证）', async ({ page }) => {
-    // This AC is already covered by F-PERM-01 "允许" test above
+    // This AC is already covered by F-PERM-01 "Allow" test above
     // Create a fresh conversation to verify independently
     await goToGuid(page);
     await selectAgent(page, 'claude');

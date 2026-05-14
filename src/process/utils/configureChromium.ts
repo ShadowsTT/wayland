@@ -15,7 +15,6 @@ import { getDevAppName } from '@/common/platform';
 // Set app name before any getPath() call so userData is isolated from production.
 // Note: getPlatformServices() auto-registration also applies this as a safety net
 // in case Rollup loads initStorage's chunk before this module runs.
-// 开发模式下设置独立 app 名称，userData 目录将与正式版隔离，允许同时运行
 if (!app.isPackaged) {
   const devAppName = getDevAppName();
   app.setName(devAppName);
@@ -26,18 +25,14 @@ if (!app.isPackaged) {
 }
 
 // Configure Chromium command-line flags for WebUI and CLI modes
-// 为 WebUI 和 CLI 模式配置 Chromium 命令行参数
 
 const isWebUI = process.argv.some((arg) => arg === '--webui');
 const isResetPassword = process.argv.includes('--resetpass');
 
 // Only configure flags for WebUI and --resetpass modes
-// 仅为 WebUI 和重置密码模式配置参数
 if (isWebUI || isResetPassword) {
   // In WebUI/reset-password mode on Linux, force headless Ozone backend.
   // This mode should never depend on X11/Wayland availability.
-  // 在 Linux 的 WebUI/重置密码模式下，强制使用 headless Ozone 后端，
-  // 避免因 DISPLAY 变量存在但显示服务不可用导致平台初始化失败。
   // Note: Do NOT use --headless (browser automation mode that causes auto-exit).
   // Instead, use --ozone-platform=headless which provides a proper display backend
   // without requiring a display server, keeping the Electron process alive.
@@ -48,7 +43,6 @@ if (isWebUI || isResetPassword) {
   }
 
   // For root user, disable sandbox to prevent crash
-  // 对于 root 用户，禁用沙箱以防止崩溃
   if (typeof process.getuid === 'function' && process.getuid() === 0) {
     app.commandLine.appendSwitch('no-sandbox');
   }

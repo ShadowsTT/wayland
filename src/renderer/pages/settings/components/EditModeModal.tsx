@@ -32,7 +32,6 @@ import StepFunLogo from '@/renderer/assets/logos/ai-china/stepfun.svg';
 import NewApiLogo from '@/renderer/assets/logos/ai-cloud/newapi.svg';
 
 /**
- * 供应商配置（包含名称、URL、Logo）
  * Provider config (includes name, URL, logo)
  */
 const PROVIDER_CONFIGS = [
@@ -63,27 +62,26 @@ const PROVIDER_CONFIGS = [
 ];
 
 /**
- * 根据名称或 URL 获取供应商 Logo
  * Get provider logo by name or URL
  */
 const getProviderLogo = (name?: string, baseUrl?: string, platform?: string): string | null => {
   if (!name && !baseUrl && !platform) return null;
 
-  // 优先按 platform 匹配（Gemini 系列）
+  // Match by platform first (Gemini family)
   if (platform) {
     const byPlatform = PROVIDER_CONFIGS.find((p) => p.platform === platform);
     if (byPlatform) return byPlatform.logo;
   }
 
-  // 按名称精确匹配
+  // Exact name match
   const byName = PROVIDER_CONFIGS.find((p) => p.name === name);
   if (byName) return byName.logo;
 
-  // 按名称模糊匹配（忽略大小写）
+  // Fuzzy name match (case-insensitive)
   const byNameLower = PROVIDER_CONFIGS.find((p) => p.name.toLowerCase() === name?.toLowerCase());
   if (byNameLower) return byNameLower.logo;
 
-  // 按 URL 匹配
+  // Match by URL
   if (baseUrl) {
     const byUrl = PROVIDER_CONFIGS.find((p) => p.url && baseUrl.includes(p.url.replace('https://', '').split('/')[0]));
     if (byUrl) return byUrl.logo;
@@ -93,7 +91,6 @@ const getProviderLogo = (name?: string, baseUrl?: string, platform?: string): st
 };
 
 /**
- * 供应商 Logo 组件
  * Provider Logo Component
  */
 const ProviderLogo: React.FC<{ logo: string | null; name: string; size?: number }> = ({ logo, name, size = 20 }) => {
@@ -114,7 +111,7 @@ const EditModeModal = ModalHOC<{ data?: IProvider; onChange(data: IProvider): vo
     const bedrockAuthMethod = Form.useWatch('bedrockAuthMethod', form);
     const isBedrock = data?.platform === 'bedrock';
 
-    // 获取供应商 Logo / Get provider logo
+    // Get provider logo
     const providerLogo = useMemo(() => {
       return getProviderLogo(data?.name, data?.baseUrl, data?.platform);
     }, [data?.name, data?.baseUrl, data?.platform]);
@@ -188,7 +185,7 @@ const EditModeModal = ModalHOC<{ data?: IProvider; onChange(data: IProvider): vo
         {messageContext}
         <div className='py-20px'>
           <Form form={form} layout='vertical'>
-            {/* 模型供应商名称（可编辑，带 Logo）/ Model Provider name (editable, with Logo) */}
+            {/* Model Provider name (editable, with Logo) */}
             <Form.Item
               label={
                 <div className='flex items-center gap-6px'>
@@ -203,7 +200,7 @@ const EditModeModal = ModalHOC<{ data?: IProvider; onChange(data: IProvider): vo
               <Input placeholder={t('settings.modelProvider')} />
             </Form.Item>
 
-            {/* Base URL - 仅 Gemini 平台显示（用于自定义代理）/ Base URL - only for Gemini platform (for custom proxy) */}
+            {/* Base URL - only for Gemini platform (for custom proxy) */}
             <Form.Item
               hidden={isBedrock}
               label={t('settings.baseUrl')}

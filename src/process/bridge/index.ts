@@ -55,7 +55,7 @@ export interface BridgeDependencies {
 }
 
 /**
- * 初始化所有IPC桥接模块
+ * Initialize all IPC bridge modules
  */
 export function initAllBridges(deps: BridgeDependencies): void {
   initDialogBridge();
@@ -65,7 +65,7 @@ export function initAllBridges(deps: BridgeDependencies): void {
   initConversationBridge(deps.conversationService, deps.workerTaskManager, deps.teamSessionService);
   initApplicationBridge(deps.workerTaskManager);
   initGeminiConversationBridge(deps.workerTaskManager);
-  // 额外的 Gemini 辅助桥（订阅检测等）需要在对话桥初始化后可用 / extra helpers after core bridges
+  // extra Gemini helper bridges (subscription detection, etc.) must be available after the conversation bridge is initialized / extra helpers after core bridges
   initGeminiBridge();
   initBedrockBridge();
   initAcpConversationBridge(deps.workerTaskManager);
@@ -97,7 +97,7 @@ export function initAllBridges(deps: BridgeDependencies): void {
 }
 
 /**
- * 初始化ACP检测器
+ * Initialize the ACP detector
  */
 export async function initializeAcpDetector(): Promise<void> {
   try {
@@ -107,7 +107,7 @@ export async function initializeAcpDetector(): Promise<void> {
   }
 }
 
-// 导出初始化函数供单独使用
+// Export individual init functions for standalone use
 
 export {
   initAcpConversationBridge,
@@ -147,5 +147,5 @@ export {
 };
 export { disposeAllSnapshots } from './workspaceSnapshotBridge';
 export { disposeAllTeamSessions } from './teamBridge';
-// 导出窗口控制相关工具函数
+// Export window-control utility functions
 export { registerWindowMaximizeListeners } from './windowControlsBridge';

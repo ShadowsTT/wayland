@@ -8,18 +8,18 @@ import type { TMessage } from '@/common/chat/chatLib';
 import { getDatabase } from './index';
 
 /**
- * 流式消息缓冲管理器
+ * Streaming message buffer manager.
  *
- * 作用：优化流式消息的数据库写入性能
+ * Purpose: optimize database write performance for streaming messages.
  *
- * 核心策略：
- * - 延迟更新：不是每个 chunk 都写数据库，而是定期批量更新
- * - 批量写入：每 300ms 或累积 20 个 chunk 后写入一次
+ * Core strategy:
+ * - Deferred updates: don't write to the database on every chunk; batch periodically instead.
+ * - Batched writes: write once every 300ms or after 20 accumulated chunks.
  *
- * 性能提升：
- * - 原本：1000 次 UPDATE（每个 chunk 一次）
- * - 优化后：~10 次 UPDATE（定期批量）
- * - 提升：100 倍
+ * Performance gain:
+ * - Before: 1000 UPDATEs (one per chunk).
+ * - After: ~10 UPDATEs (periodic batching).
+ * - Improvement: ~100x.
  */
 
 interface StreamBuffer {
@@ -29,20 +29,20 @@ interface StreamBuffer {
   chunkCount: number;
   lastDbUpdate: number;
   updateTimer?: NodeJS.Timeout;
-  mode: 'accumulate' | 'replace'; // 每个 buffer 独立的模式，避免并发冲突
+  mode: 'accumulate' | 'replace'; // per-buffer mode to avoid concurrent conflicts
 }
 
 interface StreamingConfig {
-  updateInterval?: number; // 更新间隔（毫秒）
-  chunkBatchSize?: number; // 每多少个 chunk 更新一次
+  updateInterval?: number; // update interval (milliseconds)
+  chunkBatchSize?: number; // update once every N chunks
 }
 
 export class StreamingMessageBuffer {
   private buffers = new Map<string, StreamBuffer>();
 
-  // 默认配置
-  private readonly UPDATE_INTERVAL = 300; // 300ms 更新一次
-  private readonly CHUNK_BATCH_SIZE = 20; // 或累积 20 个 chunk
+  // Default configuration
+  private readonly UPDATE_INTERVAL = 300; // update once every 300ms
+  private readonly CHUNK_BATCH_SIZE = 20; // or after 20 accumulated chunks
 
   constructor(private config?: StreamingConfig) {
     if (config?.updateInterval) {
@@ -54,56 +54,56 @@ export class StreamingMessageBuffer {
   }
 
   /**
-   * 追加流式 chunk
+   * Append a streaming chunk.
    *
    * @param id
-   * @param messageId - 合并消息唯一 ID
-   * @param conversationId - 会话 ID
-   * @param chunk - 文本片段
+   * @param messageId - merged-message unique ID
+   * @param conversationId - conversation ID
+   * @param chunk - text fragment
    *
-   * 性能优化：批量写入而非每个 chunk 都写数据库
+   * Performance optimization: batched writes instead of one DB write per chunk.
    * @param mode
    */
   append(id: string, messageId: string, conversationId: string, chunk: string, mode: 'accumulate' | 'replace'): void {
     let buffer = this.buffers.get(messageId);
 
     if (!buffer) {
-      // 首次 chunk，初始化缓冲区（存储 mode 到 buffer 而非实例）
+      // First chunk: initialize the buffer (store mode on the buffer rather than the instance)
       buffer = {
         messageId,
         conversationId,
         currentContent: chunk,
         chunkCount: 1,
         lastDbUpdate: Date.now(),
-        mode, // 每个 buffer 使用独立的 mode，避免并发消息模式冲突
+        mode, // each buffer uses its own mode to avoid concurrent-message mode conflicts
       };
       this.buffers.set(messageId, buffer);
     } else {
-      // 根据 buffer 的模式累积或替换内容（使用 buffer.mode 而非 this.mode）
+      // Accumulate or replace content based on the buffer's mode (uses buffer.mode rather than this.mode)
       if (buffer.mode === 'accumulate') {
         buffer.currentContent += chunk;
       } else {
-        buffer.currentContent = chunk; // 替换模式：直接覆盖
+        buffer.currentContent = chunk; // replace mode: overwrite directly
       }
       buffer.chunkCount++;
     }
 
-    // 清除旧的定时器
+    // Clear the old timer
     if (buffer.updateTimer) {
       clearTimeout(buffer.updateTimer);
       buffer.updateTimer = undefined;
     }
 
-    // 判断是否需要更新数据库（仅基于数量和时间）
+    // Decide whether to update the database (based only on count and time)
     const shouldUpdate =
-      buffer.chunkCount % this.CHUNK_BATCH_SIZE === 0 || // 累积足够的 chunk
-      Date.now() - buffer.lastDbUpdate > this.UPDATE_INTERVAL; // 超过时间间隔
+      buffer.chunkCount % this.CHUNK_BATCH_SIZE === 0 || // enough chunks accumulated
+      Date.now() - buffer.lastDbUpdate > this.UPDATE_INTERVAL; // time interval exceeded
 
     if (shouldUpdate) {
-      // 立即更新
+      // Update immediately
       this.flushBuffer(id, messageId, false);
     } else {
-      // 设置延迟更新（防止消息流中断）
+      // Schedule a deferred update (so message streams aren't interrupted)
       buffer.updateTimer = setTimeout(() => {
         this.flushBuffer(id, messageId, false);
       }, this.UPDATE_INTERVAL);
@@ -111,11 +111,11 @@ export class StreamingMessageBuffer {
   }
 
   /**
-   * 刷新缓冲区到数据库
+   * Flush the buffer to the database.
    *
    * @param id
-   * @param messageId - 合并消息唯一消息 ID
-   * @param clearBuffer - 是否清理缓冲区（默认 false）
+   * @param messageId - merged-message unique message ID
+   * @param clearBuffer - whether to clear the buffer (default false)
    */
   private async flushBuffer(id: string, messageId: string, clearBuffer = false): Promise<void> {
     const buffer = this.buffers.get(messageId);
@@ -146,10 +146,10 @@ export class StreamingMessageBuffer {
         db.insertMessage(message);
       }
 
-      // 更新最后写入时间
+      // Record the time of the last write
       buffer.lastDbUpdate = Date.now();
 
-      // 如果需要，清理缓冲区
+      // Clear the buffer if requested
       if (clearBuffer) {
         this.buffers.delete(messageId);
       }
@@ -159,5 +159,5 @@ export class StreamingMessageBuffer {
   }
 }
 
-// 单例实例
+// Singleton instance
 export const streamingBuffer = new StreamingMessageBuffer();

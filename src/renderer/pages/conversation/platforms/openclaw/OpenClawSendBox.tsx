@@ -131,7 +131,6 @@ const OpenClawSendBox: React.FC<{ conversation_id: string }> = ({ conversation_i
   });
 
   // Use ref to sync state for immediate access in event handlers
-  // 使用 ref 同步状态，以便在事件处理程序中立即访问
   const aiProcessingRef = useRef(aiProcessing);
 
   // Track whether current turn has content output
@@ -225,7 +224,6 @@ const OpenClawSendBox: React.FC<{ conversation_id: string }> = ({ conversation_i
 
     // Check actual conversation status from backend before resetting aiProcessing
     // to avoid flicker when switching to a running conversation
-    // 先获取后端状态再重置 aiProcessing，避免切换到运行中的会话时闪烁
     void ipcBridge.conversation.get.invoke({ id: conversation_id }).then((res) => {
       if (cancelled) {
         return;
@@ -288,7 +286,6 @@ const OpenClawSendBox: React.FC<{ conversation_id: string }> = ({ conversation_i
       switch (message.type) {
         case 'thought':
           // Auto-recover aiProcessing state if thought arrives after finish
-          // 如果 thought 在 finish 后到达，自动恢复 aiProcessing 状态
           if (!aiProcessingRef.current) {
             setAiProcessing(true);
             aiProcessingRef.current = true;
@@ -298,7 +295,6 @@ const OpenClawSendBox: React.FC<{ conversation_id: string }> = ({ conversation_i
         case 'finish':
           {
             // Immediate state reset (notification is handled by centralized hook)
-            // 立即重置状态（通知由集中化 hook 处理）
             setAiProcessing(false);
             aiProcessingRef.current = false;
             setThought({ subject: '', description: '' });
@@ -558,7 +554,6 @@ const OpenClawSendBox: React.FC<{ conversation_id: string }> = ({ conversation_i
           createdAt: Date.now(),
         };
         // Reset AI reply for new turn
-        // 重置 AI 回复用于新一轮
         addOrUpdateMessage(userMessage, true);
 
         void checkAndUpdateTitle(conversation_id, input);

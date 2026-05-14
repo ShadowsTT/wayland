@@ -28,13 +28,12 @@ type AssistantLike = {
 };
 
 /**
- * 从 conversation extra 中解析预设助手 ID
  * Resolve preset assistant ID from conversation extra
  *
- * 处理向后兼容：
- * - presetAssistantId: 新格式 'builtin-xxx'
- * - customAgentId: ACP 会话的旧格式
- * - enabledSkills: Gemini Cowork 会话的旧格式
+ * Backward compatibility:
+ * - presetAssistantId: new format 'builtin-xxx'
+ * - customAgentId: legacy format for ACP conversations
+ * - enabledSkills: legacy format for Gemini Cowork conversations
  */
 /**
  * Resolve the assistant config ID (preserving original prefix like 'builtin-').
@@ -60,23 +59,19 @@ export function resolvePresetId(conversation: TChatConversation): string | null 
   const customAgentId = typeof extra?.customAgentId === 'string' ? extra.customAgentId.trim() : '';
   const enabledSkills = Array.isArray(extra?.enabledSkills) ? extra.enabledSkills : [];
 
-  // 1. 优先使用 presetAssistantId（新会话）
-  // Priority: use presetAssistantId (new conversations)
+  // 1. Priority: use presetAssistantId (new conversations)
   if (presetAssistantId) {
     const resolved = presetAssistantId.replace('builtin-', '');
     return resolved;
   }
 
-  // 2. 向后兼容：customAgentId（ACP/Codex 旧会话）
-  // Backward compatible: customAgentId (ACP/Codex old conversations)
+  // 2. Backward compatible: customAgentId (ACP/Codex old conversations)
   if (customAgentId) {
     const resolved = customAgentId.replace('builtin-', '');
     return resolved;
   }
 
-  // 3. 向后兼容：enabledSkills 存在说明是 Cowork 会话（Gemini 旧会话）
-  // Backward compatible: enabledSkills means Cowork conversation (Gemini old conversations)
-  // 只有在既没有 presetAssistantId 也没有 customAgentId 时才使用此逻辑
+  // 3. Backward compatible: enabledSkills means Cowork conversation (Gemini old conversations)
   // Only use this logic when both presetAssistantId and customAgentId are absent (including empty strings)
   if (conversation.type === 'gemini' && !presetAssistantId && !customAgentId && enabledSkills.length > 0) {
     return 'cowork';
@@ -86,8 +81,8 @@ export function resolvePresetId(conversation: TChatConversation): string | null 
 }
 
 /**
- * 规范化头像：支持 emoji / 内置 svg / 扩展资源 URL
- * Normalize avatar to either emoji text or a renderable image URL
+ * Normalize avatar to either emoji text or a renderable image URL.
+ * Supports emoji / built-in svg / extension resource URL.
  */
 function normalizeAvatar(avatar: string | undefined): { logo: string; isEmoji: boolean } {
   const value = (avatar || '').trim();
@@ -176,7 +171,6 @@ function hasMatchingEnabledSkills(candidateSkills: string[] | undefined, enabled
 }
 
 /**
- * 根据 preset 构建助手信息
  * Build assistant info from preset
  */
 function buildPresetInfo(presetId: string, locale: string): PresetAssistantInfo | null {
@@ -284,11 +278,10 @@ function inferLegacyAssistantInfo(
 }
 
 /**
- * 获取预设助手信息的 Hook
  * Hook to get preset assistant info from conversation
  *
- * @param conversation - 会话对象 / Conversation object
- * @returns 预设助手信息或 null / Preset assistant info or null
+ * @param conversation - Conversation object
+ * @returns Preset assistant info or null
  */
 export function usePresetAssistantInfo(conversation: TChatConversation | undefined): {
   info: PresetAssistantInfo | null;

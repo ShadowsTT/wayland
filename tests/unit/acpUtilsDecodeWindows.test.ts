@@ -26,7 +26,7 @@ describe('decodeWindowsError', () => {
   });
 
   it('decodes GBK buffer to readable Chinese text', () => {
-    // "成功" in GBK encoding
+    // "success" (Chinese characters) in GBK encoding
     const gbkBuffer = Buffer.from([0xb3, 0xc9, 0xb9, 0xa6]);
     const error = { stderr: gbkBuffer, code: 0 };
     expect(decodeWindowsError(error)).toBe('成功');

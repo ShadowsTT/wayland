@@ -1,9 +1,9 @@
-/* Misaka Mikoto Theme - 御坂美琴主题 (优化版) */
-/* 参考《科学超电磁炮》配色风格 */
+/* Misaka Mikoto Theme - Optimized version */
+/* Color palette inspired by "A Certain Scientific Railgun" */
 
 :root {
-  /* ========== 核心颜色变量 ========== */
-  /* 主色调 - Tokiwadai Blue & Electric Blue */
+  /* ========== Core color variables ========== */
+  /* Primary - Tokiwadai Blue & Electric Blue */
   --color-primary-base: #1e3a8a;
   --color-primary: var(--color-primary-base);
   --primary: var(--color-primary-base);
@@ -13,14 +13,14 @@
   --color-primary-dark-1: #1e40af;
   --primary-rgb: 30, 58, 138;
 
-  /* 品牌色 - 使用变量引用减少重复 */
+  /* Brand - using variable references to reduce duplication */
   --brand: var(--color-primary-base);
   --brand-light: #dbeafe;
   --brand-hover: var(--color-primary-light-1);
   --color-brand-fill: var(--color-primary-base);
   --color-brand-bg: #dbeafe;
 
-  /* AOU 品牌色板 - 蓝色系渐变（常盘台校服色） */
+  /* AOU brand palette - blue gradient (Tokiwadai uniform color) */
   --aou-1: #eff6ff;
   --aou-2: #dbeafe;
   --aou-3: #bfdbfe;
@@ -32,7 +32,7 @@
   --aou-9: #1e3a8a;
   --aou-10: #172554;
 
-  /* 背景色 - 完整定义以兼容所有组件 */
+  /* Background - complete definitions for component compatibility */
   --bg-base-color: #f0f9ff;
   --bg-base: #ffffff;
   --bg-1: var(--bg-base-color);
@@ -57,7 +57,7 @@
   --color-fill-2: #e0f2fe;
   --color-fill-3: #bae6fd;
 
-  /* 文字色 - 完整定义 */
+  /* Text - complete definitions */
   --text-base-color: #1e293b;
   --text-0: #000000;
   --text-primary: var(--text-base-color);
@@ -69,7 +69,7 @@
   --color-text-3: #94a3b8;
   --color-text-4: #cbd5e1;
 
-  /* 边框色 - 完整定义 */
+  /* Border - complete definitions */
   --border-base-color: #93c5fd;
   --border-base: var(--border-base-color);
   --border-light: #bfdbfe;
@@ -80,30 +80,30 @@
   --color-border-3: #dbeafe;
   --color-border-4: #eff6ff;
 
-  /* 语义色 */
+  /* Semantic */
   --success: #10b981;
   --warning: #f59e0b;
   --danger: #ef4444;
   --info: var(--color-primary-light-1);
 
-  /* 消息背景色 */
+  /* Message backgrounds */
   --message-user-bg: #dbeafe;
   --message-tips-bg: var(--bg-base-color);
   --workspace-btn-bg: #e0f2fe;
 
-  /* 对话框颜色 */
+  /* Dialog colors */
   --dialog-fill-0: rgba(255, 255, 255, 0.9);
 
-  /* ========== 动画变量 ========== */
+  /* ========== Animation variables ========== */
   --transition-duration: 0.3s;
   --transition-timing: ease;
 
-  /* ========== 渐变背景 ========== */
+  /* ========== Gradient backgrounds ========== */
   --gradient-primary: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
   --gradient-primary-hover: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
 }
 
-/* ========== 全局样式 ========== */
+/* ========== Global styles ========== */
 body {
   font-family: 'Inter', 'SF Pro Display', 'Segoe UI', 'Microsoft YaHei', sans-serif;
   background-color: var(--bg-1);
@@ -113,7 +113,7 @@ html {
   background-color: var(--bg-1);
 }
 
-/* ========== 布局样式 ========== */
+/* ========== Layout styles ========== */
 .arco-layout,
 [class*='layout'] {
   background-color: var(--bg-1);
@@ -123,7 +123,7 @@ html {
   background-color: var(--bg-1);
 }
 
-/* ========== 侧边栏 ========== */
+/* ========== Sidebar ========== */
 .layout-sider {
   background-color: #e0f2fe;
   border-right: 2px solid var(--border-base-color);
@@ -151,8 +151,8 @@ html {
   color: white;
 }
 
-/* ========== 图标样式 - 简化选择器 ========== */
-/* 全局图标默认颜色 */
+/* ========== Icon styles - simplified selectors ========== */
+/* Default global icon color */
 .theme-icon svg,
 svg:not([class*='model'] svg):not([class*='Model'] svg) {
   fill: none;
@@ -170,7 +170,7 @@ svg:not([class*='model'] svg):not([class*='Model'] svg):hover {
   color: var(--color-primary-light-1);
 }
 
-/* 按钮内图标 */
+/* Icons inside buttons */
 button:not([class*='model']) svg,
 .arco-btn:not([class*='model']) svg {
   fill: none;
@@ -186,19 +186,19 @@ button:not([class*='model']) svg:hover,
   color: var(--color-primary-light-1);
 }
 
-/* 主要按钮内的图标为白色 */
+/* Icons inside primary buttons are white */
 .arco-btn-primary svg {
   stroke: white;
   color: white;
 }
 
-/* ========== 背景图片设置 ========== */
+/* ========== Background image settings ========== */
 .layout-content.bg-1 {
   background-color: var(--bg-1);
   position: relative;
 }
 
-/* 半透明遮罩层 */
+/* Semi-transparent overlay */
 .layout-content.bg-1::before {
   content: '';
   position: absolute;
@@ -216,7 +216,7 @@ button:not([class*='model']) svg:hover,
   pointer-events: none;
 }
 
-/* 聊天页面背景图 */
+/* Chat page background image */
 .chat-layout-header,
 [class*='chat-layout'] .arco-layout-content,
 [class*='conversation'] .arco-layout-content {
@@ -234,7 +234,7 @@ button:not([class*='model']) svg:hover,
   pointer-events: none;
 }
 
-/* 确保内容在背景之上 */
+/* Ensure content sits above the background */
 .layout-content.bg-1 > *,
 [class*='chat-layout'] .arco-layout-content > *,
 [class*='conversation'] .arco-layout-content > * {
@@ -242,7 +242,7 @@ button:not([class*='model']) svg:hover,
   z-index: 1;
 }
 
-/* ========== 输入框和发送框 ========== */
+/* ========== Input and send box ========== */
 .guidLayout,
 [class*='guid'] {
   position: relative;
@@ -263,7 +263,7 @@ button:not([class*='model']) svg:hover,
   color: var(--color-text-1);
 }
 
-/* 发送框样式 */
+/* Send box styles */
 .sendbox-container:not([class*='model']):not([class*='Model']),
 [class*='sendbox']:not([class*='input']):not([class*='textarea']):not([class*='model']):not([class*='Model']):not(
     [class*='tools']
@@ -304,7 +304,7 @@ button:not([class*='model']) svg:hover,
   transform: scale(1.1);
 }
 
-/* ========== 消息气泡 ========== */
+/* ========== Message bubbles ========== */
 .message-item.user .message-bubble,
 [class*='message'][class*='user'] .message-content {
   background: var(--gradient-primary);
@@ -326,7 +326,7 @@ button:not([class*='model']) svg:hover,
   padding: 12px 16px;
 }
 
-/* 工具调用相关样式 */
+/* Tool-call related styles */
 .message-item.ai .arco-alert,
 [class*='message'][class*='ai'] .arco-alert,
 [class*='message'][class*='assistant'] .arco-alert,
@@ -359,7 +359,7 @@ button:not([class*='model']) svg:hover,
   padding: 2px 6px;
 }
 
-/* ========== 按钮样式 ========== */
+/* ========== Button styles ========== */
 .arco-btn-primary:not([class*='icon']):not([class*='circle']):not([class*='model']),
 button[type='primary']:not([class*='icon']):not([class*='circle']):not([class*='model']) {
   background: var(--gradient-primary);
@@ -391,7 +391,7 @@ button[type='secondary']:not([class*='model']) svg:hover {
   color: var(--color-primary-light-1);
 }
 
-/* ========== 滚动条 ========== */
+/* ========== Scrollbar ========== */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
@@ -420,7 +420,7 @@ button[type='secondary']:not([class*='model']) svg:hover {
   border-radius: 4px;
 }
 
-/* ========== 选中和链接 ========== */
+/* ========== Selection and links ========== */
 ::selection {
   background-color: var(--color-primary-light-1);
   color: white;
@@ -436,7 +436,7 @@ a:hover:not([class*='button']):not([class*='btn']) {
   text-decoration: underline;
 }
 
-/* ========== Tooltip 和 Popover ========== */
+/* ========== Tooltip and Popover ========== */
 .arco-tooltip-popup,
 .arco-popover-popup {
   pointer-events: none;
@@ -463,7 +463,7 @@ a:hover:not([class*='button']):not([class*='btn']) {
   border-color: var(--color-primary-dark-1);
 }
 
-/* ========== 对话框 ========== */
+/* ========== Dialog ========== */
 .arco-modal-body {
   background-color: rgba(255, 255, 255, 0.8);
   backdrop-filter: blur(10px);
@@ -481,11 +481,11 @@ a:hover:not([class*='button']):not([class*='btn']) {
 }
 
 /* ========================================================= */
-/* ==================== 深色模式 Dark Mode ================= */
+/* ==================== Dark Mode ================= */
 /* ========================================================= */
 
 [data-theme='dark'] {
-  /* 主色调 */
+  /* Primary */
   --color-primary-base: #60a5fa;
   --color-primary: var(--color-primary-base);
   --primary: var(--color-primary-base);
@@ -495,14 +495,14 @@ a:hover:not([class*='button']):not([class*='btn']) {
   --color-primary-dark-1: #3b82f6;
   --primary-rgb: 96, 165, 250;
 
-  /* 品牌色 */
+  /* Brand */
   --brand: var(--color-primary-base);
   --brand-light: #1e3a5a;
   --brand-hover: var(--color-primary-light-1);
   --color-brand-fill: var(--color-primary-base);
   --color-brand-bg: #1e3a5a;
 
-  /* AOU 品牌色板 */
+  /* AOU brand palette */
   --aou-1: #0f1729;
   --aou-2: #1e2a47;
   --aou-3: #1e3a5a;
@@ -514,7 +514,7 @@ a:hover:not([class*='button']):not([class*='btn']) {
   --aou-9: #dbeafe;
   --aou-10: #eff6ff;
 
-  /* 背景色 */
+  /* Background */
   --bg-base-color: #0f1729;
   --color-bg-1: var(--bg-base-color);
   --bg-1: var(--bg-base-color);
@@ -530,7 +530,7 @@ a:hover:not([class*='button']):not([class*='btn']) {
   --fill: var(--bg-base-color);
   --color-fill: var(--bg-base-color);
 
-  /* 文字色 */
+  /* Text */
   --text-base-color: #e0f2fe;
   --color-text-1: var(--text-base-color);
   --text-primary: var(--text-base-color);
@@ -540,7 +540,7 @@ a:hover:not([class*='button']):not([class*='btn']) {
   --text-disabled: #93c5fd;
   --text-0: #ffffff;
 
-  /* 边框色 */
+  /* Border */
   --border-base-color: #3d5a8f;
   --color-border: var(--border-base-color);
   --color-border-1: var(--border-base-color);
@@ -548,26 +548,26 @@ a:hover:not([class*='button']):not([class*='btn']) {
   --border-base: var(--border-base-color);
   --border-light: #2d4a6f;
 
-  /* 语义色 */
+  /* Semantic */
   --success: #34d399;
   --warning: #fbbf24;
   --danger: #f87171;
   --info: var(--color-primary-base);
 
-  /* 消息背景色 */
+  /* Message backgrounds */
   --message-user-bg: #2d4a6f;
   --message-tips-bg: #1e3a5a;
   --workspace-btn-bg: #1a2332;
 
-  /* 对话框颜色 */
+  /* Dialog colors */
   --dialog-fill-0: rgba(15, 23, 41, 0.95);
 
-  /* 渐变 */
+  /* Gradient */
   --gradient-primary: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
   --gradient-primary-hover: linear-gradient(135deg, #60a5fa 0%, #93c5fd 100%);
 }
 
-/* 深色模式侧边栏 */
+/* Dark mode sidebar */
 [data-theme='dark'] .layout-sider {
   background: linear-gradient(180deg, #1e3a5a 0%, #1a2332 100%);
   border-right: 3px solid var(--color-primary-base);
@@ -580,7 +580,7 @@ a:hover:not([class*='button']):not([class*='btn']) {
   border-bottom: 2px solid rgba(255, 255, 255, 0.2);
 }
 
-/* 深色模式图标 */
+/* Dark mode icons */
 [data-theme='dark'] svg:not([class*='model'] svg),
 [data-theme='dark'] .theme-icon svg {
   stroke: var(--color-primary-base);
@@ -607,7 +607,7 @@ a:hover:not([class*='button']):not([class*='btn']) {
   filter: drop-shadow(0 0 8px rgba(147, 197, 253, 0.6));
 }
 
-/* 深色模式背景图 */
+/* Dark mode background image */
 [data-theme='dark'] .layout-content.bg-1::before {
   background: linear-gradient(135deg, rgba(15, 23, 41, 0.8) 0%, rgba(30, 58, 90, 0.85) 50%, rgba(15, 23, 41, 0.8) 100%);
 }
@@ -618,7 +618,7 @@ a:hover:not([class*='button']):not([class*='btn']) {
   filter: brightness(1.1) saturate(1.3) hue-rotate(-10deg);
 }
 
-/* 深色模式输入框 */
+/* Dark mode input */
 [data-theme='dark'] .guidInputCard {
   background: linear-gradient(135deg, rgba(30, 58, 90, 0.9) 0%, rgba(45, 74, 111, 0.9) 100%);
   border: 3px solid var(--color-primary-base);
@@ -665,7 +665,7 @@ a:hover:not([class*='button']):not([class*='btn']) {
   filter: drop-shadow(0 0 8px rgba(147, 197, 253, 0.8));
 }
 
-/* 深色模式消息气泡 */
+/* Dark mode message bubbles */
 [data-theme='dark'] .message-item.user .message-bubble,
 [data-theme='dark'] [class*='message'][class*='user'] .message-content {
   background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 50%, #93c5fd 100%);
@@ -711,7 +711,7 @@ a:hover:not([class*='button']):not([class*='btn']) {
   border: 1px solid var(--border-base-color);
 }
 
-/* 深色模式按钮 */
+/* Dark mode buttons */
 [data-theme='dark'] .arco-btn-primary:not([class*='icon']):not([class*='circle']):not([class*='model']),
 [data-theme='dark'] button[type='primary']:not([class*='icon']):not([class*='circle']):not([class*='model']) {
   background: var(--gradient-primary);
@@ -728,7 +728,7 @@ a:hover:not([class*='button']):not([class*='btn']) {
   transform: translateY(-2px);
 }
 
-/* 深色模式滚动条 */
+/* Dark mode scrollbar */
 [data-theme='dark'] *:hover::-webkit-scrollbar-thumb {
   background: rgba(96, 165, 250, 0.5);
 }
@@ -738,13 +738,13 @@ a:hover:not([class*='button']):not([class*='btn']) {
   box-shadow: 0 0 8px rgba(96, 165, 250, 0.6);
 }
 
-/* 深色模式选中文字 */
+/* Dark mode selected text */
 [data-theme='dark'] ::selection {
   background-color: var(--color-primary-dark-1);
   text-shadow: 0 0 4px rgba(59, 130, 246, 0.5);
 }
 
-/* 深色模式链接 */
+/* Dark mode links */
 [data-theme='dark'] a:not([class*='button']):not([class*='btn']) {
   color: var(--color-primary-base);
   text-decoration-color: rgba(96, 165, 250, 0.4);
@@ -755,7 +755,7 @@ a:hover:not([class*='button']):not([class*='btn']) {
   text-shadow: 0 0 8px rgba(147, 197, 253, 0.5);
 }
 
-/* 深色模式 Tooltip */
+/* Dark mode Tooltip */
 [data-theme='dark'] .arco-tooltip-inner,
 [data-theme='dark'] .arco-popover-inner,
 [data-theme='dark'] .arco-popover-content {
@@ -772,7 +772,7 @@ a:hover:not([class*='button']):not([class*='btn']) {
   border-color: var(--color-primary-base);
 }
 
-/* 深色模式对话框 */
+/* Dark mode dialog */
 [data-theme='dark'] .arco-modal,
 [data-theme='dark'] .arco-modal-wrapper {
   color: var(--text-base-color);
@@ -795,7 +795,7 @@ a:hover:not([class*='button']):not([class*='btn']) {
   border-top: 2px solid var(--color-primary-base);
 }
 
-/* 深色模式表单 */
+/* Dark mode form */
 [data-theme='dark'] .arco-form-label,
 [data-theme='dark'] .arco-form-label-item,
 [data-theme='dark'] label {
@@ -837,7 +837,7 @@ a:hover:not([class*='button']):not([class*='btn']) {
   opacity: 0.5;
 }
 
-/* 深色模式开关 */
+/* Dark mode switch */
 [data-theme='dark'] .arco-switch {
   background-color: var(--border-base-color);
 }
@@ -846,14 +846,14 @@ a:hover:not([class*='button']):not([class*='btn']) {
   background-color: var(--color-primary-base);
 }
 
-/* 深色模式文字 */
+/* Dark mode text */
 [data-theme='dark'] .arco-typography,
 [data-theme='dark'] p,
 [data-theme='dark'] span:not([class*='icon']) {
   color: var(--color-text-2);
 }
 
-/* 深色模式分割线 */
+/* Dark mode divider */
 [data-theme='dark'] .arco-divider {
   border-color: var(--color-primary-base);
   opacity: 0.3;

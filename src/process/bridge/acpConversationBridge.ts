@@ -191,7 +191,6 @@ export function initAcpConversationBridge(workerTaskManager: IWorkerTaskManager)
   });
 
   // Set model for ACP agents
-  // 设置 ACP 代理的模型
   ipcBridge.acpConversation.setModel.provider(async ({ conversationId, modelId }) => {
     try {
       const task = await workerTaskManager.getOrBuildTask(conversationId);

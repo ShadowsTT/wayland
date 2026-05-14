@@ -11,7 +11,7 @@ import type { PreviewHistoryTarget, PreviewSnapshotInfo } from '@/common/types/p
 import { getSystemDir } from '../utils/initStorage';
 
 interface StoredSnapshot extends PreviewSnapshotInfo {
-  storagePath: string; // 相对 baseDir 的路径 / Path relative to base dir
+  storagePath: string; // Path relative to base dir
 }
 
 interface PreviewHistoryIndex {
@@ -24,13 +24,13 @@ const HISTORY_FOLDER_NAME = 'preview-history';
 const INDEX_FILE_NAME = 'index.json';
 const MAX_VERSIONS_PER_TARGET = 50;
 
-// 管理预览面板快照：负责存储、索引和读取 / Manage preview panel snapshots: persistence, indexing and retrieval
+// Manage preview panel snapshots: persistence, indexing and retrieval
 class PreviewHistoryService {
   private getBaseDir(): string {
     return path.join(getSystemDir().cacheDir, HISTORY_FOLDER_NAME);
   }
 
-  // 确保历史目录存在（递归创建）/ Ensure history directory exists
+  // Ensure history directory exists
   private async ensureDir(targetDir: string): Promise<void> {
     try {
       await fs.mkdir(targetDir, { recursive: true });
@@ -58,7 +58,7 @@ class PreviewHistoryService {
     }
   }
 
-  // 根据目标生成稳定的标识和摘要，作为索引/存储路径 / Build stable identity & digest for indexing
+  // Build stable identity & digest for indexing
   private buildIdentity(target: PreviewHistoryTarget): { identity: string; digest: string } {
     const keyParts = [
       target.filePath ? `path:${target.filePath}` : '',
@@ -75,7 +75,7 @@ class PreviewHistoryService {
     return { identity, digest };
   }
 
-  // 读取目标索引文件，若不存在则返回默认结构 / Read snapshot index or fallback to empty structure
+  // Read snapshot index or fallback to empty structure
   private async readIndex(
     targetDir: string,
     identity: string,
@@ -87,7 +87,7 @@ class PreviewHistoryService {
     try {
       const content = await fs.readFile(indexPath, 'utf-8');
       const parsed = JSON.parse(content) as PreviewHistoryIndex;
-      // 兼容旧数据 / Backward compatibility for future schema changes
+      // Backward compatibility for future schema changes
       if (!Array.isArray(parsed.versions)) {
         parsed.versions = [];
       }
@@ -101,7 +101,7 @@ class PreviewHistoryService {
     }
   }
 
-  // 将内存索引写回磁盘 / Persist in-memory index to disk
+  // Persist in-memory index to disk
   private async writeIndex(targetDir: string, index: PreviewHistoryIndex): Promise<void> {
     const indexPath = path.join(targetDir, INDEX_FILE_NAME);
     await fs.writeFile(indexPath, JSON.stringify(index, null, 2), 'utf-8');
@@ -111,7 +111,7 @@ class PreviewHistoryService {
     return `${snapshotId}.md`;
   }
 
-  // 组装快照元数据，记录储存路径 / Build snapshot metadata with storage path info
+  // Build snapshot metadata with storage path info
   private createSnapshotInfo(params: {
     snapshotId: string;
     content: string;
@@ -137,7 +137,7 @@ class PreviewHistoryService {
     return publicInfo;
   }
 
-  // 列出对应目标的快照清单（只返回对外结构）/ List snapshots for given target (public info only)
+  // List snapshots for given target (public info only)
   public async list(target: PreviewHistoryTarget): Promise<PreviewSnapshotInfo[]> {
     const { identity, digest } = this.buildIdentity(target);
     const targetDir = path.join(this.getBaseDir(), digest);
@@ -145,7 +145,7 @@ class PreviewHistoryService {
     return index.versions.map((item) => this.normalizeSnapshot(item));
   }
 
-  // 保存快照：写入文件并维护索引、数量限制 / Save snapshot file and maintain bounded index
+  // Save snapshot file and maintain bounded index
   public async save(target: PreviewHistoryTarget, content: string): Promise<PreviewSnapshotInfo> {
     const { identity, digest } = this.buildIdentity(target);
     const baseDir = this.getBaseDir();
@@ -171,7 +171,7 @@ class PreviewHistoryService {
 
     index.versions.unshift(storedSnapshot);
 
-    // 限制快照数量，删除最旧的记录 / Limit number of snapshots per target
+    // Limit number of snapshots per target
     while (index.versions.length > MAX_VERSIONS_PER_TARGET) {
       const removed = index.versions.pop();
       if (removed) {
@@ -184,7 +184,7 @@ class PreviewHistoryService {
     return this.normalizeSnapshot(storedSnapshot);
   }
 
-  // 获取指定快照的原始内容 / Retrieve raw content for a snapshot
+  // Retrieve raw content for a snapshot
   public async getContent(
     target: PreviewHistoryTarget,
     snapshotId: string

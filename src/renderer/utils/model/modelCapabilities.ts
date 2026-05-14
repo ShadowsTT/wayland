@@ -9,11 +9,11 @@ import { CAPABILITY_PATTERNS, CAPABILITY_EXCLUSIONS, getBaseModelName } from '@/
 
 export { hasSpecificModelCapability } from '@/common/utils/modelCapabilities';
 
-// 能力判断缓存
+// Capability resolution cache
 const modelCapabilitiesCache = new Map<string, boolean | undefined>();
 
 /**
- * 特定 provider 的能力规则
+ * Capability rules for specific providers
  */
 const PROVIDER_CAPABILITY_RULES: Record<string, Record<ModelType, boolean | null>> = {
   anthropic: {
@@ -41,10 +41,10 @@ const PROVIDER_CAPABILITY_RULES: Record<string, Record<ModelType, boolean | null
 };
 
 /**
- * 检查用户是否手动配置了某个能力类型
- * @param model - 模型对象
- * @param type - 能力类型
- * @returns true/false 如果用户有明确配置，undefined 如果未配置
+ * Check whether the user has manually configured a given capability type
+ * @param model - Model object
+ * @param type - Capability type
+ * @returns true/false if the user has an explicit configuration, undefined otherwise
  */
 const getUserSelectedCapability = (model: IProvider, type: ModelType): boolean | undefined => {
   const capability = model.capabilities?.find((cap) => cap.type === type);
@@ -52,10 +52,10 @@ const getUserSelectedCapability = (model: IProvider, type: ModelType): boolean |
 };
 
 /**
- * 根据 provider 获取特定能力的规则
- * @param provider - 提供商名称
- * @param type - 能力类型
- * @returns true/false/null (null表示使用默认逻辑)
+ * Get the capability rule for a given provider
+ * @param provider - Provider name
+ * @param type - Capability type
+ * @returns true/false/null (null means use default logic)
  */
 const getProviderCapabilityRule = (provider: string, type: ModelType): boolean | null => {
   const rules = PROVIDER_CAPABILITY_RULES[provider?.toLowerCase()];
@@ -63,50 +63,50 @@ const getProviderCapabilityRule = (provider: string, type: ModelType): boolean |
 };
 
 /**
- * 判断模型是否具有某个能力 - 参考 Cherry Studio 的三层判断逻辑
- * @param model - 模型对象
- * @param type - 能力类型
- * @returns true=支持, false=不支持, undefined=未知
+ * Determine whether a model has a given capability — three-layer resolution inspired by Cherry Studio
+ * @param model - Model object
+ * @param type - Capability type
+ * @returns true=supported, false=unsupported, undefined=unknown
  */
 export const hasModelCapability = (model: IProvider, type: ModelType): boolean | undefined => {
-  // 生成缓存键（包含 capabilities 版本以避免缓存过期）
+  // Build cache key (includes capabilities hash to invalidate stale entries)
   const capabilitiesHash = model.capabilities ? JSON.stringify(model.capabilities) : '';
   const cacheKey = `${model.id}-${model.platform}-${type}-${capabilitiesHash}`;
 
-  // 检查缓存
+  // Check cache
   if (modelCapabilitiesCache.has(cacheKey)) {
     return modelCapabilitiesCache.get(cacheKey);
   }
 
   let result: boolean | undefined;
 
-  // 1. 优先级1：用户手动配置
+  // 1. Priority 1: user-configured capability
   const userSelected = getUserSelectedCapability(model, type);
   if (userSelected !== undefined) {
     result = userSelected;
   } else {
-    // 2. 优先级2：特定 provider 规则
+    // 2. Priority 2: provider-specific rule
     const providerRule = getProviderCapabilityRule(model.platform, type);
     if (providerRule !== null) {
       result = providerRule;
     } else {
-      // 3. 优先级3：正则表达式匹配
-      // 检查平台下是否有任一模型支持该能力
+      // 3. Priority 3: regex pattern matching
+      // Check whether any model under this platform supports the capability
       const modelNames = model.model || [];
 
-      // 统一逻辑处理所有能力类型
-      // 检查是否有任一模型支持该能力
+      // Unified handling for all capability types
+      // Check whether at least one model supports the capability
       const exclusions = CAPABILITY_EXCLUSIONS[type];
       const pattern = CAPABILITY_PATTERNS[type];
 
       const hasSupport = modelNames.some((modelName) => {
         const baseModelName = getBaseModelName(modelName);
 
-        // 检查黑名单
+        // Check blacklist
         const isExcluded = exclusions.some((excludePattern) => excludePattern.test(baseModelName));
         if (isExcluded) return false;
 
-        // 检查白名单
+        // Check whitelist
         return pattern.test(baseModelName);
       });
 
@@ -114,13 +114,13 @@ export const hasModelCapability = (model: IProvider, type: ModelType): boolean |
     }
   }
 
-  // 缓存结果
+  // Cache result
   modelCapabilitiesCache.set(cacheKey, result);
   return result;
 };
 
 /**
- * 清空能力判断缓存
+ * Clear the capability resolution cache
  */
 export const clearModelCapabilitiesCache = (): void => {
   modelCapabilitiesCache.clear();

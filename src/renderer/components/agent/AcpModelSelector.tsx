@@ -256,10 +256,10 @@ const AcpModelSelector: React.FC<{
     modelSourceLabel && displayLabel
       ? `${displayLabel}\nSource: ${modelSourceLabel}`
       : displayLabel || modelSourceLabel;
-  // 获取模型配置数据（包含健康状态）
+  // Fetch model configuration data (includes health status)
   const { data: modelConfig } = useSWR<IProvider[]>('model.config', () => ipcBridge.mode.getModelConfig.invoke());
 
-  // 获取当前模型的健康状态
+  // Get health status for the current model
   const currentModelHealth = React.useMemo(() => {
     if (!modelInfo?.currentModelId || !modelConfig) return { status: 'unknown', color: 'bg-gray-400' };
     const providerConfig = modelConfig.find((p) => p.platform?.includes(backend || ''));
@@ -315,7 +315,7 @@ const AcpModelSelector: React.FC<{
       droplist={
         <Menu>
           {modelInfo.availableModels.map((model) => {
-            // 获取模型健康状态
+            // Get model health status
             const providerConfig = modelConfig?.find((p) => p.platform?.includes(backend || ''));
             const healthStatus = providerConfig?.modelHealth?.[model.id]?.status || 'unknown';
             const healthColor =

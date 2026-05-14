@@ -15,7 +15,6 @@ interface URLViewerProps {
 }
 
 /**
- * URL 预览组件 - 用于在应用内预览网页（对话框预览面板）
  * URL Preview component - for previewing web pages within the app (conversation preview panel)
  *
  * Delegates to the shared WebviewHost with navigation bar enabled.

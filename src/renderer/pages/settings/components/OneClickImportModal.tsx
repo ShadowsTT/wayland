@@ -24,20 +24,20 @@ const OneClickImportModal: React.FC<OneClickImportModalProps> = ({ visible, onCa
 
   useEffect(() => {
     if (visible) {
-      // 重置状态
+      // Reset state
       setCurrentStep(1);
       setSelectedAgent('');
       setImportableServers([]);
       setLoadingImport(false);
 
-      // 初始化时检测可用的agents
+      // Detect available agents during initialization
       const loadAgents = async () => {
         try {
           const response = await acpConversation.getAvailableAgents.invoke();
           if (response.success && response.data) {
             const agents = response.data.map((agent) => ({ backend: agent.backend, name: agent.name }));
             setDetectedAgents(agents);
-            // 设置第一个agent为默认值
+            // Set first agent as the default value
             if (agents.length > 1) {
               setSelectedAgent(agents[0].backend);
             }
@@ -52,12 +52,12 @@ const OneClickImportModal: React.FC<OneClickImportModalProps> = ({ visible, onCa
 
   const handleNextStep = async () => {
     if (currentStep === 1) {
-      // 步骤1 -> 步骤2: 选择Agent后，进入获取MCP阶段
+      // Step 1 -> Step 2: after selecting Agent, enter the fetch-MCP stage
       if (!selectedAgent) return;
       setCurrentStep(2);
       await handleImportFromCLI();
     } else if (currentStep === 2) {
-      // 步骤2 -> 步骤3: 执行导入，显示成功页面
+      // Step 2 -> Step 3: perform import, show success page
       handleBatchImport();
       setCurrentStep(3);
     }
@@ -74,18 +74,18 @@ const OneClickImportModal: React.FC<OneClickImportModalProps> = ({ visible, onCa
   const handleImportFromCLI = async () => {
     setLoadingImport(true);
     try {
-      // 获取所有可用的agents
+      // Fetch all available agents
       const agentsResponse = await acpConversation.getAvailableAgents.invoke();
       if (!agentsResponse.success || !agentsResponse.data) {
         throw new Error('Failed to get available agents');
       }
 
-      // 通过IPC调用后端服务获取MCP配置
+      // Call the backend service via IPC to fetch MCP configs
       const mcpResponse = await mcpService.getAgentMcpConfigs.invoke(agentsResponse.data);
       if (mcpResponse.success && mcpResponse.data) {
         const allServers: IMcpServer[] = [];
 
-        // 过滤选中的agent的服务器
+        // Filter servers for the selected agent
         mcpResponse.data.forEach((agentConfig) => {
           if (agentConfig.source === selectedAgent) {
             allServers.push(...agentConfig.servers);
@@ -107,7 +107,7 @@ const OneClickImportModal: React.FC<OneClickImportModalProps> = ({ visible, onCa
   const handleBatchImport = () => {
     if (onBatchImport && importableServers.length > 0) {
       const serversToImport = importableServers.map((server) => {
-        // 为CLI导入的服务器生成标准的JSON格式
+        // Generate standard JSON format for CLI-imported servers
         const serverConfig: Record<string, string | string[] | Record<string, string>> = {
           description: server.description,
         };
@@ -134,7 +134,7 @@ const OneClickImportModal: React.FC<OneClickImportModalProps> = ({ visible, onCa
           enabled: server.enabled,
           transport: server.transport,
           status: server.status as IMcpServer['status'],
-          tools: (server.tools || []) as IMcpTool[], // 保留原始的 tools 信息
+          tools: (server.tools || []) as IMcpTool[], // Preserve original tools info
           originalJson: JSON.stringify({ mcpServers: { [server.name]: serverConfig } }, null, 2),
         };
       });
@@ -142,7 +142,7 @@ const OneClickImportModal: React.FC<OneClickImportModalProps> = ({ visible, onCa
     }
   };
 
-  // 渲染步骤1: 选择Agent
+  // Render step 1: select Agent
   const renderStep1 = () => (
     <div className='py-4'>
       <Select
@@ -161,7 +161,7 @@ const OneClickImportModal: React.FC<OneClickImportModalProps> = ({ visible, onCa
     </div>
   );
 
-  // 渲染步骤2: 获取MCP工具列表
+  // Render step 2: fetch MCP tools list
   const renderStep2 = () => (
     <div>
       {loadingImport ? (
@@ -196,7 +196,7 @@ const OneClickImportModal: React.FC<OneClickImportModalProps> = ({ visible, onCa
     </div>
   );
 
-  // 渲染步骤3: 导入成功
+  // Render step 3: import success
   const renderStep3 = () => (
     <div>
       {importableServers.length > 0 ? (

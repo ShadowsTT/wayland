@@ -9,14 +9,14 @@
  *
  * ## Context
  *
- * Worker 端扩展通过 `aion.storage.get/set/delete` 发起 api-call 消息,
- * SandboxHost 收到后路由到 apiHandlers, 而 apiHandlers 就是由这个类生成的。
+ * Worker-side extensions issue api-call messages via `aion.storage.get/set/delete`.
+ * SandboxHost receives them and routes to apiHandlers, which are produced by this class.
  *
- * ## Current status: 未接入
+ * ## Current status: not wired up
  *
- * 目前 `createSandbox()` 尚未被任何地方调用 (ChannelPlugin 和 Lifecycle hooks
- * 仍在主进程裸跑), 所以这个类暂时没有调用方。它将在 ChannelPlugin/Lifecycle
- * 迁移到 SandboxHost 时被接入, 届时的用法:
+ * `createSandbox()` is not yet called from anywhere (ChannelPlugin and Lifecycle hooks
+ * still run bare in the main process), so this class has no callers yet. It will be
+ * wired in when ChannelPlugin/Lifecycle are migrated to SandboxHost. Intended usage:
  *
  * ```typescript
  * import { getExtensionStorage } from './ExtensionStorage';

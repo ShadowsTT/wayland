@@ -11,22 +11,21 @@ import classNames from 'classnames';
 import React from 'react';
 
 /**
- * 自定义下拉选择组件属性 / Custom select component props
+ * Custom select component props
  */
 type NativeSelectProps = Omit<SelectProps, 'size'>;
 type NativeSelectSize = NonNullable<SelectProps['size']>;
 type WaylandSelectSize = NativeSelectSize | 'middle';
 
 export interface WaylandSelectProps extends NativeSelectProps {
-  /** 额外的类名 / Additional class name */
+  /** Additional class name */
   className?: string;
-  /** 统一尺寸，新增 middle（32px）/ Unified size with additional "middle" (32px) */
+  /** Unified size with additional "middle" (32px) */
   size?: WaylandSelectSize;
 }
 
 /**
- * 基础样式类名
- * 注意：主题相关样式（背景色、边框色）在 arco-override.css 的 .aion-select 类中定义
+ * Base style class names
  * Note: Theme-related styles (background, border colors) are defined in .aion-select class in arco-override.css
  */
 const BASE_CLASS = classNames(
@@ -44,55 +43,50 @@ const BASE_CLASS = classNames(
 );
 
 /**
- * 默认的弹出层容器获取函数
- * 始终返回 document.body 以避免嵌套容器导致的 ResizeObserver 循环错误
  * Default popup container getter function
  * Always returns document.body to avoid ResizeObserver loop errors from nested containers
  */
 const defaultGetPopupContainer = (): HTMLElement => {
-  // 在浏览器环境下始终挂载到 body，避免嵌套容器导致 ResizeObserver 循环
   // Always mount popup to body in browsers to avoid nested-container ResizeObserver loops
   if (typeof document !== 'undefined' && document.body) {
     return document.body;
   }
-  // SSR/测试环境降级返回占位，具体不会真正渲染
   // Fallback for SSR/tests – this code path shouldn't render popups
   return undefined as unknown as HTMLElement;
 };
 
 /**
- * 自定义下拉选择组件 / Custom select component
+ * Custom select component
  *
- * 基于 Arco Design Select 的封装，提供统一的样式主题和弹出层处理
  * Wrapper around Arco Design Select with unified theme styling and popup handling
  *
  * @features
- * - 自动适配明暗主题 / Auto theme adaptation (light/dark)
- * - 弹出层挂载到 body，避免布局问题 / Popup mounted to body to avoid layout issues
- * - 统一的圆角和边框样式 / Unified border radius and border styles
- * - 完整的 Arco Select API 支持 / Full Arco Select API support
+ * - Auto theme adaptation (light/dark)
+ * - Popup mounted to body to avoid layout issues
+ * - Unified border radius and border styles
+ * - Full Arco Select API support
  *
  * @example
  * ```tsx
- * // 基本用法 / Basic usage
- * <WaylandSelect placeholder="请选择" style={{ width: 200 }}>
- *   <WaylandSelect.Option value="1">选项1</WaylandSelect.Option>
- *   <WaylandSelect.Option value="2">选项2</WaylandSelect.Option>
+ * // Basic usage
+ * <WaylandSelect placeholder="Please select" style={{ width: 200 }}>
+ *   <WaylandSelect.Option value="1">Option 1</WaylandSelect.Option>
+ *   <WaylandSelect.Option value="2">Option 2</WaylandSelect.Option>
  * </WaylandSelect>
  *
- * // 多选 / Multiple selection
- * <WaylandSelect mode="multiple" placeholder="请选择多个">
- *   <WaylandSelect.Option value="1">选项1</WaylandSelect.Option>
- *   <WaylandSelect.Option value="2">选项2</WaylandSelect.Option>
+ * // Multiple selection
+ * <WaylandSelect mode="multiple" placeholder="Select multiple">
+ *   <WaylandSelect.Option value="1">Option 1</WaylandSelect.Option>
+ *   <WaylandSelect.Option value="2">Option 2</WaylandSelect.Option>
  * </WaylandSelect>
  *
- * // 分组 / Grouped options
- * <WaylandSelect placeholder="请选择">
- *   <WaylandSelect.OptGroup label="分组1">
- *     <WaylandSelect.Option value="1">选项1</WaylandSelect.Option>
+ * // Grouped options
+ * <WaylandSelect placeholder="Please select">
+ *   <WaylandSelect.OptGroup label="Group 1">
+ *     <WaylandSelect.Option value="1">Option 1</WaylandSelect.Option>
  *   </WaylandSelect.OptGroup>
- *   <WaylandSelect.OptGroup label="分组2">
- *     <WaylandSelect.Option value="2">选项2</WaylandSelect.Option>
+ *   <WaylandSelect.OptGroup label="Group 2">
+ *     <WaylandSelect.Option value="2">Option 2</WaylandSelect.Option>
  *   </WaylandSelect.OptGroup>
  * </WaylandSelect>
  * ```
@@ -129,7 +123,7 @@ const WaylandSelect = InternalSelect as WaylandSelectComponent;
 
 WaylandSelect.displayName = 'WaylandSelect';
 
-// 导出子组件 / Export sub-components
+// Export sub-components
 WaylandSelect.Option = Select.Option;
 WaylandSelect.OptGroup = Select.OptGroup;
 

@@ -352,7 +352,7 @@ export class TeammateManager extends EventEmitter {
    *
    * Previously the timeout just setStatus(slotId, 'idle'), which left the leader
    * unaware — it would eventually re-wake on some other signal and guess that
-   * the teammate was "空转" (idle) with no concrete evidence.
+   * the teammate was "idle-spinning" with no concrete evidence.
    */
   private async handleInactivityTimeout(agent: TeamAgent): Promise<void> {
     const timeoutSeconds = Math.floor(TeammateManager.WAKE_TIMEOUT_MS / 1000);

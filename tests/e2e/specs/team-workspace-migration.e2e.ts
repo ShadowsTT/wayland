@@ -143,7 +143,7 @@ test.describe('Team Workspace Migration', () => {
 
     await page.screenshot({ path: 'tests/e2e/results/team-migration-02-member-added.png' });
 
-    // ── Step 3: Wait for workspace panel with "临时空间" label ───────────
+    // -- Step 3: Wait for workspace panel with "Temporary" label ---------
 
     const workspaceTitle = page.locator('text=工作空间').or(page.locator('text=Workspace'));
     await expect(workspaceTitle.first()).toBeVisible({ timeout: 20_000 });
@@ -189,7 +189,7 @@ test.describe('Team Workspace Migration', () => {
     // 5a. UI: page not blank — leader textarea still visible
     await expect(page.locator('textarea').first()).toBeVisible({ timeout: 15_000 });
 
-    // 5b. UI: workspace label no longer says "临时空间"
+    // 5b. UI: workspace label no longer says "Temporary"
     const newLabel = page.locator('.workspace-title-label');
     await expect(newLabel.first()).toBeVisible({ timeout: 10_000 });
     const labelText = await newLabel.first().textContent();

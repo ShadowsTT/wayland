@@ -20,7 +20,7 @@ const AddModelModal = ModalHOC<{ data?: IProvider; onSubmit: (model: IProvider) 
     const { data: modelList, isLoading } = useModeModeList(data?.platform, data?.baseUrl, data?.apiKey);
     const existingModels = data?.model || [];
     const optionsList = useMemo(() => {
-      // 处理新的数据格式，可能包含 fix_base_url
+      // Handle new data format, which may include fix_base_url
       const models = Array.isArray(modelList) ? modelList : modelList?.models || [];
       if (!models || !data?.model) return models;
       return models.map((item) => {
@@ -35,7 +35,7 @@ const AddModelModal = ModalHOC<{ data?: IProvider; onSubmit: (model: IProvider) 
       if (!model) return;
       const updatedData: IProvider = { ...data, model: [...existingModels, model] };
 
-      // new-api 平台：添加模型协议配置 / new-api platform: add model protocol config
+      // new-api platform: add model protocol config
       if (isNewApi) {
         updatedData.modelProtocols = { ...data?.modelProtocols, [model]: modelProtocol };
       }
@@ -78,7 +78,7 @@ const AddModelModal = ModalHOC<{ data?: IProvider; onSubmit: (model: IProvider) 
             ></Select>
           </div>
 
-          {/* New API 协议选择 / New API Protocol Selection */}
+          {/* New API Protocol Selection */}
           {isNewApi && (
             <div className='space-y-8px'>
               <div className='text-13px font-500 text-t-secondary'>{t('settings.modelProtocol')}</div>

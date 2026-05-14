@@ -38,13 +38,13 @@ const Hook = (...hooks: Array<() => void>) => {
   });
 };
 
-// 从右到左，对原组件进行HOC操作
+// Apply HOCs to the original component from right to left
 const Wrapper = (...HOCComponents: Array<React.FC<any> | HOCComponentAndProps>) => {
   return <Props extends Record<string, any>>(Component: React.FC<Props>): React.FC<Props> => {
-    // 为了修复类型错误，避免 reduce 过程中类型不一致，需显式断言类型
+    // Explicit cast to fix type errors caused by inconsistent reduce types
     return HOCComponents.toReversed().reduce<React.FC<Props>>((Com, HOCComponent) => {
       if (Array.isArray(HOCComponent)) {
-        // 断言类型，确保传递给 HOC 的是 React.FC<Props>
+        // Cast to ensure what we pass to HOC is a React.FC<Props>
         return HOC(HOCComponent[0] as React.FC<any>, HOCComponent[1])(Com);
       }
       return HOC(HOCComponent as React.FC<any>)(Com);

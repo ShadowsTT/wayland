@@ -61,7 +61,7 @@ type Draft =
     };
 
 /**
- * 当前支持的对话类型以及对应的草稿对象
+ * Currently supported conversation types and their corresponding draft objects.
  */
 type SendBoxDraftStore = {
   [K in TChatConversation['type']]: Map<string, Extract<Draft, { _type: K }>>;
@@ -172,7 +172,7 @@ const getDraft = <K extends TChatConversation['type']>(
 };
 
 /**
- * 获得一种类型下的会话草稿操作的 React Hook
+ * React Hook for conversation draft operations of a given type.
  */
 export const getSendBoxDraftHook = <K extends TChatConversation['type']>(
   type: K,

@@ -91,7 +91,6 @@ const DirectorySelectionModal: React.FC<DirectorySelectionModalProps> = ({
   };
 
   // Double-click behavior removed - single click now handles directory navigation
-  // 移除双击行为 - 单击现在处理目录导航
   const handleItemDoubleClick = (_item: DirectoryItem) => {
     // No-op: single click already handles navigation
   };
@@ -103,7 +102,6 @@ const DirectorySelectionModal: React.FC<DirectorySelectionModalProps> = ({
   const handleGoUp = () => {
     if (directoryData.parentPath !== undefined) {
       // Handle '__ROOT__' as empty path to show drive list on Windows
-      // 处理 '__ROOT__' 为空路径，在 Windows 上显示驱动器列表
       const targetPath = directoryData.parentPath === '__ROOT__' ? '' : directoryData.parentPath;
       loadDirectory(targetPath).catch((error) => console.error('Failed to load parent directory:', error));
     }

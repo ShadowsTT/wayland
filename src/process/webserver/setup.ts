@@ -16,7 +16,6 @@ import { errorHandler } from './middleware/errorHandler';
 import { attachCsrfToken } from './middleware/security';
 
 /**
- * 获取所有非内部 IPv4 地址（LAN、VPN、Tailscale 等）
  * Get all non-internal IPv4 addresses (LAN, VPN, Tailscale, etc.)
  */
 function getAllNonInternalIPs(): string[] {
@@ -39,50 +38,39 @@ function getAllNonInternalIPs(): string[] {
 }
 
 /**
- * 获取或生成 CSRF Secret
  * Get or generate CSRF secret
  *
  * CSRF secret must be exactly 32 characters for AES-256-CBC
- * CSRF 密钥必须正好 32 个字符以用于 AES-256-CBC
  *
- * 优先级：环境变量 > 随机生成（每次启动不同）
  * Priority: Environment variable > Random generation (different on each startup)
  */
 function getCsrfSecret(): string {
-  // 优先使用环境变量 / Prefer environment variable
+  // Prefer environment variable
   if (process.env.CSRF_SECRET && process.env.CSRF_SECRET.length === 32) {
     return process.env.CSRF_SECRET;
   }
 
-  // 生成随机 32 字符密钥（16 字节的 hex 编码）
   // Generate random 32-character secret (16 bytes hex encoded)
   const randomSecret = crypto.randomBytes(16).toString('hex');
   console.log('[security] Generated random CSRF secret for this session');
   return randomSecret;
 }
 
-// 在模块加载时生成一次，整个进程生命周期内保持不变
 // Generate once at module load, remains constant for process lifetime
 const CSRF_SECRET = getCsrfSecret();
 
 /**
- * 配置基础中间件
  * Configure basic middleware for Express app
  */
 export function setupBasicMiddleware(app: Express): void {
-  // 请求体解析器
   // Body parsers
   app.use(express.json({ limit: '10mb' }));
   app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
   // CSRF Protection using tiny-csrf (CodeQL compliant)
   // Must be applied after cookieParser and before routes
-  // CSRF 保护使用 tiny-csrf（符合 CodeQL 要求）
-  // 必须在 cookieParser 之后、路由之前应用
   app.use(cookieParser('cookie-parser-secret'));
-  // P1 安全修复：登录接口启用 CSRF 保护（前端已添加 withCsrfToken）
   // P1 Security fix: Enable CSRF for login (frontend already uses withCsrfToken)
-  // 仅排除 QR 登录（有独立的一次性 token 保护机制）
   // Only exclude QR login (has its own one-time token protection)
   app.use(
     csrf(
@@ -94,14 +82,12 @@ export function setupBasicMiddleware(app: Express): void {
   );
   app.use(attachCsrfToken); // Attach token to response headers
 
-  // 安全中间件
   // Security middleware
   app.use(AuthMiddleware.securityHeadersMiddleware);
   app.use(AuthMiddleware.requestLoggingMiddleware);
 }
 
 /**
- * 配置 CORS（跨域资源共享）
  * Configure CORS based on server mode
  */
 function normalizeOrigin(origin: string): string | null {
@@ -120,7 +106,6 @@ function normalizeOrigin(origin: string): string | null {
 function getConfiguredOrigins(port: number, allowRemote: boolean): Set<string> {
   const baseOrigins = new Set<string>([`http://localhost:${port}`, `http://127.0.0.1:${port}`]);
 
-  // 允许远程访问时，自动添加所有网络接口 IP（LAN、VPN、Tailscale 等）
   // When remote access is enabled, add all network interface IPs (LAN, VPN, Tailscale, etc.)
   if (allowRemote) {
     const allIPs = getAllNonInternalIPs();
@@ -180,7 +165,6 @@ export function setupCors(app: Express, port: number, allowRemote: boolean): voi
 }
 
 /**
- * 配置错误处理中间件（必须最后注册）
  * Configure error handling middleware (must be registered last)
  */
 export function setupErrorHandler(app: Express): void {

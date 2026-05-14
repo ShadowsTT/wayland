@@ -149,7 +149,7 @@ class HubStateManagerImpl {
     if (hasError) return 'install_failed';
 
     // 3. Loaded in ExtensionRegistry — check for update
-    // TODO: integrity 各平台不一致，暂时无法使用。后续可以考虑在安装时记录版本号或自定义 hash 来辅助判断更新。
+    // TODO: integrity differs across platforms and cannot be used yet. We could record version number or a custom hash at install time to help determine updates.
     // const loaded = loadedByName.get(ext.name);
     // if (loaded) {
     //   const manifestPath = path.join(loaded.directory, EXTENSION_MANIFEST_FILE);

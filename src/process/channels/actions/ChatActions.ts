@@ -99,11 +99,9 @@ export const handleToolConfirm: ActionHandler = async (context, params) => {
   }
 
   try {
-    // 只调用 confirm，不发送消息
     // Only call confirm, don't send message - agent will continue and send updates
     await getChannelMessageService().confirm(conversationId, callId, value);
 
-    // 返回成功但不带消息，agent 会继续执行并通过流回调更新消息
     // Return success without message, agent will continue and update via stream callback
     return { success: true };
   } catch (error: any) {

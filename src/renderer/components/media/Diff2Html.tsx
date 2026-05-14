@@ -166,7 +166,7 @@ const Diff2Html = ({
         {operatorRef.current &&
           ReactDOM.createPortal(
             <>
-              {/* side-by-side 选项 / Side-by-side option */}
+              {/* Side-by-side option */}
               <Checkbox className='whitespace-nowrap' checked={sideBySide} onChange={(value) => setSideBySide(value)}>
                 <span className='whitespace-nowrap'>side-by-side</span>
               </Checkbox>
@@ -183,7 +183,7 @@ const Diff2Html = ({
                 </Button>
               </Tooltip>
 
-              {/* 折叠按钮 / Collapse button */}
+              {/* Collapse button */}
               {collapse ? (
                 <ExpandDownOne
                   theme='outline'
