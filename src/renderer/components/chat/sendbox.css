@@ -432,3 +432,37 @@
     min-width: 28px;
   }
 }
+
+/* ========================================================
+   Sendbox panel — pin border color in both states.
+   Was inheriting purple from Arco's default when focused.
+   Forge brand: dark neutral border, brand-orange glow on focus.
+   ======================================================== */
+.sendbox-panel {
+  border-color: var(--border-bright, #353535) !important;
+  transition:
+    border-color 180ms ease,
+    box-shadow 220ms ease,
+    background-color 180ms ease;
+}
+
+.sendbox-panel:focus-within {
+  border-color: rgba(255, 107, 53, 0.5) !important;
+  box-shadow:
+    0 0 0 1px rgba(255, 107, 53, 0.4),
+    0 0 24px rgba(255, 107, 53, 0.14),
+    0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+/* Suppress native browser focus rings on the inner textarea — the
+   panel's glow IS the focus state. */
+.sendbox-panel textarea,
+.sendbox-panel textarea:focus,
+.sendbox-panel textarea:focus-visible,
+.sendbox-panel input,
+.sendbox-panel input:focus,
+.sendbox-panel input:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+}
+

@@ -447,35 +447,45 @@ const Layout: React.FC<{
                 )}
               >
                 <div
-                  className={classNames('bg-black shrink-0 size-40px relative rd-0.5rem', {
+                  className={classNames('shrink-0 relative rd-8px flex items-center justify-center', {
+                    'size-40px': !collapsed,
                     '!size-24px': collapsed,
                   })}
+                  style={{
+                    background:
+                      'radial-gradient(circle at 30% 30%, rgba(255, 107, 53, 0.18), transparent 70%), var(--bg-2, #161616)',
+                    border: '1px solid var(--border-mid, #353535)',
+                    boxShadow: '0 1px 2px rgba(0, 0, 0, 0.3)',
+                  }}
                   onClick={onClick}
                 >
                   <svg
-                    className={classNames('w-5.5 h-5.5 absolute inset-0 m-auto', {
-                      ' scale-140': !collapsed,
+                    className={classNames({
+                      'w-24px h-24px': !collapsed,
+                      'w-14px h-14px': collapsed,
                     })}
-                    viewBox='0 0 80 80'
+                    viewBox='0 0 24 24'
                     fill='none'
+                    stroke='#ff6b35'
+                    strokeWidth='2'
+                    strokeLinecap='round'
+                    strokeLinejoin='round'
+                    aria-hidden='true'
+                    focusable='false'
                   >
-                    <path
-                      key='logo-path-1'
-                      d='M40 20 Q38 22 25 40 Q23 42 26 42 L30 42 Q32 40 40 30 Q48 40 50 42 L54 42 Q57 42 55 40 Q42 22 40 20'
-                      fill='white'
-                    ></path>
-                    <circle key='logo-circle' cx='40' cy='46' r='3' fill='white'></circle>
-                    <path
-                      key='logo-path-2'
-                      d='M18 50 Q40 70 62 50'
-                      stroke='white'
-                      strokeWidth='3.5'
-                      fill='none'
-                      strokeLinecap='round'
-                    ></path>
+                    <path d='M20.341 6.484A10 10 0 0 1 10.266 21.85' />
+                    <path d='M3.659 17.516A10 10 0 0 1 13.74 2.152' />
+                    <circle cx='12' cy='12' r='3' />
+                    <circle cx='19' cy='5' r='2' />
+                    <circle cx='5' cy='19' r='2' />
                   </svg>
                 </div>
-                <div className='flex-1 text-20px text-1 collapsed-hidden font-bold'>Wayland</div>
+                <div className='flex-1 flex flex-col gap-2px collapsed-hidden min-w-0'>
+                  <span className='text-14px font-700 text-t-primary leading-none tracking-[0.01em]'>Wayland</span>
+                  <span className='text-10px font-500 uppercase tracking-[0.16em] text-[var(--text-dim,#555)] leading-none'>
+                    AI Agent
+                  </span>
+                </div>
                 {isMobile && !collapsed && (
                   <button
                     type='button'
