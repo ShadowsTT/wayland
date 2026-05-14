@@ -253,10 +253,65 @@ const createWindow = ({ showOnReady = true }: { showOnReady?: boolean } = {}): v
       : { frame: false }),
     webPreferences: {
       preload: path.join(__dirname, '../preload/index.js'),
-      webviewTag: true, // 启用 webview 标签用于 HTML 预览 / Enable webview tag for HTML preview
+      // C6: explicit hardening. Match ambient window pattern; preload + contextBridge
+      // is the supported renderer surface, so node access must stay disabled.
+      sandbox: true,
+      contextIsolation: true,
+      nodeIntegration: false,
+      nodeIntegrationInWorker: false,
+      // <webview> is used by HTMLRenderer / PDFViewer / WebviewHost for previewing
+      // user content; keep the tag enabled but lock down attached webviews via
+      // the `will-attach-webview` guard below.
+      webviewTag: true,
     },
   });
   console.log(`[Wayland] Main window created (id=${mainWindow.id})`);
+
+  // C6: security guards on the main window's webContents.
+  // 1) Deny renderer-initiated window.open() — preload exposes whatever opener APIs
+  //    we actually want (auth, external links go through shell.openExternal).
+  mainWindow.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+
+  // 2) Block navigation away from the expected renderer origin. In dev the renderer
+  //    is served from ELECTRON_RENDERER_URL (Vite); in production it's a file:// URL
+  //    pointing at the packaged renderer/index.html. Any other origin is treated as
+  //    a renderer-takeover attempt and cancelled.
+  const expectedRendererOrigin = (() => {
+    const devUrl = process.env['ELECTRON_RENDERER_URL'];
+    if (!app.isPackaged && devUrl) {
+      try {
+        return new URL(devUrl).origin;
+      } catch {
+        return null;
+      }
+    }
+    return 'file://';
+  })();
+  mainWindow.webContents.on('will-navigate', (event, navigationUrl) => {
+    try {
+      const target = new URL(navigationUrl);
+      const targetOrigin = target.protocol === 'file:' ? 'file://' : target.origin;
+      if (expectedRendererOrigin && targetOrigin === expectedRendererOrigin) {
+        return;
+      }
+    } catch {
+      // Fall through to deny on unparsable URLs.
+    }
+    console.warn('[Wayland] Blocked will-navigate to', navigationUrl);
+    event.preventDefault();
+  });
+
+  // 3) Enforce safe defaults on any <webview> the renderer attaches. The renderer
+  //    code only sets `src` on <webview>, so we strip preload and force the secure
+  //    triad here regardless of what the renderer requested.
+  mainWindow.webContents.on('will-attach-webview', (_event, webPreferences, params) => {
+    delete (webPreferences as { preload?: string; preloadURL?: string }).preload;
+    delete (webPreferences as { preload?: string; preloadURL?: string }).preloadURL;
+    webPreferences.nodeIntegration = false;
+    webPreferences.contextIsolation = true;
+    (webPreferences as { sandbox?: boolean }).sandbox = true;
+    (params as { nodeintegration?: boolean }).nodeintegration = false;
+  });
 
   // Show window after content is ready to prevent FOUC (Flash of Unstyled Content)
   // Use 'ready-to-show' which fires when renderer has painted first frame,
