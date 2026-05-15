@@ -851,6 +851,12 @@ type CleanupModules = {
   webserverAdapter: typeof import('@process/webserver/adapter');
   officeWatch: typeof import('@process/bridge/officeWatchBridge');
   pptPreview: typeof import('@process/bridge/pptPreviewBridge');
+  // L15 (AUDIT-05 F17): close SQLite handle from before-quit so the DB file
+  // is flushed/unlocked before process exit.
+  database: typeof import('@process/services/database/export');
+  // L16 (AUDIT-05 F18): shut down cron timers from before-quit so scheduled
+  // work cannot outlive the app's quit sequence.
+  cron: typeof import('@process/services/cron/cronServiceSingleton');
 };
 let _cleanupModulesPromise: Promise<CleanupModules> | undefined;
 
@@ -862,13 +868,17 @@ const prefetchCleanupModules = (): Promise<CleanupModules> => {
     import('@process/webserver/adapter'),
     import('@process/bridge/officeWatchBridge'),
     import('@process/bridge/pptPreviewBridge'),
-  ]).then(([ambient, channels, webuiBridge, webserverAdapter, officeWatch, pptPreview]) => ({
+    import('@process/services/database/export'),
+    import('@process/services/cron/cronServiceSingleton'),
+  ]).then(([ambient, channels, webuiBridge, webserverAdapter, officeWatch, pptPreview, database, cron]) => ({
     ambient,
     channels,
     webuiBridge,
     webserverAdapter,
     officeWatch,
     pptPreview,
+    database,
+    cron,
   }));
 };
 
@@ -886,9 +896,17 @@ void app
   })
   .then(handleAppReady)
   .catch((error) => {
-    // App initialization failed
+    // L14 (AUDIT-05 F13): match initializeProcess failure semantics — capture
+    // to Sentry and hard-exit so the OS/launcher can recover. app.quit() is a
+    // soft request that can be cancelled by before-quit handlers, which is the
+    // wrong behavior when init itself failed.
     console.error('[Wayland] App initialization failed:', error);
-    app.quit();
+    try {
+      Sentry.captureException(error);
+    } catch {
+      // Ignore Sentry failures — we've already logged the original error.
+    }
+    app.exit(1);
   });
 
 // Quit when all windows are closed, except on macOS. There, it's common
@@ -989,6 +1007,8 @@ app.on('before-quit', async () => {
       safeImport('webserverAdapter', () => import('@process/webserver/adapter')),
       safeImport('officeWatch', () => import('@process/bridge/officeWatchBridge')),
       safeImport('pptPreview', () => import('@process/bridge/pptPreviewBridge')),
+      safeImport('database', () => import('@process/services/database/export')),
+      safeImport('cron', () => import('@process/services/cron/cronServiceSingleton')),
     ]);
     const out: Partial<CleanupModules> = {};
     for (const [k, v] of entries) {
@@ -1000,7 +1020,41 @@ app.on('before-quit', async () => {
   const cleanup = async () => {
     const mods = await loadModules();
 
-    // Worker processes first (M18 made workerTaskManager.clear() properly
+    // Ordering rationale for the cleanup() chain (top-down):
+    //   1. closeDatabase            — flush + release SQLite handle so cron/worker
+    //                                 work scheduled after it cannot enqueue new
+    //                                 transactions against a half-torn-down DB.
+    //   2. CronService.shutdown     — clear scheduled timers + retry timers so no
+    //                                 new jobs fire (and can't spawn workers) once
+    //                                 the DB is closed.
+    //   3. workerTaskManager.clear  — kill in-flight worker processes; safe to do
+    //                                 after cron is silenced.
+    //   4. everything else          — bridges, channels, webserver, ambient, etc.
+    // All steps run concurrently via Promise.allSettled below; the order above is
+    // the logical precedence the timeouts respect (each has its own 2s budget).
+    // No per-step try/catch — withTimeout + allSettled already absorb failures.
+
+    // L15 (AUDIT-05 F17): close DB before worker/cron drain can enqueue new tx.
+    const databaseStep = withTimeout(
+      'closeDatabase',
+      (async () => {
+        if (!mods.database) return;
+        mods.database.closeDatabase();
+      })(),
+      PER_STEP_TIMEOUT_MS
+    );
+
+    // L16 (AUDIT-05 F18): silence cron timers before workers so no fresh jobs fire.
+    const cronStep = withTimeout(
+      'cronService.shutdown',
+      (async () => {
+        if (!mods.cron) return;
+        mods.cron.cronService.shutdown();
+      })(),
+      PER_STEP_TIMEOUT_MS
+    );
+
+    // Worker processes after DB + cron (M18 made workerTaskManager.clear() properly
     // await per-agent kill() with its own 3.5s bound).
     const workerStep = withTimeout('workerTaskManager.clear', workerTaskManager.clear(), PER_STEP_TIMEOUT_MS);
 
@@ -1061,7 +1115,10 @@ app.on('before-quit', async () => {
 
     // Run all steps concurrently; allSettled so one slow step can't starve
     // the rest. Each step has its own 2s budget via withTimeout above.
+    // Listed in the documented top-down ordering above for readability.
     await Promise.allSettled([
+      databaseStep,
+      cronStep,
       workerStep,
       ambientStep,
       teamStep,

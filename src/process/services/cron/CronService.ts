@@ -509,6 +509,29 @@ export class CronService {
   }
 
   /**
+   * Shutdown the service: stop every active timer and retry timer.
+   * Called from before-quit cleanup (AUDIT-05 F18) to prevent cron-triggered
+   * work from outliving the app's quit sequence.
+   */
+  shutdown(): void {
+    for (const timer of this.timers.values()) {
+      if (timer instanceof Cron) {
+        timer.stop();
+      } else {
+        clearTimeout(timer);
+        clearInterval(timer);
+      }
+    }
+    this.timers.clear();
+
+    for (const retryTimer of this.retryTimers.values()) {
+      clearTimeout(retryTimer);
+    }
+    this.retryTimers.clear();
+    this.retryCounts.clear();
+  }
+
+  /**
    * Stop timer for a job
    * Also clears associated retry timers
    */
