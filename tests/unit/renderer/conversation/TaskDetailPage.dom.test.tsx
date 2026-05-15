@@ -442,10 +442,10 @@ describe('TaskDetailPage', () => {
     render(<TaskDetailPage />);
 
     await waitFor(() => {
-      expect(screen.getAllByTestId('icon-write')).toHaveLength(1);
+      expect(screen.getAllByTestId('icon-PenSquare')).toHaveLength(1);
     });
 
-    const editButton = screen.getByTestId('icon-write').closest('button')!;
+    const editButton = screen.getByTestId('icon-PenSquare').closest('button')!;
     fireEvent.click(editButton);
 
     await waitFor(() => {
@@ -459,10 +459,10 @@ describe('TaskDetailPage', () => {
     render(<TaskDetailPage />);
 
     await waitFor(() => {
-      expect(screen.getAllByTestId('icon-write')).toHaveLength(1);
+      expect(screen.getAllByTestId('icon-PenSquare')).toHaveLength(1);
     });
 
-    const editButton = screen.getByTestId('icon-write').closest('button')!;
+    const editButton = screen.getByTestId('icon-PenSquare').closest('button')!;
     fireEvent.click(editButton);
 
     await waitFor(() => {
@@ -481,10 +481,10 @@ describe('TaskDetailPage', () => {
     render(<TaskDetailPage />);
 
     await waitFor(() => {
-      expect(screen.getByTestId('icon-delete')).toBeInTheDocument();
+      expect(screen.getByTestId('icon-Trash2')).toBeInTheDocument();
     });
 
-    const deleteButton = screen.getByTestId('icon-delete').closest('button')!;
+    const deleteButton = screen.getByTestId('icon-Trash2').closest('button')!;
     fireEvent.click(deleteButton);
 
     await waitFor(() => {

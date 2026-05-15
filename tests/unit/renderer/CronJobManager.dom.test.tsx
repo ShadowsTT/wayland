@@ -143,7 +143,7 @@ describe('CronJobManager', () => {
     expect(screen.getByTestId('arco-popover')).toBeInTheDocument();
     expect(screen.getByText('cron.status.createNow')).toBeInTheDocument();
     expect(screen.getByText('cron.status.unconfiguredHint')).toBeInTheDocument();
-    expect(screen.getByTestId('icon-alarm-clock')).toBeInTheDocument();
+    expect(screen.getByTestId('icon-Clock')).toBeInTheDocument();
   });
 
   it('shows unconfigured state when hasCronSkill is explicitly true and no jobs', () => {
@@ -165,7 +165,7 @@ describe('CronJobManager', () => {
 
     // Should show Tooltip with job name, not Popover
     expect(screen.getByTestId('arco-tooltip')).toBeInTheDocument();
-    expect(screen.getByTestId('icon-alarm-clock')).toBeInTheDocument();
+    expect(screen.getByTestId('icon-Clock')).toBeInTheDocument();
     // Should not show the unconfigured popover
     expect(screen.queryByTestId('arco-popover')).not.toBeInTheDocument();
   });
@@ -181,7 +181,7 @@ describe('CronJobManager', () => {
     render(<CronJobManager conversationId='conv-1' hasCronSkill={true} />);
 
     expect(screen.getByTestId('arco-tooltip')).toBeInTheDocument();
-    expect(screen.getByTestId('icon-alarm-clock')).toBeInTheDocument();
+    expect(screen.getByTestId('icon-Clock')).toBeInTheDocument();
   });
 
   it('returns null during loading with no job', () => {

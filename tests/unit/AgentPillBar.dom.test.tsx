@@ -137,7 +137,7 @@ describe('AgentPillBar', () => {
   it('renders Robot icon when no logo available', () => {
     const agents: AvailableAgent[] = [makeAgent({ backend: 'remote', name: 'Unknown' })];
     render(<AgentPillBar {...defaultProps} availableAgents={agents} selectedAgentKey='remote' />);
-    expect(screen.getByTestId('icon-robot')).toBeTruthy();
+    expect(screen.getByTestId('icon-Bot')).toBeTruthy();
   });
 
   it('renders emoji avatar for remote agents', () => {
@@ -163,7 +163,7 @@ describe('AgentPillBar', () => {
   it('navigates to /settings/agent?tab=local when + clicked', () => {
     const agents: AvailableAgent[] = [makeAgent({ backend: 'claude', name: 'Claude' })];
     render(<AgentPillBar {...defaultProps} availableAgents={agents} />);
-    const plusIcon = screen.getByTestId('icon-plus');
+    const plusIcon = screen.getByTestId('icon-Plus');
     const plusDiv = plusIcon.closest('div') as HTMLElement;
     expect(plusDiv).toBeTruthy();
     fireEvent.click(plusDiv);

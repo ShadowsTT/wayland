@@ -77,6 +77,6 @@ describe('WorkspaceOpenButton', () => {
 
   it('shows terminal icon as default tool', () => {
     render(<WorkspaceOpenButton workspacePath='/home/user/project' />);
-    expect(screen.getByTestId('icon-terminal')).toBeDefined();
+    expect(screen.getByTestId('icon-Terminal')).toBeDefined();
   });
 });

@@ -179,8 +179,8 @@ describe('CronJobSiderSection', () => {
 
   it('shows Right icon when collapsed (default)', () => {
     render(<CronJobSiderSection jobs={mockJobs} pathname='/' onNavigate={mockOnNavigate} />);
-    expect(screen.getByTestId('icon-right')).toBeInTheDocument();
-    expect(screen.queryByTestId('icon-down')).not.toBeInTheDocument();
+    expect(screen.getByTestId('icon-ChevronRight')).toBeInTheDocument();
+    expect(screen.queryByTestId('icon-ChevronDown')).not.toBeInTheDocument();
   });
 
   it('shows Down icon when expanded', () => {
@@ -189,8 +189,8 @@ describe('CronJobSiderSection', () => {
     const header = screen.getByText('cron.scheduledTasks').closest('div');
     fireEvent.click(header!);
 
-    expect(screen.getByTestId('icon-down')).toBeInTheDocument();
-    expect(screen.queryByTestId('icon-right')).not.toBeInTheDocument();
+    expect(screen.getByTestId('icon-ChevronDown')).toBeInTheDocument();
+    expect(screen.queryByTestId('icon-ChevronRight')).not.toBeInTheDocument();
   });
 
   it('toggles visibility multiple times correctly', () => {

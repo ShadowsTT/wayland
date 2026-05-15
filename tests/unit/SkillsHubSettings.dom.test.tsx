@@ -234,7 +234,7 @@ describe('SkillsHubSettings Component', () => {
     });
 
     // Using testid because ARCO icons are mocked as spans with test ids
-    const deleteButtons = screen.getAllByTestId('icon-delete');
+    const deleteButtons = screen.getAllByTestId('icon-Trash2');
     fireEvent.click(deleteButtons[0].parentElement!);
 
     await waitFor(() => {
@@ -260,7 +260,7 @@ describe('SkillsHubSettings Component', () => {
 
     // Click Add button (has title "Add" mocked effectively)
     // Instead of targeting testid, let's grab the add button. In UI it's a Plus icon.
-    const plusIcon = screen.getByTestId('icon-plus');
+    const plusIcon = screen.getByTestId('icon-Plus');
     fireEvent.click(plusIcon.parentElement!);
 
     await waitFor(() => {

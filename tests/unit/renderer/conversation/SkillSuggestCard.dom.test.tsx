@@ -90,7 +90,7 @@ describe('SkillSuggestCard', () => {
 
     expect(screen.getByText('Test Skill')).toBeInTheDocument();
     expect(screen.getByText('A test skill description')).toBeInTheDocument();
-    expect(screen.getByTestId('icon-lightning')).toBeInTheDocument();
+    expect(screen.getByTestId('icon-Zap')).toBeInTheDocument();
   });
 
   it('does not render when skill already exists', async () => {
@@ -237,7 +237,7 @@ describe('SkillSuggestCard', () => {
 
     // Preview should be collapsed initially
     expect(screen.queryByTestId('markdown-view')).not.toBeInTheDocument();
-    expect(screen.getByTestId('icon-down')).toBeInTheDocument();
+    expect(screen.getByTestId('icon-ChevronDown')).toBeInTheDocument();
 
     // Click to expand
     const previewToggle = screen.getByText('cron.skill.preview');
@@ -247,7 +247,7 @@ describe('SkillSuggestCard', () => {
     await waitFor(() => {
       expect(screen.getByTestId('markdown-view')).toBeInTheDocument();
     });
-    expect(screen.getByTestId('icon-up')).toBeInTheDocument();
+    expect(screen.getByTestId('icon-ChevronUp')).toBeInTheDocument();
 
     // Click to collapse
     fireEvent.click(previewToggle);
@@ -256,7 +256,7 @@ describe('SkillSuggestCard', () => {
     await waitFor(() => {
       expect(screen.queryByTestId('markdown-view')).not.toBeInTheDocument();
     });
-    expect(screen.getByTestId('icon-down')).toBeInTheDocument();
+    expect(screen.getByTestId('icon-ChevronDown')).toBeInTheDocument();
   });
 
   it('renders preview content in markdown format when expanded', async () => {
