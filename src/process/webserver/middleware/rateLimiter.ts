@@ -34,8 +34,12 @@ class RateLimitStore {
   private cleanupInterval: NodeJS.Timeout;
 
   constructor() {
-    // Clean up expired entries every 60 seconds
+    // Clean up expired entries every 60 seconds.
+    // .unref() so the interval does not keep the event loop alive on app
+    // shutdown — without it, 5 module-level limiter stores each hold the
+    // process open for up to 60s after the user quits.
     this.cleanupInterval = setInterval(() => this.cleanup(), 60000);
+    this.cleanupInterval.unref();
   }
 
   get(key: string): RateLimitEntry | undefined {
