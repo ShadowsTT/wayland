@@ -1311,14 +1311,14 @@ describe('CreateTaskDialog - advanced settings panel', () => {
     // Advanced open because workspace was set in agentConfig
     const workspaceTrigger = screen.getByTestId('cron-workspace-trigger');
     expect(workspaceTrigger).toBeInTheDocument();
-    // Clear icon present because workspace has a value
-    expect(workspaceTrigger.querySelector('[data-testid="icon-close"]')).not.toBeNull();
+    // Clear icon present because workspace has a value (Lucide <X /> stamped via vitest.dom.setup)
+    expect(workspaceTrigger.querySelector('[data-testid="icon-X"]')).not.toBeNull();
 
-    fireEvent.click(workspaceTrigger.querySelector('[data-testid="icon-close"]') as Element);
+    fireEvent.click(workspaceTrigger.querySelector('[data-testid="icon-X"]') as Element);
 
-    // After clearing, the trigger swaps back to the empty state affordance.
-    expect(workspaceTrigger.querySelector('[data-testid="icon-close"]')).toBeNull();
-    expect(workspaceTrigger.querySelector('[data-testid="icon-down"]')).not.toBeNull();
+    // After clearing, the trigger swaps back to the empty state affordance (Lucide <ChevronDown />).
+    expect(workspaceTrigger.querySelector('[data-testid="icon-X"]')).toBeNull();
+    expect(workspaceTrigger.querySelector('[data-testid="icon-ChevronDown"]')).not.toBeNull();
   });
 
   it('opens advanced panel pre-expanded when editJob has a workspace', () => {
