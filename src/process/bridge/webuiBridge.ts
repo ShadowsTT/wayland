@@ -315,15 +315,33 @@ export function initWebuiBridge(): void {
     }
   );
 
-  ipcMain.handle('webui-direct-change-username', async (_event, { newUsername }: { newUsername: string }) => {
-    return WebuiService.handleAsync(async () => {
-      const username = await WebuiService.changeUsername(newUsername);
-      return { success: true, data: { username } };
-    }, 'Direct IPC: Change username');
-  });
+  // Direct IPC: Change username
+  // Gated by: rate limit.
+  // TODO(audit-phase1: NEW-CODE-REVIEW.md, THREAT-MODEL-CHECK.md): also gate
+  // with current-password verification + native confirmation, matching
+  // webui-direct-change-password. Requires extending the preload
+  // `webuiChangeUsername` signature and updating renderer callers, so it's
+  // tracked as a follow-up to keep this P0 patch surgical.
+  ipcMain.handle(
+    'webui-direct-change-username',
+    async (_event, { newUsername }: { newUsername: string }) => {
+      if (!enforceRateLimit('webui-direct-change-username')) {
+        return { success: false, msg: AUTH_ERROR_RATE_LIMITED };
+      }
+      return WebuiService.handleAsync(async () => {
+        const username = await WebuiService.changeUsername(newUsername);
+        return { success: true, data: { username } };
+      }, 'Direct IPC: Change username');
+    }
+  );
 
   // Direct IPC: Generate QR token
+  // Gated by: rate limit. QR tokens are short-lived bearer credentials for
+  // WebUI login — a compromised renderer must not be able to farm them.
   ipcMain.handle('webui-direct-generate-qr-token', async () => {
+    if (!enforceRateLimit('webui-direct-generate-qr-token')) {
+      return { success: false, msg: AUTH_ERROR_RATE_LIMITED };
+    }
     // Check webServerInstance status
     if (!webServerInstance) {
       return {
