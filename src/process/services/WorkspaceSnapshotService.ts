@@ -10,8 +10,33 @@ import os from 'node:os';
 import path from 'node:path';
 import { promisify } from 'node:util';
 import type { CompareResult, FileChangeInfo, SnapshotInfo } from '@/common/types/fileSnapshot';
+import { getSystemDir } from '@process/utils/initStorage';
 
 const execFileAsync = promisify(execFile);
+
+const SNAPSHOT_DIRNAME = '.wayland-snapshots';
+const SNAPSHOT_PREFIX = 'wayland-snapshot-';
+
+/**
+ * Resolve the root directory under which transient snapshot gitdirs live.
+ *
+ * Prefers `<workDir>/.wayland-snapshots` so snapshots land on the same drive
+ * as the user-configured workspace (avoids filling the system drive on
+ * Windows setups where C: is system and D: is workspace — upstream #2679).
+ * Falls back to `os.tmpdir()` when the workDir lookup throws (e.g. before
+ * storage init, or in tests with no Electron app path).
+ */
+function getSnapshotRoot(): string {
+  try {
+    const workDir = getSystemDir().workDir;
+    if (workDir) {
+      return path.join(workDir, SNAPSHOT_DIRNAME);
+    }
+  } catch {
+    // initStorage not ready or unavailable — fall through to tmpdir
+  }
+  return os.tmpdir();
+}
 
 type SnapshotState = {
   mode: 'git-repo' | 'snapshot';
@@ -199,18 +224,29 @@ export class WorkspaceSnapshotService {
    * Remove leftover `wayland-snapshot-*` directories from previous sessions
    * that were not cleaned up (e.g. due to a crash). Safe to call at startup
    * as a fire-and-forget — errors are silently ignored.
+   *
+   * Scans both the current snapshot root (under workDir) AND `os.tmpdir()`
+   * to clean up legacy entries left behind before snapshots respected
+   * `workDir` (upstream #2679 fix).
    */
   static async cleanupStaleSnapshots(): Promise<void> {
-    const tmpdir = os.tmpdir();
-    let entries: string[];
-    try {
-      entries = await fs.readdir(tmpdir);
-    } catch {
-      return;
-    }
+    const roots = new Set<string>();
+    roots.add(getSnapshotRoot());
+    // Always scan tmpdir too — covers legacy snapshots from pre-fix builds.
+    roots.add(os.tmpdir());
 
-    const stale = entries.filter((name) => name.startsWith('wayland-snapshot-'));
-    await Promise.allSettled(stale.map((name) => fs.rm(path.join(tmpdir, name), { recursive: true, force: true })));
+    await Promise.all(
+      Array.from(roots).map(async (root) => {
+        let entries: string[];
+        try {
+          entries = await fs.readdir(root);
+        } catch {
+          return;
+        }
+        const stale = entries.filter((name) => name.startsWith(SNAPSHOT_PREFIX));
+        await Promise.allSettled(stale.map((name) => fs.rm(path.join(root, name), { recursive: true, force: true })));
+      })
+    );
   }
 
   // --- Private ---
@@ -389,7 +425,11 @@ export class WorkspaceSnapshotService {
   }
 
   private async createWorkingTreeSnapshot(workspacePath: string): Promise<string> {
-    const gitdir = path.join(os.tmpdir(), `wayland-snapshot-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`);
+    const root = getSnapshotRoot();
+    // Ensure the snapshot root exists when it's not os.tmpdir() (which is
+    // always present). `recursive: true` is a no-op when the dir already exists.
+    await fs.mkdir(root, { recursive: true }).catch(() => {});
+    const gitdir = path.join(root, `${SNAPSHOT_PREFIX}${Date.now()}-${Math.random().toString(36).slice(2, 8)}`);
     const gitArgs = [`--git-dir=${gitdir}`, `--work-tree=${workspacePath}`];
 
     await execFileAsync('git', ['init', '--bare', gitdir]);
