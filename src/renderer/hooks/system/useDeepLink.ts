@@ -9,11 +9,14 @@ import { useNavigate } from 'react-router-dom';
 import { ipcBridge } from '@/common';
 
 /**
- * Deep link event payload from main process
+ * Deep link event payload from main process.
+ * `decoded` is the parsed `?data=<base64-JSON>` blob — untrusted, must be
+ * shape-validated before any field is read (see `validateAddProviderDecoded`).
  */
 export type DeepLinkPayload = {
   action: string;
   params: Record<string, string>;
+  decoded?: unknown;
 };
 
 export type DeepLinkAddProviderDetail = {
@@ -21,6 +24,24 @@ export type DeepLinkAddProviderDetail = {
   apiKey?: string;
   name?: string;
   platform?: string;
+};
+
+/**
+ * Hand-written validator for the `add-provider` / `provider/add` decoded payload.
+ * Returns only string-typed known fields; everything else is dropped.
+ * Pattern: consumers of `payload.decoded` MUST do this before reading any field
+ * (M8: attacker-controlled keys in base64 JSON would otherwise pollute trusted state).
+ */
+const validateAddProviderDecoded = (decoded: unknown): DeepLinkAddProviderDetail => {
+  if (!decoded || typeof decoded !== 'object') return {};
+  const d = decoded as Record<string, unknown>;
+  const pickString = (k: string): string | undefined => (typeof d[k] === 'string' ? (d[k] as string) : undefined);
+  return {
+    baseUrl: pickString('baseUrl') ?? pickString('base_url'),
+    apiKey: pickString('apiKey') ?? pickString('api_key') ?? pickString('key'),
+    name: pickString('name'),
+    platform: pickString('platform'),
+  };
 };
 
 /** Pending deep link data for the add-provider action. Read-once: consumed by ModelModalContent on mount. */
@@ -56,11 +77,15 @@ export const useDeepLink = () => {
     (payload: DeepLinkPayload) => {
       // Support both formats: "add-provider" and "provider/add" (one-api style)
       if (payload.action === 'add-provider' || payload.action === 'provider/add') {
+        // Prefer shape-validated `decoded` (from base64 JSON), fall back to query params.
+        // M8: decoded fields are NEVER trusted by key — they are pulled through an explicit
+        // allowlist validator so attacker-chosen JSON keys can't inject trusted-looking state.
+        const fromDecoded = validateAddProviderDecoded(payload.decoded);
         pendingDeepLinkData = {
-          baseUrl: payload.params.baseUrl || payload.params.base_url,
-          apiKey: payload.params.apiKey || payload.params.api_key || payload.params.key,
-          name: payload.params.name,
-          platform: payload.params.platform,
+          baseUrl: fromDecoded.baseUrl ?? payload.params.baseUrl ?? payload.params.base_url,
+          apiKey: fromDecoded.apiKey ?? payload.params.apiKey ?? payload.params.api_key ?? payload.params.key,
+          name: fromDecoded.name ?? payload.params.name,
+          platform: fromDecoded.platform ?? payload.params.platform,
         };
 
         // Navigate to model settings page; ModelModalContent will pick up the pending data

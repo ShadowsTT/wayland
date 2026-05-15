@@ -688,6 +688,12 @@ export const deepLink = {
   received: buildEmitter<{
     action: string; // e.g. 'add-provider'
     params: Record<string, string>; // parsed query params
+    /**
+     * Decoded base64-JSON payload from the `data` query param, if present.
+     * Typed as `unknown` — consumers MUST validate the shape before reading
+     * any field (M8: prevents attacker-controlled key injection).
+     */
+    decoded?: unknown;
   }>('deep-link.received'),
 };
 

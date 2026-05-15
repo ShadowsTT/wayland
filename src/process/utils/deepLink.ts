@@ -15,7 +15,19 @@ export const PROTOCOL_SCHEME = 'wayland';
  *   1. wayland://add-provider?baseUrl=xxx&apiKey=xxx
  *   2. wayland://provider/add?v=1&data=<base64 JSON>  (one-api / new-api style)
  */
-export const parseDeepLinkUrl = (url: string): { action: string; params: Record<string, string> } | null => {
+export type DeepLinkParsed = {
+  action: string;
+  params: Record<string, string>;
+  /**
+   * Decoded base64-JSON payload from the `data` query param, if present and parseable.
+   * Stored as `unknown` so consumers must explicitly validate the shape before use —
+   * never spread into `params` (M8: prevents attacker-chosen keys from injecting
+   * trusted-looking fields like `redirectUrl`, `apiKey`, `baseUrl`).
+   */
+  decoded?: unknown;
+};
+
+export const parseDeepLinkUrl = (url: string): DeepLinkParsed | null => {
   try {
     const parsed = new URL(url);
     if (parsed.protocol !== `${PROTOCOL_SCHEME}:`) return null;
@@ -29,20 +41,23 @@ export const parseDeepLinkUrl = (url: string): { action: string; params: Record<
       params[key] = value;
     });
 
-    // If data param exists, decode base64 JSON and merge into params
+    // If data param exists, decode base64 JSON and expose it under an explicit
+    // `decoded` field. Consumers must opt in and validate the shape — keys are
+    // NOT merged into `params` (would allow attacker-controlled injection).
+    let decoded: unknown;
     if (params.data) {
       try {
         const json = JSON.parse(Buffer.from(params.data, 'base64').toString('utf-8'));
         if (json && typeof json === 'object') {
-          Object.assign(params, json);
+          decoded = json;
         }
       } catch {
-        // Ignore decode errors
+        // ignore malformed base64 data
       }
       delete params.data;
     }
 
-    return { action, params };
+    return decoded !== undefined ? { action, params, decoded } : { action, params };
   } catch {
     return null;
   }
