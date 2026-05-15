@@ -8,7 +8,6 @@ import { ipcBridge } from '@/common';
 import { trackUpload, type UploadSource } from '@/renderer/hooks/file/useUploadState';
 import { isElectronDesktop } from '@/renderer/utils/platform';
 import { getCsrfToken } from '@process/webserver/middleware/csrfClient';
-import { CSRF_HEADER_NAME } from '@process/webserver/config/constants';
 
 /**
  * Upload a file to the server via HTTP multipart (WebUI mode).
@@ -21,12 +20,6 @@ export async function uploadFileViaHttp(
   conversationId?: string,
   onProgress?: (percent: number) => void
 ): Promise<string> {
-  const formData = new FormData();
-  formData.append('file', file);
-  if (conversationId) {
-    formData.append('conversationId', conversationId);
-  }
-
   return new Promise<string>((resolve, reject) => {
     const csrfToken = getCsrfToken();
     if (!csrfToken) {
@@ -34,10 +27,19 @@ export async function uploadFileViaHttp(
       return;
     }
 
+    // tiny-csrf only validates req.body._csrf — the x-csrf-token header is
+    // silently ignored on multipart uploads. Append the token to the form
+    // body so the middleware sees it after busboy/multer parses the upload.
+    const formData = new FormData();
+    formData.append('_csrf', csrfToken);
+    formData.append('file', file);
+    if (conversationId) {
+      formData.append('conversationId', conversationId);
+    }
+
     const xhr = new XMLHttpRequest();
     xhr.open('POST', '/api/upload');
     xhr.withCredentials = true;
-    xhr.setRequestHeader(CSRF_HEADER_NAME, csrfToken);
 
     if (onProgress) {
       xhr.upload.addEventListener('progress', (e) => {

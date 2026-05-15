@@ -45,11 +45,12 @@ export function setupBasicMiddleware(app: Express): void {
   app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
   // CSRF Protection using tiny-csrf (CodeQL compliant)
-  // Must be applied after cookieParser and before routes
-  // No signed cookies are issued anywhere in the codebase (grep confirmed
-  // zero `signedCookies` / `signed:` usages), so cookie-parser runs without
-  // a secret — avoids a hardcoded credential in source.
-  app.use(cookieParser());
+  // Must be applied after cookieParser and before routes.
+  // tiny-csrf transports its CSRF token as a *signed* cookie (it sets
+  // `cookieParams.signed = true` internally), so cookie-parser MUST be
+  // initialised with the same secret — otherwise req.signedCookies is
+  // always {} and every protected POST/PUT/DELETE/PATCH throws 500.
+  app.use(cookieParser(CSRF_SECRET));
   // P1 Security fix: Enable CSRF for login (frontend already uses withCsrfToken)
   // Only exclude QR login (has its own one-time token protection)
   app.use(
