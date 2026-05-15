@@ -52,7 +52,7 @@ export function useFileChanges({ workspace }: UseFileChangesParams): UseFileChan
           ipcBridge.fileSnapshot.getBranches
             .invoke({ workspace })
             .then(setBranches)
-            .catch(() => {});
+            .catch((err) => console.warn('[useFileChanges.getBranches]', err));
         }
       })
       .catch((err) => {
@@ -60,6 +60,7 @@ export function useFileChanges({ workspace }: UseFileChangesParams): UseFileChan
       });
 
     return () => {
+      // intentional fire-and-forget; teardown failure is non-actionable
       ipcBridge.fileSnapshot.dispose.invoke({ workspace }).catch(() => {});
     };
   }, [workspace]);

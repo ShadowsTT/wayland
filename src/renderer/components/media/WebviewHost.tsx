@@ -181,7 +181,7 @@ const WebviewHost: React.FC<WebviewHostProps> = ({
         true;
       `
         )
-        .catch(() => {});
+        .catch((err) => console.warn('[WebviewHost.injectClickInterceptor]', err));
     };
 
     const handleConsoleMessage = (event: Electron.ConsoleMessageEvent) => {
@@ -243,7 +243,7 @@ const WebviewHost: React.FC<WebviewHostProps> = ({
         true;
       `
         )
-        .catch(() => {});
+        .catch((err) => console.warn('[WebviewHost.injectViewportMeta]', err));
 
       // Set up message listener inside webview
       webviewEl
@@ -257,7 +257,7 @@ const WebviewHost: React.FC<WebviewHostProps> = ({
         true;
       `
         )
-        .catch(() => {});
+        .catch((err) => console.warn('[WebviewHost.injectMessageListener]', err));
 
       if (isStarOfficeUrl(currentUrl)) {
         webviewEl
@@ -283,7 +283,7 @@ const WebviewHost: React.FC<WebviewHostProps> = ({
           true;
         `
           )
-          .catch(() => {});
+          .catch((err) => console.warn('[WebviewHost.injectZoomHandlers]', err));
       }
 
       if (isStarOfficeUrl(currentUrl) && autoFitPendingRef.current) {
@@ -314,7 +314,7 @@ const WebviewHost: React.FC<WebviewHostProps> = ({
               setZoomFactor(Math.max(MIN_ZOOM_FACTOR, Math.min(MAX_ZOOM_FACTOR, next)));
               autoFitPendingRef.current = false;
             })
-            .catch(() => {});
+            .catch((err) => console.warn('[WebviewHost.autoFitZoom]', err));
         }, 120);
       }
     };
@@ -402,7 +402,7 @@ const WebviewHost: React.FC<WebviewHostProps> = ({
         const next = Number((currentContent.clientWidth / stageWidth).toFixed(2));
         setZoomFactor(Math.max(MIN_ZOOM_FACTOR, Math.min(MAX_ZOOM_FACTOR, next)));
       })
-      .catch(() => {});
+      .catch((err) => console.warn('[WebviewHost.handleZoomFit]', err));
   }, [isStarOffice]);
 
   const handleOuterWheelZoom = useCallback(

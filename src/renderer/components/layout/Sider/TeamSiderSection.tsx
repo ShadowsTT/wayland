@@ -197,6 +197,7 @@ const TeamSiderSection: React.FC<TeamSiderSectionProps> = ({
                             await removeTeam(team.id);
                             Message.success(t('team.sider.deleteSuccess'));
                             if (pathname.startsWith(`/team/${team.id}`)) {
+                              // intentional fire-and-forget; failure is non-actionable
                               Promise.resolve(navigate('/')).catch(() => {});
                             }
                           },

@@ -34,7 +34,7 @@ const SkillSuggestCard: React.FC<SkillSuggestCardProps> = ({ suggestion, cronJob
       .then((exists) => {
         if (exists) setSaved(true);
       })
-      .catch(() => {});
+      .catch((err) => console.warn('[SkillSuggestCard.hasSkill]', err));
   }, [cronJobId]);
 
   if (dismissed || saved) return null;

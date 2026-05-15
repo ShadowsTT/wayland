@@ -982,6 +982,7 @@ const SendBox: React.FC<{
       if (warmupTimerRef.current) clearTimeout(warmupTimerRef.current);
       warmupTimerRef.current = setTimeout(() => {
         warmedConversationRef.current = cid;
+        // intentional fire-and-forget; failure is non-actionable
         ipcBridge.conversation.warmup.invoke({ conversation_id: cid }).catch(() => {});
       }, 1000);
     }
@@ -1214,7 +1215,14 @@ const SendBox: React.FC<{
     setReplyQuote(null);
 
     onSend(finalMessage)
-      .catch(() => {})
+      .catch((err) => {
+        console.warn('[sendbox.send] onSend failed', {
+          conversationId: conversationContext?.conversationId,
+          messageLength: finalMessage.length,
+          hasDomSnippets: domSnippets.length > 0,
+          error: err,
+        });
+      })
       .finally(() => {
         setIsLoading(false);
       });

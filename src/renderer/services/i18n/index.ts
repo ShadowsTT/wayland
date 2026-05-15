@@ -146,7 +146,9 @@ export async function changeLanguage(lang: string): Promise<void> {
     localStorage.setItem('i18nextLng', normalized);
   }
   // Notify main process to sync i18n (for tray menu, etc.)
-  ipcBridge.systemSettings.changeLanguage.invoke({ language: normalized }).catch(() => {});
+  ipcBridge.systemSettings.changeLanguage
+    .invoke({ language: normalized })
+    .catch((err) => console.warn('[i18n.changeLanguage]', err));
 }
 
 // Clear translation cache (useful for development/testing)

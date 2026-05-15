@@ -58,7 +58,7 @@ const AcpConfigSelector: React.FC<{
           setConfigOptions(result.data.configOptions);
         }
       })
-      .catch(() => {});
+      .catch((err) => console.warn('[AcpConfigSelector.getConfigOptions.init]', err));
 
     return () => {
       cancelled = true;
@@ -78,7 +78,7 @@ const AcpConfigSelector: React.FC<{
               setConfigOptions(result.data.configOptions);
             }
           })
-          .catch(() => {});
+          .catch((err) => console.warn('[AcpConfigSelector.getConfigOptions.onUpdate]', err));
       }
     };
     return ipcBridge.acpConversation.responseStream.on(handler);
@@ -122,7 +122,7 @@ const AcpConfigSelector: React.FC<{
                 setConfigOptions(result.data.configOptions);
               }
             })
-            .catch(() => {});
+            .catch((err) => console.warn('[AcpConfigSelector.getConfigOptions.revert]', err));
         });
     },
     [conversationId, onOptionSelect]

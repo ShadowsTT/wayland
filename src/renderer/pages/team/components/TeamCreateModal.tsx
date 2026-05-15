@@ -48,7 +48,7 @@ const TeamCreateModal: React.FC<Props> = ({ visible, onClose, onCreated }) => {
       .then((data) => {
         if (active) setCachedInitResults(data ?? null);
       })
-      .catch(() => {});
+      .catch((err) => console.warn('[TeamCreateModal.cachedInitializeResult]', err));
     return () => {
       active = false;
     };

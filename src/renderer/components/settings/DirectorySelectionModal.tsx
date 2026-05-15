@@ -162,7 +162,12 @@ const DirectorySelectionModal: React.FC<DirectorySelectionModalProps> = ({
             {error && (
               <div className='p-16px text-center text-danger text-13px'>
                 <div>{error}</div>
-                <Button size='mini' className='mt-8px' onClick={() => loadDirectory(currentPath).catch(() => {})}>
+                <Button
+                  size='mini'
+                  className='mt-8px'
+                  // intentional fire-and-forget; loadDirectory surfaces failure via its own error state
+                  onClick={() => loadDirectory(currentPath).catch(() => {})}
+                >
                   {t('common.retry', { defaultValue: 'Retry' })}
                 </Button>
               </div>

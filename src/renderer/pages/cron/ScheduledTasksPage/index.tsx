@@ -50,7 +50,7 @@ const ScheduledTasksPage: React.FC = () => {
     systemSettings.getKeepAwake
       .invoke()
       .then(setKeepAwake)
-      .catch(() => {});
+      .catch((err) => console.warn('[ScheduledTasksPage.getKeepAwake]', err));
   }, []);
 
   const handleKeepAwakeChange = useCallback(async (enabled: boolean) => {

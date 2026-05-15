@@ -299,13 +299,13 @@ const CreateTaskDialog: React.FC<CreateTaskDialogProps> = ({
           const preferred = typeof saved === 'string' ? saved : saved?.useModel;
           if (preferred) setModelId(preferred);
         })
-        .catch(() => {});
+        .catch((err) => console.warn('[CreateTaskDialog.get gemini.defaultModel]', err));
     } else if (resolvedBackend === 'aionrs') {
       ConfigStorage.get('aionrs.defaultModel')
         .then((saved) => {
           if (saved?.useModel) setModelId(saved.useModel);
         })
-        .catch(() => {});
+        .catch((err) => console.warn('[CreateTaskDialog.get aionrs.defaultModel]', err));
     }
   }, [resolvedBackend, modelId]);
 

@@ -127,7 +127,7 @@ const AgentModeSelector: React.FC<AgentModeSelectorProps> = ({
           }
         });
       })
-      .catch(() => {});
+      .catch((err) => console.warn('[AgentModeSelector.cachedModes]', err));
 
     return () => {
       cancelled = true;

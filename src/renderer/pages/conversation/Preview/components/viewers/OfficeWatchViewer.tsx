@@ -133,6 +133,7 @@ const OfficeWatchViewer: React.FC<OfficeWatchViewerProps> = ({ docType, filePath
       cancelled = true;
       unsubStatus();
       if (filePathRef.current) {
+        // intentional fire-and-forget; teardown failure is non-actionable
         bridge.stop.invoke({ filePath: filePathRef.current }).catch(() => {});
       }
     };

@@ -64,28 +64,28 @@ const SystemModalContent: React.FC = () => {
           setStartOnBoot(result.data);
         }
       })
-      .catch(() => {});
+      .catch((err) => console.warn('[SystemModalContent.getStartOnBootStatus]', err));
   }, [isDesktop]);
 
   useEffect(() => {
     ipcBridge.systemSettings.getCloseToTray
       .invoke()
       .then((enabled) => setCloseToTray(enabled))
-      .catch(() => {});
+      .catch((err) => console.warn('[SystemModalContent.getCloseToTray]', err));
   }, []);
 
   useEffect(() => {
     ipcBridge.systemSettings.getNotificationEnabled
       .invoke()
       .then((enabled) => setNotificationEnabled(enabled))
-      .catch(() => {});
+      .catch((err) => console.warn('[SystemModalContent.getNotificationEnabled]', err));
   }, []);
 
   useEffect(() => {
     ipcBridge.systemSettings.getCronNotificationEnabled
       .invoke()
       .then((enabled) => setCronNotificationEnabled(enabled))
-      .catch(() => {});
+      .catch((err) => console.warn('[SystemModalContent.getCronNotificationEnabled]', err));
   }, []);
 
   useEffect(() => {
@@ -93,7 +93,7 @@ const SystemModalContent: React.FC = () => {
       .then((val) => {
         if (val && val > 0) setPromptTimeout(val);
       })
-      .catch(() => {});
+      .catch((err) => console.warn('[SystemModalContent.get acp.promptTimeout]', err));
   }, []);
 
   useEffect(() => {
@@ -101,21 +101,21 @@ const SystemModalContent: React.FC = () => {
       .then((val) => {
         if (val && val > 0) setAgentIdleTimeout(val);
       })
-      .catch(() => {});
+      .catch((err) => console.warn('[SystemModalContent.get acp.agentIdleTimeout]', err));
   }, []);
 
   useEffect(() => {
     ipcBridge.systemSettings.getSaveUploadToWorkspace
       .invoke()
       .then((enabled) => setSaveUploadToWorkspace(enabled))
-      .catch(() => {});
+      .catch((err) => console.warn('[SystemModalContent.getSaveUploadToWorkspace]', err));
   }, []);
 
   useEffect(() => {
     ipcBridge.systemSettings.getAutoPreviewOfficeFiles
       .invoke()
       .then((enabled) => setAutoPreviewOfficeFiles(enabled))
-      .catch(() => {});
+      .catch((err) => console.warn('[SystemModalContent.getAutoPreviewOfficeFiles]', err));
   }, []);
 
   const handleCloseToTrayChange = useCallback((checked: boolean) => {
@@ -170,8 +170,11 @@ const SystemModalContent: React.FC = () => {
   const handlePromptTimeoutBlur = useCallback(() => {
     const clamped = Math.max(30, Math.min(3600, promptTimeout || 300));
     setPromptTimeout(clamped);
-    ConfigStorage.set('acp.promptTimeout', clamped).catch(() => {});
-  }, [promptTimeout]);
+    ConfigStorage.set('acp.promptTimeout', clamped).catch((err) => {
+      console.warn('[SystemModalContent.set acp.promptTimeout]', err);
+      Message.error(t('common.saveFailed'));
+    });
+  }, [promptTimeout, t]);
 
   const handleAgentIdleTimeoutChange = useCallback((val: number | undefined) => {
     setAgentIdleTimeout(val as number);
@@ -180,8 +183,11 @@ const SystemModalContent: React.FC = () => {
   const handleAgentIdleTimeoutBlur = useCallback(() => {
     const clamped = Math.max(1, Math.min(60, agentIdleTimeout || 5));
     setAgentIdleTimeout(clamped);
-    ConfigStorage.set('acp.agentIdleTimeout', clamped).catch(() => {});
-  }, [agentIdleTimeout]);
+    ConfigStorage.set('acp.agentIdleTimeout', clamped).catch((err) => {
+      console.warn('[SystemModalContent.set acp.agentIdleTimeout]', err);
+      Message.error(t('common.saveFailed'));
+    });
+  }, [agentIdleTimeout, t]);
 
   const handleSaveUploadToWorkspaceChange = useCallback((checked: boolean) => {
     setSaveUploadToWorkspace(checked);

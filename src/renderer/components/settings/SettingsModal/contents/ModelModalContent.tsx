@@ -300,6 +300,7 @@ const ModelModalContent: React.FC = () => {
 
       // Prevent unhandled rejection if timeout fires while sendMessage is still pending.
       // The actual error is still caught by `await responsePromise` below.
+      // intentional fire-and-forget; failure is non-actionable
       responsePromise.catch(() => {});
 
       // 3. Send test message
@@ -402,7 +403,9 @@ const ModelModalContent: React.FC = () => {
       }
       if (tempConversationId) {
         // Delete the temporary conversation
-        ipcBridge.conversation.remove.invoke({ id: tempConversationId }).catch(() => {});
+        ipcBridge.conversation.remove
+          .invoke({ id: tempConversationId })
+          .catch((err) => console.warn('[ModelModalContent.removeHealthCheckConversation]', err));
       }
       setHealthCheckLoading((prev) => ({ ...prev, [loadingKey]: false }));
     }

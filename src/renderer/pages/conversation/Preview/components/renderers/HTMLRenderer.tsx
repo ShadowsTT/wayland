@@ -647,7 +647,9 @@ const HTMLRenderer: React.FC<HTMLRendererProps> = ({
     if (!webview || !onScroll) return;
 
     const injectScrollSync = () => {
-      void webview.executeJavaScript(scrollSyncScript).catch(() => {});
+      void webview
+        .executeJavaScript(scrollSyncScript)
+        .catch((err) => console.warn('[HTMLRenderer.injectScrollSync]', err));
     };
 
     if (webviewLoadedRef.current) {
@@ -677,6 +679,7 @@ const HTMLRenderer: React.FC<HTMLRendererProps> = ({
           })();
         `
       )
+      // intentional fire-and-forget; per-event scroll sync, failure is non-actionable
       .catch(() => {});
   }, []);
   // Use external containerRef or internal divRef
@@ -708,6 +711,7 @@ const HTMLRenderer: React.FC<HTMLRendererProps> = ({
           })();
         `
         )
+        // intentional fire-and-forget; per-event scroll sync, failure is non-actionable
         .catch(() => {})
         .finally(() => {
           setTimeout(() => {
