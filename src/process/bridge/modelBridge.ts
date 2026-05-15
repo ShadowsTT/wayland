@@ -20,12 +20,43 @@ import {
   getProtocolDisplayName,
 } from '@/common/utils/protocolDetector';
 import { isGoogleApisHost } from '@/common/utils/urlValidation';
-import OpenAI from 'openai';
+import type OpenAIType from 'openai';
 import { isNewApiPlatform } from '@/common/utils/platformConstants';
 import { ipcBridge } from '@/common';
 import { ProcessConfig } from '@process/utils/initStorage';
 import { ExtensionRegistry } from '@process/extensions';
-import { BedrockClient, ListInferenceProfilesCommand } from '@aws-sdk/client-bedrock';
+import type {
+  BedrockClient as BedrockClientType,
+  ListInferenceProfilesCommand as ListInferenceProfilesCommandType,
+} from '@aws-sdk/client-bedrock';
+
+// Single-flight Promise caches for the AI SDK modules used here.
+// Defer evaluation of the openai + @aws-sdk/client-bedrock packages
+// until the first probe call. Reduces main-process idle RSS for users
+// who haven't configured these providers. Exported for cron-aware
+// pre-warming.
+let _openaiCtorPromise: Promise<typeof OpenAIType> | null = null;
+export function loadOpenAI(): Promise<typeof OpenAIType> {
+  if (!_openaiCtorPromise) {
+    _openaiCtorPromise = import('openai').then((m) => m.default);
+  }
+  return _openaiCtorPromise;
+}
+
+type BedrockModule = {
+  BedrockClient: typeof BedrockClientType;
+  ListInferenceProfilesCommand: typeof ListInferenceProfilesCommandType;
+};
+let _bedrockModulePromise: Promise<BedrockModule> | null = null;
+export function loadAwsBedrock(): Promise<BedrockModule> {
+  if (!_bedrockModulePromise) {
+    _bedrockModulePromise = import('@aws-sdk/client-bedrock').then((m) => ({
+      BedrockClient: m.BedrockClient,
+      ListInferenceProfilesCommand: m.ListInferenceProfilesCommand,
+    }));
+  }
+  return _bedrockModulePromise;
+}
 
 /**
  * Minimal completion-token request used for connectivity / auth probes.
@@ -281,7 +312,8 @@ export function initModelBridge(): void {
       }
 
       try {
-        const openai = new OpenAI({
+        const OpenAICtor = await loadOpenAI();
+        const openai = new OpenAICtor({
           baseURL: openaiBaseUrl,
           apiKey: actualApiKey,
           defaultHeaders: {
@@ -325,11 +357,12 @@ export function initModelBridge(): void {
           }
           process.env.AWS_REGION = region;
 
-          // Create Bedrock client
-          const bedrockClient = new BedrockClient({ region });
+          // Create Bedrock client (SDK module loaded lazily)
+          const { BedrockClient: BedrockCtor, ListInferenceProfilesCommand: ListInferenceProfilesCmd } = await loadAwsBedrock();
+          const bedrockClient = new BedrockCtor({ region });
 
           // List inference profiles (cross-region inference endpoints)
-          const command = new ListInferenceProfilesCommand({});
+          const command = new ListInferenceProfilesCmd({});
           const response = await bedrockClient.send(command);
 
           // Filter inference profiles that contain Claude models
@@ -428,7 +461,8 @@ export function initModelBridge(): void {
     }
 
     try {
-      const openai = new OpenAI({
+      const OpenAICtor = await loadOpenAI();
+      const openai = new OpenAICtor({
         baseURL: base_url,
         apiKey: actualApiKey,
         // Use custom User-Agent to avoid some API proxies (like packyapi) blocking OpenAI SDK's default User-Agent
