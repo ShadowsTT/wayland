@@ -798,9 +798,50 @@ app.on('open-url', (event, url) => {
   showOrCreateMainWindow({ mainWindow, createWindow });
 });
 
+// M17: Prefetch cleanup modules at app-ready so before-quit doesn't
+// race the 10s master timeout doing cold dynamic imports. Fire-and-forget;
+// before-quit awaits this cache and falls back to fresh imports if undefined
+// (e.g. quit fires before ready, or one of the imports rejected).
+type CleanupModules = {
+  ambient: typeof import('./process/ambient/ambientWindowManager');
+  channels: typeof import('@process/channels');
+  webuiBridge: typeof import('@process/bridge/webuiBridge');
+  webserverAdapter: typeof import('@process/webserver/adapter');
+  officeWatch: typeof import('@process/bridge/officeWatchBridge');
+  pptPreview: typeof import('@process/bridge/pptPreviewBridge');
+};
+let _cleanupModulesPromise: Promise<CleanupModules> | undefined;
+
+const prefetchCleanupModules = (): Promise<CleanupModules> => {
+  return Promise.all([
+    import('./process/ambient/ambientWindowManager'),
+    import('@process/channels'),
+    import('@process/bridge/webuiBridge'),
+    import('@process/webserver/adapter'),
+    import('@process/bridge/officeWatchBridge'),
+    import('@process/bridge/pptPreviewBridge'),
+  ]).then(([ambient, channels, webuiBridge, webserverAdapter, officeWatch, pptPreview]) => ({
+    ambient,
+    channels,
+    webuiBridge,
+    webserverAdapter,
+    officeWatch,
+    pptPreview,
+  }));
+};
+
 // Ensure we don't miss the ready event when running in CLI/WebUI mode
 void app
   .whenReady()
+  .then(() => {
+    // Kick off cleanup-module prefetch BEFORE handleAppReady so it runs in
+    // parallel with init. Failure is non-fatal — before-quit handles undefined.
+    _cleanupModulesPromise = prefetchCleanupModules();
+    _cleanupModulesPromise.catch((err) => {
+      console.warn('[Wayland] Cleanup-module prefetch failed; before-quit will fall back to fresh imports:', err);
+      _cleanupModulesPromise = undefined;
+    });
+  })
   .then(handleAppReady)
   .catch((error) => {
     // App initialization failed
@@ -846,68 +887,161 @@ app.on('before-quit', async () => {
   isExplicitQuit = true;
   destroyTray();
 
-  const cleanup = async () => {
-    // Kill all agent worker processes
-    await workerTaskManager.clear();
+  // M17: per-step budget. A single slow step (e.g. WebSocket close) cannot
+  // starve later steps. Total ceiling stays at 10s.
+  const PER_STEP_TIMEOUT_MS = 2000;
+  const MASTER_TIMEOUT_MS = 10000;
 
-    // Destroy ambient bubble window (if active)
-    try {
-      const { destroyAmbientWindow } = await import('./process/ambient/ambientWindowManager');
-      destroyAmbientWindow();
-    } catch {
-      /* ambient not initialized */
-    }
-
-    // Stop all active team sessions (TCP servers + child processes)
-    await disposeAllTeamSessions().catch((err) => console.error('[App] Failed to dispose team sessions:', err));
-
-    // Shutdown Channel subsystem
-    try {
-      const { getChannelManager } = await import('@process/channels');
-      await getChannelManager().shutdown();
-    } catch (error) {
-      console.error('[App] Failed to shutdown ChannelManager:', error);
-    }
-
-    // Stop Web Server (Express + WebSocket)
-    try {
-      const { getWebServerInstance, setWebServerInstance } = await import('@process/bridge/webuiBridge');
-      const { cleanupWebAdapter } = await import('@process/webserver/adapter');
-      const instance = getWebServerInstance();
-      if (instance) {
-        instance.wss.clients.forEach((client) => client.close(1000, 'App shutting down'));
-        await new Promise<void>((resolve) => instance.server.close(() => resolve()));
-        cleanupWebAdapter();
-        setWebServerInstance(null);
-      }
-    } catch {
-      /* server not started */
-    }
-
-    // Stop Office Watch processes (Word / Excel / PPT preview)
-    try {
-      const { stopAllOfficeWatchSessions } = await import('@process/bridge/officeWatchBridge');
-      stopAllOfficeWatchSessions();
-    } catch {
-      /* not initialized */
-    }
-    try {
-      const { stopAllWatchSessions } = await import('@process/bridge/pptPreviewBridge');
-      stopAllWatchSessions();
-    } catch {
-      /* not initialized */
-    }
+  const withTimeout = <T>(label: string, p: Promise<T>, ms: number): Promise<T | undefined> => {
+    return new Promise<T | undefined>((resolve) => {
+      let settled = false;
+      const timer = setTimeout(() => {
+        if (settled) return;
+        settled = true;
+        console.warn(`[Wayland] cleanup step "${label}" exceeded ${ms}ms; moving on`);
+        resolve(undefined);
+      }, ms);
+      p.then(
+        (v) => {
+          if (settled) return;
+          settled = true;
+          clearTimeout(timer);
+          resolve(v);
+        },
+        (err) => {
+          if (settled) return;
+          settled = true;
+          clearTimeout(timer);
+          console.error(`[Wayland] cleanup step "${label}" failed:`, err);
+          resolve(undefined);
+        }
+      );
+    });
   };
 
-  // Master timeout: force quit if cleanup hangs
-  const timeout = new Promise<void>((resolve) => {
+  // Pull from prefetch cache; fall back to fresh imports if quit raced ready
+  // or the prefetch rejected. Falling back is the same cold path the audit
+  // flagged, but only when prefetch is unavailable — the common case is hot.
+  const loadModules = async (): Promise<Partial<CleanupModules>> => {
+    if (_cleanupModulesPromise) {
+      try {
+        return await _cleanupModulesPromise;
+      } catch {
+        /* fall through to per-module fresh imports */
+      }
+    }
+    const safeImport = async <K extends keyof CleanupModules>(
+      key: K,
+      loader: () => Promise<CleanupModules[K]>
+    ): Promise<[K, CleanupModules[K] | undefined]> => {
+      try {
+        return [key, await loader()];
+      } catch {
+        return [key, undefined];
+      }
+    };
+    const entries = await Promise.all([
+      safeImport('ambient', () => import('./process/ambient/ambientWindowManager')),
+      safeImport('channels', () => import('@process/channels')),
+      safeImport('webuiBridge', () => import('@process/bridge/webuiBridge')),
+      safeImport('webserverAdapter', () => import('@process/webserver/adapter')),
+      safeImport('officeWatch', () => import('@process/bridge/officeWatchBridge')),
+      safeImport('pptPreview', () => import('@process/bridge/pptPreviewBridge')),
+    ]);
+    const out: Partial<CleanupModules> = {};
+    for (const [k, v] of entries) {
+      if (v) (out as Record<string, unknown>)[k] = v;
+    }
+    return out;
+  };
+
+  const cleanup = async () => {
+    const mods = await loadModules();
+
+    // Worker processes first (M18 made workerTaskManager.clear() properly
+    // await per-agent kill() with its own 3.5s bound).
+    const workerStep = withTimeout('workerTaskManager.clear', workerTaskManager.clear(), PER_STEP_TIMEOUT_MS);
+
+    const ambientStep = withTimeout(
+      'destroyAmbientWindow',
+      (async () => {
+        if (!mods.ambient) return;
+        mods.ambient.destroyAmbientWindow();
+      })(),
+      PER_STEP_TIMEOUT_MS
+    );
+
+    const teamStep = withTimeout('disposeAllTeamSessions', disposeAllTeamSessions(), PER_STEP_TIMEOUT_MS);
+
+    const channelsStep = withTimeout(
+      'channelManager.shutdown',
+      (async () => {
+        if (!mods.channels) return;
+        await mods.channels.getChannelManager().shutdown();
+      })(),
+      PER_STEP_TIMEOUT_MS
+    );
+
+    const webServerStep = withTimeout(
+      'webServer.close',
+      (async () => {
+        if (!mods.webuiBridge) return;
+        const { getWebServerInstance, setWebServerInstance } = mods.webuiBridge;
+        const instance = getWebServerInstance();
+        if (!instance) return;
+        instance.wss.clients.forEach((client) => client.close(1000, 'App shutting down'));
+        await new Promise<void>((resolve) => instance.server.close(() => resolve()));
+        if (mods.webserverAdapter) {
+          mods.webserverAdapter.cleanupWebAdapter();
+        }
+        setWebServerInstance(null);
+      })(),
+      PER_STEP_TIMEOUT_MS
+    );
+
+    const officeWatchStep = withTimeout(
+      'stopAllOfficeWatchSessions',
+      (async () => {
+        if (!mods.officeWatch) return;
+        mods.officeWatch.stopAllOfficeWatchSessions();
+      })(),
+      PER_STEP_TIMEOUT_MS
+    );
+
+    const pptPreviewStep = withTimeout(
+      'stopAllWatchSessions',
+      (async () => {
+        if (!mods.pptPreview) return;
+        mods.pptPreview.stopAllWatchSessions();
+      })(),
+      PER_STEP_TIMEOUT_MS
+    );
+
+    // Run all steps concurrently; allSettled so one slow step can't starve
+    // the rest. Each step has its own 2s budget via withTimeout above.
+    await Promise.allSettled([
+      workerStep,
+      ambientStep,
+      teamStep,
+      channelsStep,
+      webServerStep,
+      officeWatchStep,
+      pptPreviewStep,
+    ]);
+  };
+
+  // Master ceiling: hard 10s upper bound on the entire cleanup phase.
+  // Per-step timeouts (2s each) handle the common case; this is the
+  // last-resort guard if loadModules itself wedges or many steps queue
+  // microtasks beyond their budget.
+  const masterCeiling = new Promise<void>((resolve) => {
     setTimeout(() => {
-      console.warn('[Wayland] Cleanup timed out after 10s, forcing quit');
+      console.warn(`[Wayland] Cleanup master ceiling (${MASTER_TIMEOUT_MS}ms) reached; forcing quit`);
       resolve();
-    }, 10000);
+    }, MASTER_TIMEOUT_MS);
   });
 
-  await Promise.race([cleanup(), timeout]);
+  await Promise.race([cleanup(), masterCeiling]);
 });
 
 app.on('will-quit', () => {
