@@ -840,6 +840,15 @@ export class TeamSessionService {
   }
 
   async stopAllSessions(): Promise<void> {
-    await Promise.all(Array.from(this.sessions.keys()).map((id) => this.stopSession(id)));
+    // AUDIT-05 F21: use allSettled so one failing session.dispose() does not
+    // block the others — app-quit teardown must make best effort to release
+    // every TCP server + child process, not bail on the first error.
+    const ids = Array.from(this.sessions.keys());
+    const results = await Promise.allSettled(ids.map((id) => this.stopSession(id)));
+    results.forEach((result, idx) => {
+      if (result.status === 'rejected') {
+        console.error(`[TeamSessionService] stopSession(${ids[idx]}) failed:`, result.reason);
+      }
+    });
   }
 }
