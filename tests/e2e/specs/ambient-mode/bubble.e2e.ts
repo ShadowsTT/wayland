@@ -4,11 +4,7 @@
  * Covers AC-M1-1 through AC-M1-15 from docs/product/ambient-mode-requirements.md.
  *
  * -- Directory location notes ---------------------------------------------
- * This spec lives in `tests/e2e/specs/ambient-mode/` (organized by feature name, not by implementation path).
- * The project already has a floating-ball implementation under `src/process/pet/` + `src/renderer/pet/`; on 2026-05-11
- * the user ruled **U-1 = A (Ambient is the evolution of Pet)** — not parallel/mutually exclusive, but a startup-time choice.
- * This spec **does not depend on any implementation directory path** — it locates the bubble via (1) BrowserWindow title/url filtering
- * and (2) data-testid (AC-M1-9 hard constraint).
+ * Pet implementation was removed; this spec runs only against the ambient window.
  *
  * File name `bubble.e2e.ts` (not the PM-suggested `.spec.ts`) — because playwright.config.ts
  * `testMatch: '{specs,features}/**\/*.e2e.ts'` only recognizes the `.e2e.ts` suffix.

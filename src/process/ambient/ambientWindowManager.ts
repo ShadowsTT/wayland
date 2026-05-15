@@ -5,15 +5,13 @@
  */
 
 /**
- * Ambient Mode — M1 bubble window manager.
+ * Ambient Mode — M1 bubble window manager (formerly pet, now ambient).
  *
- * Evolved from `src/process/pet/petManager.ts` (U-1 = A decision, 2026-05-11):
- *   - Keeps pet's proven cross-platform primitives: frameless + transparent +
+ *   - Cross-platform primitives: frameless + transparent +
  *     alwaysOnTop('screen-saver'), drag-follow timer, 8s watchdog, Windows
  *     transparent-resize workaround.
- *   - Drops pet-specific concepts: state machine, idle ticker, hit-test
- *     window, confirm bubble. The ambient bubble is a single window; clicks
- *     are detected in renderer and routed via IPC.
+ *   - The ambient bubble is a single window; clicks are detected in
+ *     renderer and routed via IPC.
  *   - Implements AC-M1-1/2/3/4/5/6/9/10/11/13 for the M1 skeleton. M2+ (hover,
  *     chat, panels) will layer on top without replacing this manager.
  */
@@ -28,7 +26,7 @@ export const SCREEN_MARGIN = 24;
 const DRAG_TICK_MS = 16;
 // Main-process safety watchdog: if drag-end never arrives within this window
 // (renderer dropped pointerup — happens on Windows transparent + frameless
-// across resize/move), we force-end the drag. Matches the pet's value.
+// across resize/move), we force-end the drag.
 const DRAG_WATCHDOG_MS = 8000;
 // Click vs drag threshold — accumulated pointer movement ≤ 5px counts as click.
 // Evaluated in renderer (see bubbleRenderer.ts); main only sees drag-start /
@@ -37,7 +35,7 @@ const CLICK_VS_DRAG_THRESHOLD = 5;
 void CLICK_VS_DRAG_THRESHOLD;
 
 // Rollup *sometimes* places dynamically imported modules in out/main/chunks/
-// (when code-splitting kicks in; see petManager) and sometimes inlines them
+// (when code-splitting kicks in) and sometimes inlines them
 // into out/main/index.js (when the module graph is small). In both cases we
 // want to reach sibling dirs under `out/` — resolve relative to the `out/`
 // root by walking up until we find the `preload` sibling.
@@ -52,7 +50,7 @@ function resolveOutDir(): string {
     }
     dir = path.dirname(dir);
   }
-  // Fallback to the pet-style assumption if nothing matched
+  // Fallback to the default assumption if nothing matched (formerly pet, now ambient)
   return path.join(__dirname, '..', '..');
 }
 
@@ -181,7 +179,7 @@ export async function createAmbientWindow(): Promise<void> {
   });
 
   // screen-saver level keeps the bubble above Spotlight on macOS; pop-up-menu
-  // is the equivalent safe ceiling on Windows/Linux (matches pet).
+  // is the equivalent safe ceiling on Windows/Linux.
   if (process.platform === 'darwin') {
     bubbleWindow.setAlwaysOnTop(true, 'screen-saver');
   } else {
