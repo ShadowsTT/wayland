@@ -7,7 +7,7 @@
 export const CODEX_ACP_BRIDGE_VERSION = '0.9.5';
 export const CODEX_ACP_NPX_PACKAGE = `@zed-industries/codex-acp@${CODEX_ACP_BRIDGE_VERSION}`;
 
-export const CLAUDE_ACP_BRIDGE_VERSION = '0.29.2';
+export const CLAUDE_ACP_BRIDGE_VERSION = '0.33.1';
 export const CLAUDE_ACP_NPX_PACKAGE = `@agentclientprotocol/claude-agent-acp@${CLAUDE_ACP_BRIDGE_VERSION}`;
 
 export const CODEBUDDY_ACP_BRIDGE_VERSION = '2.73.0';
