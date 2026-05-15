@@ -10,6 +10,7 @@ Documentation is organized by reader intent, not by document type.
 | [`specs/`](specs)               | Engineering-driven specs | Feature design docs, requirements, implementation plans (ACP rewrite, extension market, remote agent, wake prompt, PR notes). |
 | [`prds/`](prds)                 | Product team             | Formal Product Requirement Documents maintained by the product team. **Do not reorganize without their consent.**             |
 | [`readme/`](readme)             | Global users             | Translated copies of the root `readme.md` (Chinese, Japanese, Korean, Spanish, etc.).                                         |
+| [`audit/`](audit)               | Engineers & operators    | Versioned audit reports — security, performance, reliability, smoke-flow, dep-hygiene, threat-model. With screenshots.        |
 
 ## Quick pointers
 
@@ -29,3 +30,4 @@ Documentation is organized by reader intent, not by document type.
 | Feature requirements / design drafts driven by engineering | `specs/<feature-name>/`     |
 | Formal PRD owned by product team                           | `prds/` (coordinate first)  |
 | README translation                                         | `readme/readme_<locale>.md` |
+| Audit report (security/perf/reliability/etc.)              | `audit/`                    |
