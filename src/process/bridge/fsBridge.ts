@@ -22,6 +22,7 @@ import {
   ProcessConfig,
 } from '@process/utils/initStorage';
 import { readDirectoryRecursive } from '@process/utils';
+import { writeFileAtomic } from '@process/utils/atomicWrite';
 import { getDatabase } from '@process/services/database';
 import { ExtensionRegistry } from '@process/extensions/ExtensionRegistry';
 import type { IWorkspaceFlatFile } from '@/common/adapter/ipcBridge';
@@ -1460,7 +1461,7 @@ export function initFsBridge(): void {
 
   const saveCustomExternalPaths = async (paths: Array<{ name: string; path: string }>) => {
     const filePath = getCustomExternalPathsFile();
-    await fs.writeFile(filePath, JSON.stringify(paths, null, 2), 'utf-8');
+    await writeFileAtomic(filePath, JSON.stringify(paths, null, 2), 'utf-8');
   };
 
   ipcBridge.fs.getCustomExternalPaths.provider(async () => {

@@ -30,6 +30,7 @@ import {
   pruneDirectoryToMatch,
   verifyDirectoryFiles,
 } from './utils';
+import { writeFileAtomic } from './atomicWrite';
 import { getDatabase } from '../services/database/export';
 import type { AcpBackendConfig } from '@/common/types/acpTypes';
 import { migrateFromElectronConfig, importConfigFromFile } from './configMigration';
@@ -115,7 +116,7 @@ const WriteFile = async (filePath: string, data: string) => {
   // Ensure parent directory exists to prevent ENOENT on first write
   const dir = nodePath.dirname(filePath);
   await fs.mkdir(dir, { recursive: true });
-  return fs.writeFile(filePath, data);
+  return writeFileAtomic(filePath, data);
 };
 
 /**

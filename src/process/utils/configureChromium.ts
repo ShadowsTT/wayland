@@ -10,6 +10,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import os from 'os';
 import { getDevAppName } from '@/common/platform';
+import { writeFileSyncAtomic } from './atomicWrite';
 
 // ============ Environment Separation ============
 // Set app name before any getPath() call so userData is isolated from production.
@@ -124,7 +125,7 @@ function readRegistry(): CdpRegistryEntry[] {
 /** Write the CDP registry file atomically. */
 function writeRegistry(entries: CdpRegistryEntry[]): void {
   try {
-    fs.writeFileSync(CDP_REGISTRY_FILE, JSON.stringify(entries, null, 2), 'utf-8');
+    writeFileSyncAtomic(CDP_REGISTRY_FILE, JSON.stringify(entries, null, 2), 'utf-8');
   } catch {
     // Non-critical — log but don't crash
     console.warn('[CDP] Failed to write CDP registry file');
@@ -234,7 +235,7 @@ export function saveCdpConfig(config: CdpConfig): void {
   try {
     const userDataPath = app.getPath('userData');
     const configPath = path.join(userDataPath, CDP_CONFIG_FILE);
-    fs.writeFileSync(configPath, JSON.stringify(config, null, 2), 'utf-8');
+    writeFileSyncAtomic(configPath, JSON.stringify(config, null, 2), 'utf-8');
   } catch (error) {
     console.warn('[CDP] Failed to save CDP config:', error);
   }

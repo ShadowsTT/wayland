@@ -8,6 +8,7 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { app } from 'electron';
+import { writeFileSyncAtomic } from './atomicWrite';
 
 const FILE_NAME = 'analytics.json';
 
@@ -33,7 +34,7 @@ export function getOrCreateAnalyticsId(): string {
 
   const id = crypto.randomUUID();
   try {
-    fs.writeFileSync(filePath, JSON.stringify({ id }), { mode: 0o600 });
+    writeFileSyncAtomic(filePath, JSON.stringify({ id }), { mode: 0o600 });
   } catch {
     // best-effort — if write fails, the ID won't persist but won't throw either
   }
