@@ -6,9 +6,37 @@
 
 See [docs/contributing/development.md](docs/contributing/development.md) for environment setup. You will need:
 
-- Node.js 22+
-- [bun](https://bun.sh)
+- Node.js 22+ (workspace pin: Node 24 via `mise.toml`; `engines.node` is `>=22 <25`)
+- [bun](https://bun.sh) (workspace pin: Bun 1.3 via `mise.toml`; `engines.bun` is `>=1.3.0 <2.0.0`)
 - [prek](https://github.com/j178/prek) (`npm install -g @j178/prek`)
+
+## Reproducibility Contract
+
+To keep builds and reviews reproducible across contributors, this repo enforces a small set of pins. **Use `mise` to honor them automatically.**
+
+- **Toolchain versions** are pinned in the workspace `mise.toml` (Node, Bun, just). Rust is intentionally unpinned — `app/` has no Rust deps, and `upstream/aionrs/` ships its own `rust-toolchain.toml`.
+- **`packageManager`** in `package.json` is tied to the Bun pin in `mise.toml`. If you bump one, bump the other.
+- **`engines.bun` / `engines.node`** in `package.json` are the runtime contract. CI rejects installs that violate them.
+
+### Install
+
+```bash
+mise install                       # installs pinned Node + Bun + just from mise.toml
+bun install --frozen-lockfile      # deterministic, lockfile-exact install
+```
+
+`--frozen-lockfile` is mandatory before opening a PR. If `bun install` would modify `bun.lock`, your dependency change is a separate concern — surface it explicitly in the PR description.
+
+### Pre-flight (must pass before opening a PR)
+
+```bash
+bunx tsc --noEmit          # typecheck
+bun run lint               # oxlint
+bun run test               # vitest run
+bunx electron-vite build   # production build sanity check
+```
+
+All four must exit 0. The full local gate set is described under "Pass Local Checks Before Push" below.
 
 ## Rule 1: Atomic PRs
 
