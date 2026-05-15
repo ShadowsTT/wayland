@@ -7,8 +7,11 @@
 // Sentry must be initialized first
 // Use electron-specific renderer package only inside Electron; fall back to the
 // browser SDK when running as a standalone web server (no window.electronAPI).
+// Skip entirely when VITE_SENTRY_DSN is unset (dev) — avoids spamming the
+// console with `sentry-ipc://` protocol-handler errors that have no effect.
 import { createScrubPii } from '@/common/utils/sentryPii';
-if ((window as { electronAPI?: unknown }).electronAPI) {
+const __sentryDsn = (import.meta as ImportMeta & { env?: { VITE_SENTRY_DSN?: string } }).env?.VITE_SENTRY_DSN;
+if (__sentryDsn && (window as { electronAPI?: unknown }).electronAPI) {
   // Dynamic import avoids bundling sentry-ipc:// protocol code into the web build
   import('@sentry/electron/renderer')
     .then((Sentry) => {
