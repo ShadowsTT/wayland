@@ -29,7 +29,7 @@
  * A small set of constant control names (heartbeat, auth) is also allowed.
  */
 
-import { bridge } from '@office-ai/platform';
+import { bridge, storage } from '@office-ai/platform';
 
 /** Keys registered via `buildProvider` (main-process providers, renderer invokes). */
 const providerKeys = new Set<string>();
@@ -86,6 +86,32 @@ export function buildEmitter<Params extends unknown = undefined>(
 ): ReturnType<typeof bridge.buildEmitter<Params>> {
   emitterKeys.add(key);
   return bridge.buildEmitter<Params>(key);
+}
+
+/**
+ * Wrap `storage.buildStorage` so every namespace's `get`/`set`/`clear`/`remove`
+ * wire key is recorded in the allowlist. The platform's internal `buildStorage`
+ * calls `bridge.buildProvider` directly (NOT our wrapped `buildProvider`), so
+ * without this wrapper every storage namespace silently bypasses C1.
+ *
+ * Wire keys per namespace (from @office-ai/platform internals):
+ *   `<namespace>.storage.get`
+ *   `<namespace>.storage.set`
+ *   `<namespace>.storage.clear`
+ *   `<namespace>.storage.remove`
+ *
+ * Behavior is otherwise identical to `storage.buildStorage` — pure side-effect
+ * wrapper for allowlist registration.
+ */
+export function buildStorage<Refer = unknown>(
+  namespace: string,
+  options?: { debug: boolean }
+): ReturnType<typeof storage.buildStorage<Refer>> {
+  providerKeys.add(`${namespace}.storage.get`);
+  providerKeys.add(`${namespace}.storage.set`);
+  providerKeys.add(`${namespace}.storage.clear`);
+  providerKeys.add(`${namespace}.storage.remove`);
+  return options ? storage.buildStorage<Refer>(namespace, options) : storage.buildStorage<Refer>(namespace);
 }
 
 /**

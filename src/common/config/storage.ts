@@ -6,21 +6,25 @@
 
 import type { AcpBackend, AcpBackendAll, AcpBackendConfig } from '@/common/types/acpTypes';
 import type { SpeechToTextConfig } from '@/common/types/speech';
-import { storage } from '@office-ai/platform';
+// C1: route through wrapped buildStorage so every namespace's storage.{get,set,clear,remove}
+// wire key is recorded in the bridge allowlist. The raw `storage.buildStorage` from
+// @office-ai/platform bypasses the allowlist and causes "Bridge event not allowed"
+// rejections at runtime for every config/storage read.
+import { buildStorage } from '@/common/adapter/bridgeAllowlist';
 
 /**
  * @description 聊天相关的存储
  */
-export const ChatStorage = storage.buildStorage<IChatConversationRefer>('agent.chat');
+export const ChatStorage = buildStorage<IChatConversationRefer>('agent.chat');
 
 // 聊天消息存储
-export const ChatMessageStorage = storage.buildStorage('agent.chat.message');
+export const ChatMessageStorage = buildStorage('agent.chat.message');
 
 // 系统配置存储
-export const ConfigStorage = storage.buildStorage<IConfigStorageRefer>('agent.config');
+export const ConfigStorage = buildStorage<IConfigStorageRefer>('agent.config');
 
 // 系统环境变量存储
-export const EnvStorage = storage.buildStorage<IEnvStorageRefer>('agent.env');
+export const EnvStorage = buildStorage<IEnvStorageRefer>('agent.env');
 
 export interface IConfigStorageRefer {
   'gemini.config': {
