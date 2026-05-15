@@ -173,8 +173,11 @@ export async function createAmbientWindow(): Promise<void> {
     focusable: false,
     webPreferences: {
       preload: path.join(PRELOAD_DIR, 'ambientPreload.js'),
+      sandbox: true,
       contextIsolation: true,
       nodeIntegration: false,
+      nodeIntegrationInWorker: false,
+      webviewTag: false,
     },
   });
 

@@ -24,8 +24,15 @@ export class WeixinLoginHandler {
         width: 300,
         height: 300,
         show: false,
-        webPreferences: { nodeIntegration: false, contextIsolation: true },
+        webPreferences: {
+          sandbox: true,
+          contextIsolation: true,
+          nodeIntegration: false,
+          nodeIntegrationInWorker: false,
+          webviewTag: false,
+        },
       });
+      hidden.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
 
       const timeoutId = setTimeout(() => {
         clearInterval(poll);
