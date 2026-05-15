@@ -7,6 +7,8 @@
 import { ipcBridge } from '@/common';
 import { trackUpload, type UploadSource } from '@/renderer/hooks/file/useUploadState';
 import { isElectronDesktop } from '@/renderer/utils/platform';
+import { getCsrfToken } from '@process/webserver/middleware/csrfClient';
+import { CSRF_HEADER_NAME } from '@process/webserver/config/constants';
 
 /**
  * Upload a file to the server via HTTP multipart (WebUI mode).
@@ -26,9 +28,16 @@ export async function uploadFileViaHttp(
   }
 
   return new Promise<string>((resolve, reject) => {
+    const csrfToken = getCsrfToken();
+    if (!csrfToken) {
+      reject(new Error('CSRF token not available — please refresh login'));
+      return;
+    }
+
     const xhr = new XMLHttpRequest();
     xhr.open('POST', '/api/upload');
     xhr.withCredentials = true;
+    xhr.setRequestHeader(CSRF_HEADER_NAME, csrfToken);
 
     if (onProgress) {
       xhr.upload.addEventListener('progress', (e) => {
