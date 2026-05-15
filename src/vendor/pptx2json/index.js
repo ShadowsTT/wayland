@@ -17,11 +17,13 @@
 
 'use strict';
 
-const fs = require('fs').promises;
-const path = require('path');
-const assert = require('assert');
-const JSZip = require('jszip');
-const xml2js = require('xml2js');
+// ESM imports for vite/rollup. Original CJS requires worked under node_modules
+// resolution but rollup's strict ESM parsing of `src/vendor/` rejects them.
+import { promises as fs } from 'fs';
+import path from 'path';
+import assert from 'assert';
+import JSZip from 'jszip';
+import xml2js from 'xml2js';
 
 const PresentationXML = 'ppt/presentation.xml';
 
@@ -211,4 +213,4 @@ class PPTX2Json {
   }
 }
 
-module.exports = PPTX2Json;
+export default PPTX2Json;
