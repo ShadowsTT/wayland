@@ -31,7 +31,15 @@ export async function writeFileAtomic(
 ): Promise<void> {
   const tmp = `${targetPath}.tmp-${process.pid}-${Date.now()}`;
   await fs.writeFile(tmp, data, opts);
-  await fs.rename(tmp, targetPath);
+  try {
+    await fs.rename(tmp, targetPath);
+  } catch (err) {
+    // Best-effort cleanup so EXDEV / ENOSPC / EACCES don't orphan the tmp.
+    // Under ENOSPC the orphan would consume the very bytes that caused the
+    // failure; swallow unlink errors so the original rename error propagates.
+    await fs.unlink(tmp).catch(() => {});
+    throw err;
+  }
 }
 
 export function writeFileSyncAtomic(
@@ -41,5 +49,15 @@ export function writeFileSyncAtomic(
 ): void {
   const tmp = `${targetPath}.tmp-${process.pid}-${Date.now()}`;
   fsSync.writeFileSync(tmp, data, opts);
-  fsSync.renameSync(tmp, targetPath);
+  try {
+    fsSync.renameSync(tmp, targetPath);
+  } catch (err) {
+    // Best-effort cleanup so EXDEV / ENOSPC / EACCES don't orphan the tmp.
+    try {
+      fsSync.unlinkSync(tmp);
+    } catch {
+      // Ignore — surface the original rename error below.
+    }
+    throw err;
+  }
 }

@@ -12,30 +12,35 @@
  *   - sanitizeSvg  — Mermaid diagrams and other SVG renders
  *   - sanitizeMath — KaTeX output (may contain HTML, SVG, and MathML)
  *
- * If a specific call site needs an extra tag or attribute that DOMPurify's
- * default profile strips (e.g. Mermaid's `<foreignObject>`), pass per-call
- * overrides at the call site rather than loosening the helpers here. Keeping
- * the global profiles tight is the whole point.
+ * `USE_PROFILES` is locked per helper and intentionally excluded from `extra`
+ * via `Omit<Config, 'USE_PROFILES'>` — callers cannot widen or swap the base
+ * profile through spread. If a specific call site needs an extra tag or
+ * attribute that DOMPurify's default profile strips (e.g. Mermaid's
+ * `<foreignObject>`), pass per-call ADD_TAGS / ADD_ATTR overrides at the call
+ * site rather than loosening the helpers here. Keeping the global profiles
+ * tight is the whole point.
  */
 import DOMPurify, { type Config } from 'dompurify';
 
-export function sanitizeHtml(input: string, extra?: Config): string {
+type SanitizeExtra = Omit<Config, 'USE_PROFILES'>;
+
+export function sanitizeHtml(input: string, extra?: SanitizeExtra): string {
   return DOMPurify.sanitize(input, {
+    ...extra,
     USE_PROFILES: { html: true },
-    ...extra,
   }) as unknown as string;
 }
 
-export function sanitizeSvg(input: string, extra?: Config): string {
+export function sanitizeSvg(input: string, extra?: SanitizeExtra): string {
   return DOMPurify.sanitize(input, {
+    ...extra,
     USE_PROFILES: { svg: true, svgFilters: true },
-    ...extra,
   }) as unknown as string;
 }
 
-export function sanitizeMath(input: string, extra?: Config): string {
+export function sanitizeMath(input: string, extra?: SanitizeExtra): string {
   return DOMPurify.sanitize(input, {
-    USE_PROFILES: { html: true, mathMl: true, svg: true },
     ...extra,
+    USE_PROFILES: { html: true, mathMl: true, svg: true },
   }) as unknown as string;
 }
