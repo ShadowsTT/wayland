@@ -36,6 +36,90 @@ interface ElectronWebView extends HTMLElement {
 }
 
 /**
+ * Normalize a filesystem path for containment comparison:
+ *  - strip `file://` prefix
+ *  - collapse backslashes to forward slashes
+ *  - collapse repeated slashes
+ *  - drop trailing slash (except root)
+ */
+function normalizeForContainment(p: string): string {
+  let s = p.replace(/^file:\/\//, '').replace(/\\/g, '/');
+  s = s.replace(/\/+/g, '/');
+  if (s.length > 1 && s.endsWith('/')) s = s.slice(0, -1);
+  return s;
+}
+
+/**
+ * Returns true iff `candidate` is the same as, or contained within, `baseDir`.
+ * Both inputs are expected to be absolute (or `file://`-prefixed). Uses
+ * prefix matching on normalized, slash-segmented paths so `/foo/bar` does
+ * NOT match `/foo/bar2`.
+ *
+ * Case-insensitive compare across the whole path — the safer default for a
+ * renderer that doesn't know the host filesystem's case-sensitivity. Linux
+ * case-sensitivity is intentionally traded away here; the worst case is a
+ * stricter, not laxer, check.
+ */
+function isContained(baseDir: string, candidate: string): boolean {
+  const base = normalizeForContainment(baseDir);
+  const cand = normalizeForContainment(candidate);
+  if (!base || !cand) return false;
+  // Defense in depth: reject unresolved traversal segments.
+  if (cand.split('/').includes('..')) return false;
+  const baseLc = base.toLowerCase();
+  const candLc = cand.toLowerCase();
+  if (candLc === baseLc) return true;
+  const prefix = baseLc.endsWith('/') ? baseLc : baseLc + '/';
+  return candLc.startsWith(prefix);
+}
+
+/**
+ * Extract the directory of the given HTML file path. Strips any `file://`
+ * prefix and trailing slash so the result is a directory path suitable for
+ * use as a containment boundary.
+ */
+function htmlBaseDir(htmlFilePath: string): string {
+  const clean = htmlFilePath.replace(/^file:\/\//, '');
+  const lastFwd = clean.lastIndexOf('/');
+  const lastBwd = clean.lastIndexOf('\\');
+  const cut = Math.max(lastFwd, lastBwd);
+  if (cut < 0) return clean;
+  return clean.substring(0, cut);
+}
+
+/**
+ * Allowlist of image MIME types accepted by the inliner. Other extensions
+ * are rejected outright rather than falling back to application/octet-stream
+ * (which would let an HTML file inline arbitrary non-image bytes as <img src>).
+ *
+ * NOTE: SVG is allowed but is itself an active-content format — sanitization
+ * before inlining is a separate follow-up item.
+ */
+const ALLOWED_IMAGE_MIME = new Set<string>([
+  'image/png',
+  'image/jpeg',
+  'image/gif',
+  'image/webp',
+  'image/svg+xml',
+]);
+
+function isAllowedImagePath(p: string): boolean {
+  const m = /\.([a-zA-Z0-9]+)(?:\?|#|$)/.exec(p);
+  if (!m) return false;
+  const ext = m[1].toLowerCase();
+  const map: Record<string, string> = {
+    png: 'image/png',
+    jpg: 'image/jpeg',
+    jpeg: 'image/jpeg',
+    gif: 'image/gif',
+    webp: 'image/webp',
+    svg: 'image/svg+xml',
+  };
+  const mime = map[ext];
+  return Boolean(mime && ALLOWED_IMAGE_MIME.has(mime));
+}
+
+/**
  * Resolve relative path to absolute path
  * @param basePath Base file path
  * @param relativePath Relative path
@@ -86,6 +170,37 @@ function resolveRelativePath(basePath: string, relativePath: string): string {
 async function inlineRelativeResources(html: string, basePath: string): Promise<string> {
   let result = html;
 
+  // Containment boundary: the HTML file's own directory. A malicious HTML
+  // file can construct paths like `../../../../etc/passwd`; resolving such
+  // a path with `resolveRelativePath` would leave the boundary, so we
+  // reject anything not contained inside `baseDir` here in the renderer
+  // before invoking any privileged file-read bridge (M7).
+  //
+  // We deliberately do NOT widen the boundary to the workspace root: the
+  // renderer doesn't currently carry that context for previews, and a
+  // stricter-than-needed boundary is the safer default. If a future preview
+  // legitimately needs sibling-directory resources, plumb the workspace
+  // root in and widen `boundary` then.
+  const boundary = htmlBaseDir(basePath);
+
+  const tryResolveContained = (relativePath: string, sourceBase: string): string | null => {
+    // Reject absolute paths and Windows drive-rooted paths outright. Relative
+    // inlining must stay inside the HTML's directory; absolute references
+    // bypass the boundary entirely.
+    if (relativePath.startsWith('/') || /^[a-zA-Z]:[\\/]/.test(relativePath)) {
+      return null;
+    }
+    // `resolveRelativePath` collapses `..` segments; the containment check
+    // below is the actual guard. We allow `..` in the input string because
+    // legitimate relative paths like `./assets/../assets/foo.png` exist and
+    // still land inside the boundary.
+    const absolute = resolveRelativePath(sourceBase, relativePath);
+    if (!isContained(boundary, absolute)) {
+      return null;
+    }
+    return absolute;
+  };
+
   // 1. Handle <img src="relative"> -> base64
   const imgRegex = /<img([^>]*)\ssrc=["'](?!https?:\/\/|data:|\/\/)([^"']+)["']([^>]*)>/gi;
   const imgMatches = [...result.matchAll(imgRegex)];
@@ -93,7 +208,18 @@ async function inlineRelativeResources(html: string, basePath: string): Promise<
   for (const match of imgMatches) {
     const [fullMatch, before, src, after] = match;
     try {
-      const absolutePath = resolveRelativePath(basePath, src);
+      const absolutePath = tryResolveContained(src, basePath);
+      if (!absolutePath) {
+        console.warn('[HTMLRenderer] Rejected out-of-boundary image src:', src);
+        continue;
+      }
+      // MIME allowlist: only accept known image extensions. Unknown
+      // extensions are rejected so a hostile HTML cannot smuggle non-image
+      // bytes through <img src> via the fsBridge octet-stream fallback (M7).
+      if (!isAllowedImagePath(absolutePath)) {
+        console.warn('[HTMLRenderer] Rejected non-allowlisted image extension:', src);
+        continue;
+      }
       const dataUrl = await ipcBridge.fs.getImageBase64.invoke({ path: absolutePath });
       if (dataUrl) {
         // getImageBase64 already returns complete data URL
@@ -115,7 +241,11 @@ async function inlineRelativeResources(html: string, basePath: string): Promise<
     const isStylesheet = /rel=["']stylesheet["']/i.test(fullMatch) || href.endsWith('.css');
     if (isStylesheet) {
       try {
-        const absolutePath = resolveRelativePath(basePath, href);
+        const absolutePath = tryResolveContained(href, basePath);
+        if (!absolutePath) {
+          console.warn('[HTMLRenderer] Rejected out-of-boundary CSS href:', href);
+          continue;
+        }
         const cssContent = await ipcBridge.fs.readFile.invoke({ path: absolutePath });
         if (cssContent) {
           // Replace relative url() references in CSS with base64
@@ -128,7 +258,15 @@ async function inlineRelativeResources(html: string, basePath: string): Promise<
             try {
               // Base path for CSS file
               const cssBasePath = absolutePath;
-              const resourcePath = resolveRelativePath(cssBasePath, urlPath);
+              const resourcePath = tryResolveContained(urlPath, cssBasePath);
+              if (!resourcePath) {
+                console.warn('[HTMLRenderer] Rejected out-of-boundary CSS url():', urlPath);
+                continue;
+              }
+              if (!isAllowedImagePath(resourcePath)) {
+                console.warn('[HTMLRenderer] Rejected non-allowlisted CSS url() extension:', urlPath);
+                continue;
+              }
               const dataUrl = await ipcBridge.fs.getImageBase64.invoke({ path: resourcePath });
               if (dataUrl) {
                 // getImageBase64 already returns complete data URL
@@ -155,7 +293,11 @@ async function inlineRelativeResources(html: string, basePath: string): Promise<
   for (const match of scriptMatches) {
     const [fullMatch, before, src, after] = match;
     try {
-      const absolutePath = resolveRelativePath(basePath, src);
+      const absolutePath = tryResolveContained(src, basePath);
+      if (!absolutePath) {
+        console.warn('[HTMLRenderer] Rejected out-of-boundary script src:', src);
+        continue;
+      }
       const scriptContent = await ipcBridge.fs.readFile.invoke({ path: absolutePath });
       if (scriptContent) {
         // Keep other attributes (like type, but defer/async don't work for inline)

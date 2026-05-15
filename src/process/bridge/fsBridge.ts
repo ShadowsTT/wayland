@@ -328,27 +328,39 @@ export function initFsBridge(): void {
   });
 
   ipcBridge.fs.getImageBase64.provider(async ({ path: filePath }) => {
+    // Image-MIME allowlist (M7). Unknown extensions are REJECTED — we
+    // previously fell back to application/octet-stream, which let a
+    // hostile HTML preview inline arbitrary non-image bytes as <img src>
+    // via the inliner. This provider trusts the caller's path; containment
+    // against the HTML file's directory is enforced in the renderer
+    // (HTMLRenderer.tsx). The allowlist here is defense-in-depth so any
+    // future caller that forgets containment still cannot smuggle
+    // non-image content out as a data: URL.
+    //
+    // Note: SVG is allowed but is itself an active-content format;
+    // sanitization before inlining is tracked as a follow-up item.
+    const ALLOWED_IMAGE_EXT_MIME: Record<string, string> = {
+      png: 'image/png',
+      jpg: 'image/jpeg',
+      jpeg: 'image/jpeg',
+      gif: 'image/gif',
+      webp: 'image/webp',
+      svg: 'image/svg+xml',
+    };
+    const PLACEHOLDER =
+      'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZGRkIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkltYWdlIG5vdCBmb3VuZDwvdGV4dD48L3N2Zz4=';
     try {
       const ext = (path.extname(filePath) || '').toLowerCase().replace(/^\./, '');
-      const mimeMap: Record<string, string> = {
-        png: 'image/png',
-        jpg: 'image/jpeg',
-        jpeg: 'image/jpeg',
-        gif: 'image/gif',
-        webp: 'image/webp',
-        bmp: 'image/bmp',
-        svg: 'image/svg+xml',
-        ico: 'image/x-icon',
-        tif: 'image/tiff',
-        tiff: 'image/tiff',
-        avif: 'image/avif',
-      };
-      const mime = mimeMap[ext] || 'application/octet-stream';
+      const mime = ALLOWED_IMAGE_EXT_MIME[ext];
+      if (!mime) {
+        console.warn('[fsBridge] getImageBase64 rejected non-allowlisted extension:', ext || '(none)');
+        return PLACEHOLDER;
+      }
       const base64 = await fs.readFile(filePath, { encoding: 'base64' });
       return `data:${mime};base64,${base64}`;
-    } catch (error) {
+    } catch (_error) {
       // Return a placeholder data URL instead of throwing
-      return 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZGRkIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkltYWdlIG5vdCBmb3VuZDwvdGV4dD48L3N2Zz4=';
+      return PLACEHOLDER;
     }
   });
 
@@ -569,6 +581,8 @@ export function initFsBridge(): void {
   // Read file content (UTF-8 encoding)
   // V8 string length limit is ~512MB; guard against RangeError on oversized files
   const MAX_READ_FILE_SIZE = 256 * 1024 * 1024; // 256 MB
+  // Cap binary reads to prevent main-process OOM on attacker-controlled paths (M6)
+  const MAX_READ_FILE_BUFFER_SIZE = 64 * 1024 * 1024; // 64 MB
 
   ipcBridge.fs.readFile.provider(async ({ path: filePath }) => {
     try {
@@ -593,6 +607,12 @@ export function initFsBridge(): void {
   // Read binary file as ArrayBuffer
   ipcBridge.fs.readFileBuffer.provider(async ({ path: filePath }) => {
     try {
+      // Cap binary reads to prevent main-process OOM on attacker-controlled paths (M6)
+      const stat = await fs.stat(filePath);
+      if (stat.size > MAX_READ_FILE_BUFFER_SIZE) {
+        console.warn(`[fsBridge] File too large to read as buffer (${stat.size} bytes): ${filePath}`);
+        return null;
+      }
       const buffer = await fs.readFile(filePath);
       // Convert Node.js Buffer to ArrayBuffer
       return buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength);
