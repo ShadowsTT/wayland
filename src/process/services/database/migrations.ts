@@ -1359,6 +1359,60 @@ const migration_v30: IMigration = {
 };
 
 /**
+ * Migration v30 -> v31: Clear stale ACP session state from conversations.
+ *
+ * Conversations store their last ACP session id (acpSessionId, plus a few
+ * supporting fields) in `extra` so reopening the conversation can resume
+ * the session. When the ACP wrapper version changes (e.g. the
+ * 2026-05-15 @agentclientprotocol/claude-agent-acp 0.29.2 → 0.33.1 bump),
+ * the stored session ids reference sessions from the old wrapper. The new
+ * wrapper accepts the loadSession call and returns a config, but the
+ * resumed session has inconsistent state — manifests as prompts that
+ * stall on the first tool call (the renderer displays the tool card with
+ * empty `{}` input forever, then Wayland's timeout fires).
+ *
+ * This migration is a one-time reset of the stored ACP session pointers
+ * across all conversations. Next interaction creates a fresh session
+ * against the current wrapper. Message history (the messages table) is
+ * untouched — only the live-session bookkeeping is cleared.
+ *
+ * Fields cleared from conversations.extra:
+ *   - acpSessionId               (the stale session uuid)
+ *   - acpSessionConversationId   (self-reference, no longer useful)
+ *   - acpSessionUpdatedAt        (timestamp of stale session)
+ *   - cachedConfigOptions        (cached wrapper config; may miss new options like 'effort' from 0.33.1)
+ *
+ * Also truncates the in-DB acp_session bookkeeping table (it caches live
+ * session state; clearing forces a fresh row on next interaction).
+ *
+ * Idempotent: row counts are reported. Re-running this migration on a
+ * DB that's already been cleared changes zero rows.
+ *
+ * No down(): the cleared state was already stale; there's nothing
+ * meaningful to roll back to.
+ */
+const migration_v31: IMigration = {
+  version: 31,
+  name: 'Clear stale ACP session state (one-time reset after wrapper version change)',
+  up: (db) => {
+    const r1 = db
+      .prepare(
+        "UPDATE conversations SET extra = json_remove(extra, '$.acpSessionId', '$.acpSessionConversationId', '$.acpSessionUpdatedAt', '$.cachedConfigOptions') " +
+          "WHERE extra IS NOT NULL AND json_extract(extra, '$.acpSessionId') IS NOT NULL"
+      )
+      .run();
+    const r2 = db.prepare('DELETE FROM acp_session').run();
+    console.log(
+      `[Migration v31] Cleared stale ACP session state: ${r1.changes} conversations.extra rewritten, ${r2.changes} acp_session rows deleted`
+    );
+  },
+  down: (_db) => {
+    // No rollback — the cleared session state was stale by definition.
+    console.log('[Migration v31] No rollback — cleared state was already stale');
+  },
+};
+
+/**
  * All migrations in order
  */
 // prettier-ignore
@@ -1368,6 +1422,7 @@ export const ALL_MIGRATIONS: IMigration[] = [
   migration_v13, migration_v14, migration_v15, migration_v16, migration_v17, migration_v18,
   migration_v19, migration_v20, migration_v21, migration_v22, migration_v23, migration_v24,
   migration_v25, migration_v26, migration_v27, migration_v28, migration_v29, migration_v30,
+  migration_v31,
 ];
 
 /**
