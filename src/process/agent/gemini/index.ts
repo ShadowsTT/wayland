@@ -557,15 +557,11 @@ export class GeminiAgent {
           return;
         }
 
-        // InvalidStream is surfaced as an error to the user.
-        // Core layer (geminiChat.ts + client.ts) already handles retry internally.
+        // Defensive: the legacy `invalid_stream` synthetic event used to be re-emitted
+        // as a user-visible error here. utils.ts no longer forwards InvalidStream events
+        // from aioncli-core because the library retries transparently (#GEMINI-RETRY-NOISE
+        // fix, 2026-05-16). Anything still arriving with this type is swallowed.
         if (data.type === ('invalid_stream' as string)) {
-          const eventData = data.data as { message: string; retryable: boolean };
-          this.onStreamEvent({
-            type: 'error',
-            data: eventData.message || 'Invalid response stream detected. Please try again.',
-            msg_id: uuid(),
-          });
           return;
         }
 

@@ -264,21 +264,23 @@ export const processGeminiStreamEvents = async (
           break;
         }
         case ServerGeminiEventType.Retry:
-          onStreamEvent({
-            type: ServerGeminiEventType.Error,
-            data: 'Request is being retried after a temporary failure. Please wait…',
-          });
+          // Library-internal retry signal (aioncli-core decides to re-issue the request).
+          // The retry happens transparently inside @office-ai/aioncli-core — by the time
+          // this event reaches us, the second attempt is already in flight. Surfacing it
+          // to the renderer as an error misled users into thinking the request had failed;
+          // it had not. Log for diagnostics, do not propagate.
+          console.log('[GeminiStream] aioncli-core retrying (transient)');
           break;
         case ServerGeminiEventType.InvalidStream:
-          // InvalidStream indicates the model returned invalid content (empty response, no finish reason, etc.)
-          // This is typically a transient issue - we emit a special event type so the caller can implement retry
-          onStreamEvent({
-            type: 'invalid_stream' as ServerGeminiEventType,
-            data: {
-              message: 'Invalid response stream detected. Retrying...',
-              retryable: true,
-            },
-          });
+          // Same situation as Retry: aioncli-core's `streamWithRetries` + client.js
+          // "Please continue." mechanism handles invalid-stream recovery internally
+          // (validated at @office-ai/aioncli-core/dist/src/core/client.js:486-528).
+          // We previously re-emitted this as a `type: 'error'` event, which surfaced
+          // a scary red "Invalid response stream detected. Retrying..." warning even
+          // though the library was successfully recovering on its own. If retries are
+          // ultimately exhausted, the final turn will fail through the normal error
+          // path; we don't need to flag the intermediate retries.
+          console.log('[GeminiStream] aioncli-core invalid-stream (internal retry will run)');
           break;
         case ServerGeminiEventType.ChatCompressed:
         case ServerGeminiEventType.UserCancelled:
