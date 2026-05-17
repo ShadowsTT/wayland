@@ -33,7 +33,26 @@ export function initChannelBridge(channelRepo: IChannelRepository): void {
    */
   channel.getPluginStatus.provider(async () => {
     try {
-      const BUILTIN_TYPES = new Set(['telegram', 'lark', 'dingtalk', 'slack', 'discord', 'weixin', 'wecom']);
+      // MUST stay in lock-step with ChannelManager.loadEnabledPlugins
+      // builtinStartableTypes and the constructor's registerPlugin calls.
+      // Stale entries here misclassify shipped channels as extensions and
+      // hide them from Settings on restart (codex re-audit Miss 1, 2026-05-17).
+      const BUILTIN_TYPES = new Set([
+        'telegram',
+        'lark',
+        'dingtalk',
+        'weixin',
+        'wecom',
+        // Phase 1 (W1.1) — tier-1
+        'discord',
+        'slack',
+        'sms-twilio',
+        'whatsapp',
+        // Phase 2 (W1.2) — tier-2
+        'email-agentmail',
+        'email-imap',
+        'matrix',
+      ]);
 
       let dbPlugins: import('@process/channels/types').IChannelPluginConfig[] = [];
       try {
@@ -145,6 +164,13 @@ export function initChannelBridge(channelRepo: IChannelRepository): void {
         slack: 'Slack',
         discord: 'Discord',
         weixin: 'WeChat',
+        wecom: 'WeCom',
+        // Phase 1 + 2 (added post-codex-recheck 2026-05-17)
+        'sms-twilio': 'SMS (Twilio)',
+        whatsapp: 'WhatsApp',
+        'email-agentmail': 'Email (AgentMail)',
+        'email-imap': 'Email (IMAP/SMTP)',
+        matrix: 'Matrix',
       };
       for (const builtinType of BUILTIN_TYPES) {
         if (statusMap.has(builtinType)) continue;

@@ -127,16 +127,27 @@ export class MatrixPlugin extends BasePlugin {
     // (audit Miss 3). If whoami() disagrees with the configured credentials,
     // warn loudly but trust the server — the access token is bound to the
     // server-side mxid, not the one the operator pasted in.
+    // Fail-fast on whoami() failure (codex re-audit Miss H3-partial). If we
+    // can't confirm the server-side mxid we can't trust the echo filter, so
+    // refuse to start rather than silently risking the bot replying to itself.
+    // The "happy path warn-and-adopt" still handles configured-vs-actual
+    // mismatch when whoami() succeeds.
     try {
       const me = await this.client.whoami();
-      if (me.user_id && me.user_id !== this.selfUserId) {
+      if (!me.user_id) {
+        throw new Error('whoami() returned no user_id');
+      }
+      if (me.user_id !== this.selfUserId) {
         console.warn(
-          `[MatrixPlugin] whoami() returned ${me.user_id} but credentials said ${this.selfUserId}; using server value`,
+          `[MatrixPlugin] whoami() returned ${me.user_id} but credentials said ${this.selfUserId}; adopting server value`,
         );
         this.selfUserId = me.user_id;
       }
     } catch (error) {
-      console.warn('[MatrixPlugin] whoami() failed; using credentials.userId as-is:', error);
+      const message = error instanceof Error ? error.message : String(error);
+      throw new Error(
+        `Matrix whoami() failed; refusing to start without confirmed identity (echo-filter safety): ${message}`,
+      );
     }
     this.setupHandlers();
     await this.client.startClient({ initialSyncLimit: INITIAL_SYNC_LIMIT });

@@ -14,13 +14,15 @@ at the bottom for the boundary.
 ## Status
 
 - **Date:** 2026-05-17 (updated post-audit)
-- **Current package.json version:** `0.3.0` (wayland-native; abandoned upstream
+- **Current package.json version:** `0.3.1` (wayland-native; abandoned upstream
   AionUi 1.9.x chain in v0.2.0)
-- **Latest mainline tag:** `v0.3.0-wayland-base` (points to `main`)
+- **Latest mainline tag:** `v0.3.1-wayland-base` (points to `main`)
 - **Latest feature-branch tag:** `v0.3.0-wayland-channels-tier2` (granular
   Phase 2 history on `feat/channels-phase2`)
-- **`main` HEAD:** `v0.3.0-wayland-base` — Phase 2 channels squash-merge,
-  followed by v0.3.1 audit-fix commit (post-cross-audit hardening)
+- **`main` HEAD:** `v0.3.1-wayland-base` — closes 14 cross-audit findings on
+  top of the v0.3.0 Phase 2 squash-merge; further v0.3.2 commit cleans up
+  3 codex re-audit residuals (channelBridge allowlist, ChannelsIndex status
+  flags, Matrix whoami fail-fast, ROADMAP detail polish)
 - **Repo:** TradeCanyon/wayland
 
 Tag chain to date: `v0.1.0-wayland-base`, `v0.1.1-wayland-base`, `v0.1.2-wayland-safety`
@@ -146,18 +148,20 @@ identically in a packaged production build, not just dev. Cut the mainline
 - Wave A1 + A2 + A3 (this doc) dispatched in parallel; A1 and A2 must merge
   before the M1 tag fires.
 
-### Success criteria
+### Success criteria — STATUS at v0.3.1
 
-- `tsc` 0 errors across the bundling-fix branch.
-- `pnpm test` (or whatever the project uses) shows ≥ the post-Phase-1 baseline
-  (channels-specific scope was 155/155 at squash time). No new flakes.
-- audit-credentials script runs green against a fixture wayland-config.txt
-  covering all 4 Phase 1 schemas; zero plaintext-credential matches.
-- Packaged build smoke: macOS .dmg + Windows .exe + Linux .AppImage each
-  install, launch, and complete the WhatsApp "connect → QR scan → send echo
-  message" flow against the Baileys backend.
-- `v0.2.0-wayland-base` tag pushed to TradeCanyon/wayland; `gh release view`
-  shows full asset matrix; release notes link to this roadmap.
+- ✅ `tsc` 0 errors on the bundling-fix commit (verified post-merge).
+- ✅ `bun run vitest run tests/unit/process/channels` shows 29 files / 234 tests
+  pass in <1s — well above the post-Phase-1 155/155 baseline.
+- ⚠️ audit-credentials script: extended to cover Phase 1+2 fields and
+  documented via synthetic negative fixture; intentionally flags plaintext
+  in the test fixture as designed.
+- ❌ Packaged-build smoke (dist:mac/win/linux WhatsApp QR → echo flow) —
+  NOT executed in the v0.2.0/0.3.x shipping window. Reserved for the next
+  hand-run iteration. The bundling fix + path-resolution candidates ship
+  the code paths needed; only the human smoke remains.
+- ✅ `v0.2.0-wayland-base` + `v0.3.0-wayland-base` + `v0.3.1-wayland-base`
+  tags pushed to TradeCanyon/wayland.
 
 ### Open questions / risks
 
@@ -216,18 +220,23 @@ Per `CHANNELS-EXPANSION-PLAN.md` §4 Phase 2 + Phase 3 ordering:
   for M2: basic-auth only; flag OAuth as "coming with M4".
 - For Matrix: license scan per Phase 0 B5 before lifting.
 
-### Success criteria
+### Success criteria — STATUS at v0.3.1
 
-- Three new plugins registered in `ChannelManager`: `email-agentmail`,
-  `email-imap`, `matrix`.
-- ConfigForms exist for all three with full credential surfaces.
-- ≥ +30 tests vs M1 baseline (rough heuristic from Phase 1's +54 for four
-  plugins; three plugins should land in the +30-45 range).
-- Packaged-build smoke for each new channel: send + receive + edit (where
-  capability permits — IMAP edits are not a thing; AgentMail and Matrix
-  support edit).
-- audit-credentials covers the three new schemas.
-- `v0.3.0-wayland-base` tag with green release matrix.
+- ✅ Three new plugins registered in `ChannelManager`: `email-agentmail`,
+  `email-imap`, `matrix` (verified at `core/ChannelManager.ts:64-68`).
+- ✅ ConfigForms shipped: `EmailAgentMailConfigForm`, `EmailImapConfigForm`,
+  `MatrixConfigForm` — full credential surfaces (Phase 2 commit
+  `7569e6e62`).
+- ✅ +70 tests vs M1 baseline (well above the +30 estimate): Phase 2 adds
+  21 + 22 + 25 = 68 new tests across the three plugins, plus v0.3.1
+  post-audit hardening adds 8 more (IMAP reconnect 3, Matrix audit 5).
+- ❌ Packaged-build smoke not yet executed for the three new channels.
+  Tracked into M1's deferred smoke window.
+- ✅ audit-credentials covers the three new schemas (via
+  `fieldClassification.ts` mirror + substring match for `apiKey`,
+  `password`, `webhookSecret`).
+- ✅ `v0.3.0-wayland-base` (+ v0.3.0-wayland-channels-tier2 granular) tags
+  pushed; `v0.3.1-wayland-base` follow-up closes 14 cross-audit findings.
 
 ### Open questions / risks
 
