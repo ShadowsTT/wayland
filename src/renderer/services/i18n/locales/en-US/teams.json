@@ -16,6 +16,7 @@
     "standing": "Standing Companies",
     "standingHint": "{{count}} — persistent, ritualized orgs that run continuously",
     "teams": "Teams",
-    "teamsHint": "{{count}} — ad-hoc squads for a specific outcome. Spawn, ship, dissolve."
+    "teamsHint": "{{count}} — ad-hoc squads for a specific outcome. Spawn, ship, dissolve.",
+    "startNew": "Start a new team"
   }
 }

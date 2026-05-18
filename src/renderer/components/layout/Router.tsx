@@ -118,6 +118,12 @@ const PanelRoute: React.FC<{ layout: React.ReactElement }> = ({ layout }) => {
           <Route path='/scheduled' element={withRouteFallback(ScheduledTasksPage)} />
           <Route path='/scheduled/:jobId' element={withRouteFallback(TaskDetailPage)} />
           <Route path='/assistants' element={withRouteFallback(AssistantsLibraryPage)} />
+          {/*
+           * Plural /teams* = the team-blitz launcher library (W2a+).
+           * Singular /team/:id above (line 103) is the legacy
+           * multi-user team-mode surface, gated by TEAM_MODE_ENABLED.
+           * These are intentionally distinct routes; do not consolidate.
+           */}
           <Route path='/teams' element={withRouteFallback(TeamsLibraryPage)} />
           <Route path='/teams/new' element={withRouteFallback(TeamLauncherPage)} />
           <Route path='/teams/:teamId/launch' element={withRouteFallback(TeamLauncherPage)} />

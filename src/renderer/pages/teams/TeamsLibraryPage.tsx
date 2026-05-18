@@ -14,6 +14,13 @@
  * Source of truth for the team list: useAssistantList() (same hook
  * /assistants uses). We filter to kind === 'team' here; /assistants
  * filters the opposite direction (see AssistantsLibraryPage T2a.4).
+ *
+ * Known follow-up: useAssistantList() does not expose a loading flag, so
+ * on a cold load there's a brief moment before extension-contributed
+ * assistants resolve where totalTeams === 0 and the empty state flashes.
+ * Subsequent navigations are cached by useSWR so the flash only happens
+ * on cold app start. Fix requires adding `isLoading` to useAssistantList
+ * (shared with /assistants); tracked for next bundle-rendering refactor.
  */
 
 import { Button } from '@arco-design/web-react';
@@ -110,18 +117,22 @@ const TeamsLibraryPage: React.FC = () => {
           </section>
         )}
 
-        {(teams.length > 0 || standing.length > 0) && (
+        {totalTeams > 0 && (
           <section className={styles.sectionGroup} data-testid='teams-group-teams'>
             <header className={styles.sectionHeader}>
               <span className={`${styles.sectionTitle} ${styles.sectionTitleTeams}`}>
-                {t('teams.group.teams', { defaultValue: 'Teams' })}
+                {teams.length > 0
+                  ? t('teams.group.teams', { defaultValue: 'Teams' })
+                  : t('teams.group.startNew', { defaultValue: 'Start a new team' })}
               </span>
-              <span className={styles.sectionHint}>
-                {t('teams.group.teamsHint', {
-                  count: teams.length,
-                  defaultValue: '{{count}} — ad-hoc squads for a specific outcome. Spawn, ship, dissolve.',
-                })}
-              </span>
+              {teams.length > 0 && (
+                <span className={styles.sectionHint}>
+                  {t('teams.group.teamsHint', {
+                    count: teams.length,
+                    defaultValue: '{{count}} — ad-hoc squads for a specific outcome. Spawn, ship, dissolve.',
+                  })}
+                </span>
+              )}
             </header>
             <div className={styles.gridTeams}>
               {teams.map((team) => (

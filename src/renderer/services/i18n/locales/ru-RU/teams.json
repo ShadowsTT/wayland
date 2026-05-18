@@ -16,6 +16,7 @@
     "standing": "[TODO:translate] Standing Companies",
     "standingHint": "[TODO:translate] {{count}} — persistent, ritualized orgs that run continuously",
     "teams": "[TODO:translate] Teams",
-    "teamsHint": "[TODO:translate] {{count}} — ad-hoc squads for a specific outcome. Spawn, ship, dissolve."
+    "teamsHint": "[TODO:translate] {{count}} — ad-hoc squads for a specific outcome. Spawn, ship, dissolve.",
+    "startNew": "[TODO:translate] Start a new team"
   }
 }
