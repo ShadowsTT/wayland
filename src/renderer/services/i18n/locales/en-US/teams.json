@@ -98,5 +98,31 @@
   "activeSidebar": {
     "title": "Active",
     "rollup": "{{tokens}} tokens · ~{{usd}} this week"
+  },
+  "import": {
+    "button": "Import team",
+    "title": "Review team capabilities",
+    "intro": "This team declares the following capabilities. Grant only what you trust.",
+    "trustSelectedCta": "Trust selected",
+    "trustSelectedCtaCountdown": "Trust selected ({{seconds}}s)",
+    "sandboxCta": "Sandbox mode (no capabilities)",
+    "cancelCta": "Cancel",
+    "missingSpecialists": "Missing specialists: {{names}}. Install them first or use a different team.",
+    "success": "Team imported",
+    "error": "Failed to import team",
+    "busyError": "Import queue full — try again in a few seconds",
+    "fileReadError": "Could not read file",
+    "cap": {
+      "canReadFiles": "Read workspace files",
+      "canReadFilesDesc": "Grants this team's agents read access to files within your workspace folder. The .env, .ssh, and node_modules/.bin/.cache directories are always blocked.",
+      "canWriteFiles": "Write workspace files",
+      "canWriteFilesDesc": "Grants write + mkdir access within your workspace. Symlinks are always blocked. Protected paths always denied.",
+      "canSpawnAgents": "Spawn new teammates",
+      "canSpawnAgentsDesc": "Allows the leader to grow the roster at runtime via team_spawn_agent.",
+      "canNetworkRequest": "Make network requests",
+      "canNetworkRequestDesc": "Allows fetch/https.request calls from agent processes.",
+      "canCrossTeamMessage": "Send messages to other teams",
+      "canCrossTeamMessageDesc": "Allows team_send_message to deliver to teams outside this one."
+    }
   }
 }

@@ -98,5 +98,31 @@
   "activeSidebar": {
     "title": "[TODO:translate] Active",
     "rollup": "[TODO:translate] {{tokens}} tokens · ~{{usd}} this week"
+  },
+  "import": {
+    "button": "[TODO:translate] Import team",
+    "title": "[TODO:translate] Review team capabilities",
+    "intro": "[TODO:translate] This team declares the following capabilities. Grant only what you trust.",
+    "trustSelectedCta": "[TODO:translate] Trust selected",
+    "trustSelectedCtaCountdown": "[TODO:translate] Trust selected ({{seconds}}s)",
+    "sandboxCta": "[TODO:translate] Sandbox mode (no capabilities)",
+    "cancelCta": "[TODO:translate] Cancel",
+    "missingSpecialists": "[TODO:translate] Missing specialists: {{names}}. Install them first or use a different team.",
+    "success": "[TODO:translate] Team imported",
+    "error": "[TODO:translate] Failed to import team",
+    "busyError": "[TODO:translate] Import queue full — try again in a few seconds",
+    "fileReadError": "[TODO:translate] Could not read file",
+    "cap": {
+      "canReadFiles": "[TODO:translate] Read workspace files",
+      "canReadFilesDesc": "[TODO:translate] Grants this team's agents read access to files within your workspace folder. The .env, .ssh, and node_modules/.bin/.cache directories are always blocked.",
+      "canWriteFiles": "[TODO:translate] Write workspace files",
+      "canWriteFilesDesc": "[TODO:translate] Grants write + mkdir access within your workspace. Symlinks are always blocked. Protected paths always denied.",
+      "canSpawnAgents": "[TODO:translate] Spawn new teammates",
+      "canSpawnAgentsDesc": "[TODO:translate] Allows the leader to grow the roster at runtime via team_spawn_agent.",
+      "canNetworkRequest": "[TODO:translate] Make network requests",
+      "canNetworkRequestDesc": "[TODO:translate] Allows fetch/https.request calls from agent processes.",
+      "canCrossTeamMessage": "[TODO:translate] Send messages to other teams",
+      "canCrossTeamMessageDesc": "[TODO:translate] Allows team_send_message to deliver to teams outside this one."
+    }
   }
 }

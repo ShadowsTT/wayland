@@ -75,6 +75,9 @@ export class TeamSession extends EventEmitter {
     this.mcpServer = new TeamMcpServer({
       teamId: team.id,
       getAgents: () => this.teammateManager.getAgents(),
+      // W4b — expose the team snapshot so MCP tool dispatch can consult
+      // sandbox/capability state without re-querying the repo.
+      getTeam: () => this.team,
       mailbox: this.mailbox,
       taskManager: this.taskManager,
       spawnAgent,

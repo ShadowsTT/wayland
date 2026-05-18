@@ -23,21 +23,38 @@
  * (shared with /assistants); tracked for next bundle-rendering refactor.
  */
 
-import { Button } from '@arco-design/web-react';
-import { Plus } from 'lucide-react';
-import React, { useCallback, useMemo } from 'react';
+import { Button, Message } from '@arco-design/web-react';
+import { Plus, Upload } from 'lucide-react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
+import { ipcBridge } from '@/common';
+import { useAuth } from '@/renderer/hooks/context/AuthContext';
 import { useAssistantList } from '@/renderer/hooks/assistant';
 import type { AssistantListItem } from '@/renderer/pages/settings/AssistantSettings/types';
+import type { TeamExport } from '@process/team/importExport/TeamExportSchema';
 import BuildMyOwnTeamCard from './components/BuildMyOwnTeamCard';
+import CapabilityReviewModal, {
+  type TeamCapabilities,
+} from './components/CapabilityReviewModal';
 import TeamCard from './components/TeamCard';
 import styles from './TeamsLibraryPage.module.css';
+
+type ImportPreviewState = {
+  parsed: TeamExport;
+  capabilities: TeamCapabilities;
+  missingSpecialists: string[];
+  source: string;
+};
 
 const TeamsLibraryPage: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { assistants, localeKey } = useAssistantList();
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [importPreview, setImportPreview] = useState<ImportPreviewState | null>(null);
+  const [importLoading, setImportLoading] = useState(false);
 
   const { standing, teams } = useMemo(() => {
     const standingList: AssistantListItem[] = [];
@@ -67,6 +84,100 @@ const TeamsLibraryPage: React.FC = () => {
     });
   }, [navigate]);
 
+  // W4b — Import team flow.
+  const triggerImportPicker = useCallback(() => {
+    fileInputRef.current?.click();
+  }, []);
+
+  const handleFileSelected = useCallback(
+    async (event: React.ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0];
+      // Reset the input so picking the same file twice still fires onChange.
+      event.target.value = '';
+      if (!file) return;
+      let jsonText: string;
+      try {
+        jsonText = await file.text();
+      } catch (e) {
+        const message = e instanceof Error ? e.message : String(e);
+        Message.error(
+          `${t('teams.import.fileReadError', { defaultValue: 'Could not read file' })}: ${message}`
+        );
+        return;
+      }
+      try {
+        const preview = await ipcBridge.team.importPreview.invoke({ jsonText });
+        setImportPreview({
+          parsed: preview.parsed,
+          capabilities: preview.parsed.capabilities as TeamCapabilities,
+          missingSpecialists: preview.missingSpecialists,
+          source: file.name,
+        });
+      } catch (e) {
+        const message = e instanceof Error ? e.message : String(e);
+        Message.error(
+          `${t('teams.import.error', { defaultValue: 'Failed to import team' })}: ${message}`
+        );
+      }
+    },
+    [t]
+  );
+
+  const closeImportModal = useCallback(() => {
+    setImportPreview(null);
+    setImportLoading(false);
+  }, []);
+
+  const acceptImport = useCallback(
+    async (capabilityGrants: Record<keyof TeamCapabilities, boolean>) => {
+      if (!importPreview) return;
+      const userId = user?.id ?? 'system_default_user';
+      setImportLoading(true);
+      try {
+        const team = (await ipcBridge.team.importAccept.invoke({
+          userId,
+          parsed: importPreview.parsed,
+          capabilityGrants: capabilityGrants as Record<string, boolean>,
+          source: importPreview.source,
+        })) as { id?: string; __bridgeError?: boolean; message?: string };
+        if (team?.__bridgeError) {
+          throw new Error(team.message ?? 'Import failed');
+        }
+        Message.success(t('teams.import.success', { defaultValue: 'Team imported' }));
+        closeImportModal();
+        if (team?.id) {
+          void Promise.resolve(navigate(`/team/${team.id}`)).catch((error) => {
+            console.error('Navigation to imported team failed:', error);
+          });
+        }
+      } catch (e) {
+        const message = e instanceof Error ? e.message : String(e);
+        Message.error(
+          `${t('teams.import.error', { defaultValue: 'Failed to import team' })}: ${message}`
+        );
+        setImportLoading(false);
+      }
+    },
+    [importPreview, user?.id, t, closeImportModal, navigate]
+  );
+
+  const handleSandboxImport = useCallback(() => {
+    void acceptImport({
+      canReadFiles: false,
+      canWriteFiles: false,
+      canSpawnAgents: false,
+      canNetworkRequest: false,
+      canCrossTeamMessage: false,
+    });
+  }, [acceptImport]);
+
+  const handleTrustSelected = useCallback(
+    (grants: Record<keyof TeamCapabilities, boolean>) => {
+      void acceptImport(grants);
+    },
+    [acceptImport]
+  );
+
   return (
     <div className={styles.page} data-testid='teams-library-page'>
       <div className={styles.actionBar} data-testid='teams-action-bar'>
@@ -79,14 +190,32 @@ const TeamsLibraryPage: React.FC = () => {
             })}
           </span>
         </div>
-        <Button
-          type='primary'
-          icon={<Plus size={14} />}
-          onClick={handleBuildMyOwn}
-          data-testid='teams-build-my-own-cta'
-        >
-          {t('teams.buildMyOwn.cta', { defaultValue: 'Build my own team' })}
-        </Button>
+        <div className='flex items-center gap-8px'>
+          <Button
+            type='outline'
+            icon={<Upload size={14} />}
+            onClick={triggerImportPicker}
+            data-testid='teams-import-cta'
+          >
+            {t('teams.import.button', { defaultValue: 'Import team' })}
+          </Button>
+          <Button
+            type='primary'
+            icon={<Plus size={14} />}
+            onClick={handleBuildMyOwn}
+            data-testid='teams-build-my-own-cta'
+          >
+            {t('teams.buildMyOwn.cta', { defaultValue: 'Build my own team' })}
+          </Button>
+        </div>
+        <input
+          ref={fileInputRef}
+          type='file'
+          accept='.json,application/json'
+          onChange={handleFileSelected}
+          style={{ display: 'none' }}
+          data-testid='teams-import-file-input'
+        />
       </div>
 
       <div className={styles.scroll}>
@@ -143,6 +272,19 @@ const TeamsLibraryPage: React.FC = () => {
           </section>
         )}
       </div>
+      {importPreview && (
+        <CapabilityReviewModal
+          visible={true}
+          teamName={importPreview.parsed.name}
+          importSource={importPreview.source}
+          capabilities={importPreview.capabilities}
+          missingSpecialists={importPreview.missingSpecialists}
+          loading={importLoading}
+          onTrustSelected={handleTrustSelected}
+          onSandboxImport={handleSandboxImport}
+          onCancel={closeImportModal}
+        />
+      )}
     </div>
   );
 };
