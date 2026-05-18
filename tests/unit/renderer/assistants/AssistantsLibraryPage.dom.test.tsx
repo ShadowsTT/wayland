@@ -62,6 +62,10 @@ const mockEditor = vi.hoisted(() => ({
   handleToggleEnabled: vi.fn(),
 }));
 
+// T2a.6 — Team launchers (kind === 'team') moved to /teams via W2a.
+// Fixture now includes a team launcher to assert it gets FILTERED OUT
+// on /assistants (regression guard), plus the original specialist +
+// builtin entries that must still render.
 const mockAssistants = vi.hoisted(() => [
   {
     id: 'builtin-word-creator',
@@ -81,6 +85,7 @@ const mockAssistants = vi.hoisted(() => [
     isPreset: true,
     presetAgentType: 'gemini',
     _source: 'extension',
+    _kind: 'specialist',
   },
   {
     id: 'ext-doc-helper',
@@ -91,6 +96,18 @@ const mockAssistants = vi.hoisted(() => [
     isPreset: true,
     presetAgentType: 'claude',
     _source: 'extension',
+    _kind: 'specialist',
+  },
+  {
+    id: 'ext-cold-outbound',
+    name: 'Cold Outbound',
+    nameI18n: { 'en-US': 'Cold Outbound' },
+    descriptionI18n: { 'en-US': 'Team launcher — must NOT render on /assistants' },
+    isBuiltin: false,
+    isPreset: true,
+    presetAgentType: 'gemini',
+    _source: 'extension',
+    _kind: 'team',
   },
 ]);
 
@@ -206,22 +223,32 @@ const renderPage = (initialRoute = '/assistants') =>
   );
 
 describe('AssistantsLibraryPage', () => {
-  it('renders the three group headers and assistant cards', async () => {
+  it('renders Specialists + Built-ins groups (Teams group removed by W2a)', async () => {
     renderPage();
 
     await waitFor(() => {
       // Built-ins group always renders (BuildMyOwn lives at its tail).
       expect(screen.getByTestId('assistants-group-builtins')).toBeTruthy();
     });
-    // Teams group exists when at least one sell/run extension assistant present.
-    expect(screen.getByTestId('assistants-group-teams')).toBeTruthy();
+    // Specialists group renders when at least one specialist is present.
     expect(screen.getByTestId('assistants-group-specialists')).toBeTruthy();
+    // Teams group is gone — team launchers now live on /teams.
+    expect(screen.queryByTestId('assistants-group-teams')).toBeNull();
     // BuildMyOwnCard at end of Built-ins.
     expect(screen.getByTestId('assistant-card-build-my-own')).toBeTruthy();
-    // Cards rendered for each assistant.
+    // Cards rendered for surviving (specialist + builtin) assistants.
     expect(screen.getByTestId('assistant-card-builtin-word-creator')).toBeTruthy();
     expect(screen.getByTestId('assistant-card-ext-fire-sales')).toBeTruthy();
     expect(screen.getByTestId('assistant-card-ext-doc-helper')).toBeTruthy();
+  });
+
+  it('REGRESSION (T2a.4): renders 0 entries with _kind === "team"', async () => {
+    renderPage();
+    await waitFor(() => screen.getByTestId('assistants-library-page'));
+    // Team launchers MUST NOT render on /assistants — they moved to /teams.
+    expect(screen.queryByTestId('assistant-card-ext-cold-outbound')).toBeNull();
+    const teamTypedCards = document.querySelectorAll('[data-card-type="team"]');
+    expect(teamTypedCards.length).toBe(0);
   });
 
   it('clicking a card persists the selected agent key and would route to /guid', async () => {
@@ -258,17 +285,6 @@ describe('AssistantsLibraryPage', () => {
     await waitFor(() => {
       expect(mockEditor.handleCreate).toHaveBeenCalledTimes(1);
     });
-  });
-
-  it('groups extension assistants with category=sell into Teams', async () => {
-    renderPage();
-
-    await waitFor(() => screen.getByTestId('assistants-group-teams'));
-    const teamsGroup = screen.getByTestId('assistants-group-teams');
-    // Fire Sales has category=sell from the mock manifest — should land in Teams.
-    expect(teamsGroup.querySelector('[data-testid="assistant-card-ext-fire-sales"]')).not.toBeNull();
-    // Doc Helper (category=write) lands in Specialists, not Teams.
-    expect(teamsGroup.querySelector('[data-testid="assistant-card-ext-doc-helper"]')).toBeNull();
   });
 
   it('FilterRail type filter routes through URL and excludes non-matching cards', async () => {

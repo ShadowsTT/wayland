@@ -44,12 +44,13 @@ const defaultProps = {
 };
 
 describe('FilterRail', () => {
-  it('renders type + domain options with counts', () => {
+  it('renders type + domain options with counts (team option removed by W2a)', () => {
     render(<FilterRail {...defaultProps} onQueryChange={vi.fn()} />);
 
-    // Type rows
+    // Type rows — Teams moved to /teams in W2a so the rail no longer offers
+    // a 'team' filter on /assistants.
     expect(screen.getByTestId('assistants-filter-type-all')).toBeTruthy();
-    expect(screen.getByTestId('assistants-filter-type-team')).toBeTruthy();
+    expect(screen.queryByTestId('assistants-filter-type-team')).toBeNull();
     expect(screen.getByTestId('assistants-filter-type-specialist')).toBeTruthy();
     expect(screen.getByTestId('assistants-filter-type-builtin')).toBeTruthy();
     // Domain rows: all + 7 categories
@@ -62,8 +63,8 @@ describe('FilterRail', () => {
     const onTypeChange = vi.fn();
     render(<FilterRail {...defaultProps} onTypeChange={onTypeChange} />);
 
-    fireEvent.click(screen.getByTestId('assistants-filter-type-team'));
-    expect(onTypeChange).toHaveBeenCalledWith('team');
+    fireEvent.click(screen.getByTestId('assistants-filter-type-specialist'));
+    expect(onTypeChange).toHaveBeenCalledWith('specialist');
   });
 
   it('invokes onDomainChange when a domain row is clicked', () => {

@@ -27,9 +27,9 @@ export type FilterRailProps = {
   hasActiveFilters: boolean;
 };
 
+// T2a.4 — 'team' removed: team launchers moved to /teams.
 const TYPE_OPTIONS: ReadonlyArray<{ value: AssistantCardType | 'all'; i18nKey: string; fallback: string }> = [
   { value: 'all', i18nKey: 'assistants.filterRail.type.all', fallback: 'All' },
-  { value: 'team', i18nKey: 'assistants.filterRail.type.team', fallback: 'Teams' },
   { value: 'specialist', i18nKey: 'assistants.filterRail.type.specialist', fallback: 'Specialists' },
   { value: 'builtin', i18nKey: 'assistants.filterRail.type.builtin', fallback: 'Built-ins' },
 ];

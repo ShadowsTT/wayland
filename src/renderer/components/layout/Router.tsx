@@ -35,6 +35,8 @@ const ComponentsShowcase = React.lazy(() => import('@renderer/pages/TestShowcase
 const ScheduledTasksPage = React.lazy(() => import('@renderer/pages/cron/ScheduledTasksPage'));
 const TaskDetailPage = React.lazy(() => import('@renderer/pages/cron/ScheduledTasksPage/TaskDetailPage'));
 const TeamIndex = React.lazy(() => import('@renderer/pages/team'));
+const TeamsLibraryPage = React.lazy(() => import('@renderer/pages/teams/TeamsLibraryPage'));
+const TeamLauncherPage = React.lazy(() => import('@renderer/pages/teams/TeamLauncherPage'));
 
 const withRouteFallback = (Component: React.LazyExoticComponent<React.ComponentType>) => (
   <Suspense fallback={<AppLoader />}>
@@ -116,6 +118,9 @@ const PanelRoute: React.FC<{ layout: React.ReactElement }> = ({ layout }) => {
           <Route path='/scheduled' element={withRouteFallback(ScheduledTasksPage)} />
           <Route path='/scheduled/:jobId' element={withRouteFallback(TaskDetailPage)} />
           <Route path='/assistants' element={withRouteFallback(AssistantsLibraryPage)} />
+          <Route path='/teams' element={withRouteFallback(TeamsLibraryPage)} />
+          <Route path='/teams/new' element={withRouteFallback(TeamLauncherPage)} />
+          <Route path='/teams/:teamId/launch' element={withRouteFallback(TeamLauncherPage)} />
         </Route>
         <Route path='*' element={<Navigate to={status === 'authenticated' ? '/guid' : '/login'} replace />} />
       </Routes>

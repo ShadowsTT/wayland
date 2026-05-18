@@ -1,0 +1,21 @@
+{
+  "title": "[TODO:translate] Teams",
+  "totalCount": "[TODO:translate] {{count}} teams",
+  "siderEntry": "[TODO:translate] Teams",
+  "emptyState": "[TODO:translate] No teams available yet.",
+  "standingBadge": "[TODO:translate] Standing",
+  "card": {
+    "rolesCount": "[TODO:translate] {{count}} roles"
+  },
+  "buildMyOwn": {
+    "label": "[TODO:translate] Build my own team",
+    "hint": "[TODO:translate] Start from a blank team",
+    "cta": "[TODO:translate] Build my own team"
+  },
+  "group": {
+    "standing": "[TODO:translate] Standing Companies",
+    "standingHint": "[TODO:translate] {{count}} — persistent, ritualized orgs that run continuously",
+    "teams": "[TODO:translate] Teams",
+    "teamsHint": "[TODO:translate] {{count}} — ad-hoc squads for a specific outcome. Spawn, ship, dissolve."
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "title": "Teams",
+  "totalCount": "{{count}} teams",
+  "siderEntry": "Teams",
+  "emptyState": "No teams available yet.",
+  "standingBadge": "Standing",
+  "card": {
+    "rolesCount": "{{count}} roles"
+  },
+  "buildMyOwn": {
+    "label": "Build my own team",
+    "hint": "Start from a blank team",
+    "cta": "Build my own team"
+  },
+  "group": {
+    "standing": "Standing Companies",
+    "standingHint": "{{count}} — persistent, ritualized orgs that run continuously",
+    "teams": "Teams",
+    "teamsHint": "{{count}} — ad-hoc squads for a specific outcome. Spawn, ship, dissolve."
+  }
+}

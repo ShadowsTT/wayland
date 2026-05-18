@@ -154,21 +154,28 @@ const AssistantsLibraryPage: React.FC = () => {
   const extensionCategoryById = useMemo(() => buildExtensionCategoryMap(rawExtensions), [rawExtensions]);
 
   // --- Derive card entries ---
+  // T2a.4 — /assistants no longer renders team launchers (kind === 'team');
+  // those moved to /teams. We filter them out at the entry-derivation step
+  // so all downstream filter/count logic naturally excludes them.
   const cardEntries = useMemo<CardEntry[]>(
     () =>
-      assistants.map((assistant) => {
-        const category = resolveAssistantCategory(assistant, extensionCategoryById);
-        const type = classifyAssistant(assistant, category);
-        return { assistant, type, category };
-      }),
+      assistants
+        .filter((assistant) => assistant._kind !== 'team')
+        .map((assistant) => {
+          const category = resolveAssistantCategory(assistant, extensionCategoryById);
+          const type = classifyAssistant(assistant, category);
+          return { assistant, type, category };
+        }),
     [assistants, extensionCategoryById]
   );
 
   // --- URL-synced filter state ---
   const query = searchParams.get('q') ?? '';
   const rawType = searchParams.get('type');
+  // T2a.4 — 'team' is no longer a valid type on /assistants. A stale
+  // ?type=team URL silently falls back to 'all' rather than 404ing.
   const selectedType: AssistantCardType | 'all' =
-    rawType === 'team' || rawType === 'specialist' || rawType === 'builtin' ? rawType : 'all';
+    rawType === 'specialist' || rawType === 'builtin' ? rawType : 'all';
   const rawDomain = searchParams.get('domain');
   const selectedDomain: AssistantCategory | 'all' =
     rawDomain && (ASSISTANT_CATEGORY_VALUES as readonly string[]).includes(rawDomain)
@@ -235,16 +242,17 @@ const AssistantsLibraryPage: React.FC = () => {
   }, [cardEntries, selectedType, selectedDomain, localeKey, normalizedQuery]);
 
   // --- Group ---
+  // T2a.4 — Teams group removed; team launchers now render on /teams.
+  // The 'team' branch can never fire because cardEntries filters them
+  // out, but we keep the type narrowing exhaustive for the other two.
   const groups = useMemo(() => {
-    const teams: CardEntry[] = [];
     const specialists: CardEntry[] = [];
     const builtins: CardEntry[] = [];
     for (const entry of filteredEntries) {
-      if (entry.type === 'team') teams.push(entry);
-      else if (entry.type === 'specialist') specialists.push(entry);
-      else builtins.push(entry);
+      if (entry.type === 'specialist') specialists.push(entry);
+      else if (entry.type === 'builtin') builtins.push(entry);
     }
-    return { teams, specialists, builtins };
+    return { specialists, builtins };
   }, [filteredEntries]);
 
   // --- Card handlers ---
@@ -302,8 +310,7 @@ const AssistantsLibraryPage: React.FC = () => {
     );
   };
 
-  const isFullyEmpty =
-    groups.teams.length === 0 && groups.specialists.length === 0 && groups.builtins.length === 0;
+  const isFullyEmpty = groups.specialists.length === 0 && groups.builtins.length === 0;
   // Built-ins group always renders because BuildMyOwnCard lives at its tail.
   const showBuildCardInBuiltins = selectedType === 'all' || selectedType === 'builtin';
 
@@ -329,11 +336,6 @@ const AssistantsLibraryPage: React.FC = () => {
             <div className={styles.emptyState} data-testid='assistants-empty-state'>
               {t('assistants.emptyState', { defaultValue: 'No assistants match your filters.' })}
             </div>
-          )}
-          {renderGroup(
-            t('assistants.group.teams', { defaultValue: 'Teams' }),
-            groups.teams,
-            'assistants-group-teams'
           )}
           {renderGroup(
             t('assistants.group.specialists', { defaultValue: 'Specialists' }),
