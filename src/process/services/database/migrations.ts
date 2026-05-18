@@ -1539,6 +1539,45 @@ const migration_v34: IMigration = {
 };
 
 /**
+ * Migration v34 -> v35: Add team_event_log table (W1e).
+ *
+ * Append-only event log for every team mutation (mailbox write, task
+ * create/update, agent spawn, wake, token usage). Foundation for the W2c
+ * Activity tab and the W2d cost meter.
+ *
+ * Two indexes are created to serve the two known consumer queries:
+ *   - `(team_id, created_at)`              — Activity tab newest-first scan
+ *   - `(team_id, event_type, created_at)`  — cost meter token_usage filter
+ */
+const migration_v35: IMigration = {
+  version: 35,
+  name: 'Add team_event_log table',
+  up: (db) => {
+    db.exec(`CREATE TABLE IF NOT EXISTS team_event_log (
+      id TEXT PRIMARY KEY,
+      team_id TEXT NOT NULL,
+      event_type TEXT NOT NULL,
+      actor_slot_id TEXT,
+      target_slot_id TEXT,
+      payload TEXT NOT NULL,
+      created_at INTEGER NOT NULL,
+      FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE
+    )`);
+    db.exec('CREATE INDEX IF NOT EXISTS idx_team_event_log_team_created ON team_event_log(team_id, created_at)');
+    db.exec(
+      'CREATE INDEX IF NOT EXISTS idx_team_event_log_team_type_created ON team_event_log(team_id, event_type, created_at)'
+    );
+    console.log('[Migration v35] Added team_event_log table');
+  },
+  down: (db) => {
+    db.exec('DROP INDEX IF EXISTS idx_team_event_log_team_type_created');
+    db.exec('DROP INDEX IF EXISTS idx_team_event_log_team_created');
+    db.exec('DROP TABLE IF EXISTS team_event_log');
+    console.log('[Migration v35] Rolled back: Removed team_event_log table');
+  },
+};
+
+/**
  * All migrations in order
  */
 // prettier-ignore
@@ -1548,7 +1587,7 @@ export const ALL_MIGRATIONS: IMigration[] = [
   migration_v13, migration_v14, migration_v15, migration_v16, migration_v17, migration_v18,
   migration_v19, migration_v20, migration_v21, migration_v22, migration_v23, migration_v24,
   migration_v25, migration_v26, migration_v27, migration_v28, migration_v29, migration_v30,
-  migration_v31, migration_v32, migration_v33, migration_v34,
+  migration_v31, migration_v32, migration_v33, migration_v34, migration_v35,
 ];
 
 /**

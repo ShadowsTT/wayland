@@ -6,6 +6,7 @@ import type { IWorkerTaskManager } from '@process/task/IWorkerTaskManager';
 import { addMessage } from '@process/utils/message';
 import type { ITeamRepository } from './repository/ITeamRepository';
 import type { TTeam, TeamAgent } from './types';
+import { EventLogger } from './EventLogger';
 import { Mailbox } from './Mailbox';
 import { TaskManager } from './TaskManager';
 import { TeammateManager } from './TeammateManager';
@@ -34,17 +35,30 @@ export class TeamSession extends EventEmitter {
   private readonly mcpServer: TeamMcpServer;
   private mcpStdioConfig: StdioMcpConfig | null = null;
 
-  constructor(team: TTeam, repo: ITeamRepository, workerTaskManager: IWorkerTaskManager, spawnAgent?: SpawnAgentFn) {
+  constructor(
+    team: TTeam,
+    repo: ITeamRepository,
+    workerTaskManager: IWorkerTaskManager,
+    spawnAgent?: SpawnAgentFn,
+    /**
+     * W1e — optional team_event_log writer. When provided, Mailbox + TaskManager
+     * + TeammateManager all receive it so mailbox/task/wake/token_usage rows
+     * land in `team_event_log`. Defaults to a fresh logger over `repo` so this
+     * session works standalone (and existing tests don't have to pass it in).
+     */
+    eventLogger?: EventLogger
+  ) {
     super();
     this.team = team;
     this.teamId = team.id;
     this.repo = repo;
     this.workerTaskManager = workerTaskManager;
-    this.mailbox = new Mailbox(repo);
+    const logger = eventLogger ?? new EventLogger(repo);
+    this.mailbox = new Mailbox(repo, logger);
     // TaskManager validates task owners against the *current* team roster.
     // Pass a thunk (not a snapshot) so spawned/removed agents are reflected
     // on the next call without needing to rebuild TaskManager.
-    this.taskManager = new TaskManager(repo, () => this.teammateManager.getAgents());
+    this.taskManager = new TaskManager(repo, () => this.teammateManager.getAgents(), logger);
     this.teammateManager = new TeammateManager({
       teamId: team.id,
       agents: team.agents,
@@ -54,6 +68,7 @@ export class TeamSession extends EventEmitter {
       onAgentRemoved: (teamId, agents) => {
         void this.repo.update(teamId, { agents, updatedAt: Date.now() });
       },
+      eventLogger: logger,
     });
 
     // Create MCP server for team coordination tools

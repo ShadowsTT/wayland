@@ -117,6 +117,13 @@ export function initTeamBridge(teamSessionService: TeamSessionService): void {
       await teamSessionService.getOrStartSession(teamId);
     })
   );
+
+  // W1e — list team_event_log rows for the Activity tab + cost meter.
+  ipcBridge.team.listEvents.provider(
+    safeProvider(async ({ teamId, since, limit, eventType }) => {
+      return teamSessionService.listEvents(teamId, { since, limit, eventType });
+    })
+  );
 }
 
 /** Stop all active team sessions (TCP servers + child processes). Call on app quit. */

@@ -18,6 +18,7 @@ import type { AgentBackend } from '@/common/types/acpTypes';
 import type { TChatConversation, TProviderWithModel } from '@/common/config/storage';
 import { ProcessConfig } from '@process/utils/initStorage';
 import { getAssistantsDir } from '@process/utils/initStorage';
+import { EventLogger } from './EventLogger';
 import { TeamSession } from './TeamSession';
 import type { TTeam, TeamAgent } from './types';
 import fs from 'fs/promises';
@@ -29,12 +30,21 @@ export class TeamSessionService {
   private readonly sessions: Map<string, TeamSession> = new Map();
   /** Per-team mutex to serialize addAgent calls, preventing read-modify-write race conditions */
   private readonly addAgentLocks: Map<string, Promise<unknown>> = new Map();
+  /** W1e — append-only event log writer shared with TeamSession primitives */
+  private readonly eventLogger: EventLogger;
 
   constructor(
     private readonly repo: ITeamRepository,
     private readonly workerTaskManager: IWorkerTaskManager,
     private readonly conversationService: IConversationService
-  ) {}
+  ) {
+    this.eventLogger = new EventLogger(repo);
+  }
+
+  /** Expose the shared event logger so TeamSession can wire it into Mailbox + TaskManager + TeammateManager. */
+  getEventLogger(): EventLogger {
+    return this.eventLogger;
+  }
 
   /**
    * Returns the workspace path as-is, or empty string when not specified.
@@ -672,6 +682,20 @@ export class TeamSessionService {
     const updatedAgents = [...team.agents, newAgent];
     await this.repo.update(teamId, { agents: updatedAgents, updatedAt: Date.now() });
     this.sessions.get(teamId)?.addAgent(newAgent);
+
+    // W1e: log spawn AFTER the agent is durably persisted to the team roster.
+    void this.eventLogger.append({
+      teamId,
+      eventType: 'spawn',
+      targetSlotId: newAgent.slotId,
+      payload: {
+        agent_name: newAgent.agentName,
+        agent_type: newAgent.agentType,
+        role: newAgent.role,
+        conversation_id: newAgent.conversationId,
+      },
+    });
+
     // Notify renderer so SWR caches (useTeamList, useSiderTeamBadges) revalidate
     ipcBridge.team.listChanged.emit({ teamId, action: 'agent_added' });
     return newAgent;
@@ -785,7 +809,7 @@ export class TeamSessionService {
       }
       return newAgent;
     };
-    session = new TeamSession(team, this.repo, this.workerTaskManager, spawnAgent);
+    session = new TeamSession(team, this.repo, this.workerTaskManager, spawnAgent, this.eventLogger);
     // Do NOT add to sessions map yet — only add after MCP server is running and
     // teamMcpStdioConfig is written to DB. If we add early and then fail, a
     // subsequent getOrStartSession call would return a broken session (no MCP config).
@@ -835,6 +859,21 @@ export class TeamSessionService {
   async stopSession(teamId: string): Promise<void> {
     await this.sessions.get(teamId)?.dispose();
     this.sessions.delete(teamId);
+  }
+
+  /**
+   * W1e — read append-only events for a team, newest first. Backs the W2c
+   * Activity tab and the W2d cost meter.
+   */
+  async listEvents(
+    teamId: string,
+    options?: {
+      since?: number;
+      limit?: number;
+      eventType?: import('./types').TeamEventType;
+    }
+  ): Promise<import('./types').TeamEvent[]> {
+    return this.repo.listEvents(teamId, options);
   }
 
   async stopAllSessions(): Promise<void> {

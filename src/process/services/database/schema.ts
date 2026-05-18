@@ -135,6 +135,22 @@ export function initSchema(db: ISqliteDriver): void {
   )`);
   db.exec('CREATE INDEX IF NOT EXISTS idx_tasks_team ON team_tasks(team_id, status)');
 
+  // Team event log (W1e — append-only audit trail backing Activity tab + cost meter)
+  db.exec(`CREATE TABLE IF NOT EXISTS team_event_log (
+    id TEXT PRIMARY KEY,
+    team_id TEXT NOT NULL,
+    event_type TEXT NOT NULL,
+    actor_slot_id TEXT,
+    target_slot_id TEXT,
+    payload TEXT NOT NULL,
+    created_at INTEGER NOT NULL,
+    FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE
+  )`);
+  db.exec('CREATE INDEX IF NOT EXISTS idx_team_event_log_team_created ON team_event_log(team_id, created_at)');
+  db.exec(
+    'CREATE INDEX IF NOT EXISTS idx_team_event_log_team_type_created ON team_event_log(team_id, event_type, created_at)'
+  );
+
   console.log('[Database] Schema initialized successfully');
 }
 
@@ -163,4 +179,4 @@ export function setDatabaseVersion(db: ISqliteDriver, version: number): void {
  * Current database schema version
  * Update this when adding new migrations in migrations.ts
  */
-export const CURRENT_DB_VERSION = 34;
+export const CURRENT_DB_VERSION = 35;

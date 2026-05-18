@@ -1411,6 +1411,21 @@ export const team = {
   renameTeam: buildProvider<void, { id: string; name: string }>('team.rename'),
   setSessionMode: buildProvider<void, { teamId: string; sessionMode: string }>('team.set-session-mode'),
   updateWorkspace: buildProvider<void, { teamId: string; workspace: string }>('team.update-workspace'),
+  /**
+   * W1e — list rows from `team_event_log`, newest-first. Paged via `limit`
+   * (default 100) and `since` (only events with `createdAt > since`).
+   * Optional `eventType` filter is used by the W2d cost meter to read only
+   * `token_usage` rows.
+   */
+  listEvents: buildProvider<
+    import('@process/team/types').TeamEvent[],
+    {
+      teamId: string;
+      since?: number;
+      limit?: number;
+      eventType?: import('@process/team/types').TeamEventType;
+    }
+  >('team.list-events'),
   agentStatusChanged: buildEmitter<import('@process/team/types').ITeamAgentStatusEvent>('team.agent.status'),
   agentSpawned: buildEmitter<import('@/common/types/teamTypes').ITeamAgentSpawnedEvent>('team.agent.spawned'),
   agentRemoved: buildEmitter<import('@/common/types/teamTypes').ITeamAgentRemovedEvent>('team.agent.removed'),

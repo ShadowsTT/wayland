@@ -1,7 +1,7 @@
 // src/process/team/repository/SqliteTeamRepository.ts
 import { getDatabase } from '@process/services/database';
 import type { ISqliteDriver } from '@process/services/database/drivers/ISqliteDriver';
-import type { MailboxMessage, TeamAgent, TeamTask, TTeam } from '../types';
+import type { MailboxMessage, TeamAgent, TeamEvent, TeamEventType, TeamTask, TTeam } from '../types';
 import type { ITeamRepository } from './ITeamRepository';
 
 // ---------------------------------------------------------------------------
@@ -48,6 +48,16 @@ type TaskRow = {
   updated_at: number;
 };
 
+type EventRow = {
+  id: string;
+  team_id: string;
+  event_type: string;
+  actor_slot_id: string | null;
+  target_slot_id: string | null;
+  payload: string;
+  created_at: number;
+};
+
 // ---------------------------------------------------------------------------
 // Row -> domain converters
 // ---------------------------------------------------------------------------
@@ -78,6 +88,18 @@ function rowToMailbox(row: MailboxRow): MailboxMessage {
     summary: row.summary ?? undefined,
     files: row.files ? (JSON.parse(row.files) as string[]) : undefined,
     read: Boolean(row.read),
+    createdAt: row.created_at,
+  };
+}
+
+function rowToEvent(row: EventRow): TeamEvent {
+  return {
+    id: row.id,
+    teamId: row.team_id,
+    eventType: row.event_type as TeamEventType,
+    actorSlotId: row.actor_slot_id ?? undefined,
+    targetSlotId: row.target_slot_id ?? undefined,
+    payload: JSON.parse(row.payload) as Record<string, unknown>,
     createdAt: row.created_at,
   };
 }
@@ -377,5 +399,57 @@ export class SqliteTeamRepository implements ITeamRepository {
       return { ...current, blocked_by: JSON.stringify(blockedBy), updated_at: now };
     })();
     return rowToTask(row);
+  }
+
+  // -------------------------------------------------------------------------
+  // Team event log (W1e — append-only)
+  // -------------------------------------------------------------------------
+
+  async appendEvent(event: TeamEvent): Promise<void> {
+    const db = await this.getDb();
+    db.prepare(
+      `INSERT INTO team_event_log (id, team_id, event_type, actor_slot_id, target_slot_id, payload, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`
+    ).run(
+      event.id,
+      event.teamId,
+      event.eventType,
+      event.actorSlotId ?? null,
+      event.targetSlotId ?? null,
+      JSON.stringify(event.payload),
+      event.createdAt
+    );
+  }
+
+  async listEvents(
+    teamId: string,
+    options: { since?: number; limit?: number; eventType?: TeamEventType } = {}
+  ): Promise<TeamEvent[]> {
+    const db = await this.getDb();
+    const limit = options.limit ?? 100;
+    const since = options.since ?? 0;
+
+    // Build query in pieces so we can conditionally add the event_type filter.
+    // The two indexes (team_id, created_at) and (team_id, event_type, created_at)
+    // both cover this access path; SQLite picks whichever matches the WHERE clause.
+    if (options.eventType) {
+      const rows = db
+        .prepare(
+          `SELECT * FROM team_event_log
+           WHERE team_id = ? AND event_type = ? AND created_at > ?
+           ORDER BY created_at DESC LIMIT ?`
+        )
+        .all(teamId, options.eventType, since, limit) as EventRow[];
+      return rows.map(rowToEvent);
+    }
+
+    const rows = db
+      .prepare(
+        `SELECT * FROM team_event_log
+         WHERE team_id = ? AND created_at > ?
+         ORDER BY created_at DESC LIMIT ?`
+      )
+      .all(teamId, since, limit) as EventRow[];
+    return rows.map(rowToEvent);
   }
 }

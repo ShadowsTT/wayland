@@ -1,4 +1,5 @@
 // src/process/team/TaskManager.ts
+import type { EventLogger } from './EventLogger';
 import type { ITeamRepository } from './repository/ITeamRepository';
 import type { TeamAgent, TeamTask } from './types';
 
@@ -46,9 +47,17 @@ export class TeamTaskOwnerNotFoundError extends Error {
  * prevents typos and stale slotIds from creating tasks no agent can claim.
  */
 export class TaskManager {
+  /**
+   * @param repo         underlying persistence
+   * @param getAgents    thunk returning the current roster, for owner validation
+   * @param eventLogger  W1e — optional team_event_log writer. Each successful
+   *                     `create()` / `update()` appends a `'task'` event. Logger
+   *                     absence keeps existing tests + call sites working unchanged.
+   */
   constructor(
     private readonly repo: ITeamRepository,
-    private readonly getAgents: GetAgentsFn
+    private readonly getAgents: GetAgentsFn,
+    private readonly eventLogger?: EventLogger
   ) {}
 
   /**
@@ -99,6 +108,22 @@ export class TaskManager {
       await Promise.all(created.blockedBy.map((upstreamId) => this.repo.appendToBlocks(upstreamId, created.id)));
     }
 
+    // W1e: log AFTER successful create (skip on validation throw above).
+    if (this.eventLogger) {
+      void this.eventLogger.append({
+        teamId: created.teamId,
+        eventType: 'task',
+        actorSlotId: created.owner,
+        targetSlotId: created.id,
+        payload: {
+          action: 'create',
+          taskId: created.id,
+          status: created.status,
+          subject: created.subject,
+        },
+      });
+    }
+
     return created;
   }
 
@@ -111,10 +136,27 @@ export class TaskManager {
   async update(taskId: string, updates: UpdateTaskParams): Promise<TeamTask> {
     this.validateOwner(updates.owner);
 
-    return this.repo.updateTask(taskId, {
+    const updated = await this.repo.updateTask(taskId, {
       ...updates,
       updatedAt: Date.now(),
     });
+
+    // W1e: log AFTER successful update (skip on validation throw above).
+    if (this.eventLogger) {
+      void this.eventLogger.append({
+        teamId: updated.teamId,
+        eventType: 'task',
+        actorSlotId: updated.owner,
+        targetSlotId: updated.id,
+        payload: {
+          action: 'update',
+          taskId: updated.id,
+          status: updated.status,
+        },
+      });
+    }
+
+    return updated;
   }
 
   /**

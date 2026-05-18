@@ -8,6 +8,7 @@ import type { IResponseMessage } from '@/common/adapter/ipcBridge';
 import type { TeamAgent, TeammateStatus } from './types';
 import { isTeamCapableBackend } from '@/common/types/teamTypes';
 import { ProcessConfig } from '@process/utils/initStorage';
+import type { EventLogger } from './EventLogger';
 import type { Mailbox } from './Mailbox';
 import { buildRolePrompt } from './prompts/buildRolePrompt';
 import { formatMessages } from './prompts/formatHelpers';
@@ -22,6 +23,12 @@ type TeammateManagerParams = {
   teamWorkspace?: string;
   /** Called after an agent is removed from in-memory list, so the caller can persist the change (e.g. update DB) */
   onAgentRemoved?: (teamId: string, agents: TeamAgent[]) => void;
+  /**
+   * W1e — optional team_event_log writer. When present, `wake()` logs a
+   * `'wake'` event on completion and `acp_context_usage` stream messages
+   * log a `'token_usage'` event.
+   */
+  eventLogger?: EventLogger;
 };
 
 /**
@@ -36,6 +43,8 @@ export class TeammateManager extends EventEmitter {
   private readonly onAgentRemovedFn?: (teamId: string, agents: TeamAgent[]) => void;
   /** Shared team workspace path (leader's working directory) */
   private readonly teamWorkspace: string | undefined;
+  /** W1e — optional team_event_log writer */
+  private readonly eventLogger: EventLogger | undefined;
 
   /** Tracks which slotIds currently have an in-progress wake to avoid loops */
   private readonly activeWakes = new Set<string>();
@@ -61,6 +70,7 @@ export class TeammateManager extends EventEmitter {
     this.workerTaskManager = params.workerTaskManager;
     this.onAgentRemovedFn = params.onAgentRemoved;
     this.teamWorkspace = params.teamWorkspace;
+    this.eventLogger = params.eventLogger;
 
     for (const agent of this.agents) {
       this.ownedConversationIds.add(agent.conversationId);
@@ -102,6 +112,8 @@ export class TeammateManager extends EventEmitter {
 
     console.log(`[TeammateManager] wake(${agent.agentName}): status=${agent.status}, proceeding`);
 
+    // W1e: capture wall-clock duration of the wake for the event log
+    const wakeStart = Date.now();
     this.activeWakes.add(slotId);
     // Clear any stale finalizedTurns entry so a re-woken agent's finish event
     // is not silently dropped by the 5-second dedup window from a prior turn.
@@ -214,6 +226,7 @@ export class TeammateManager extends EventEmitter {
           // Nothing to send — restore idle status and release wake
           this.setStatus(slotId, 'idle');
           this.activeWakes.delete(slotId);
+          this.logWakeEvent(slotId, wakeStart, true, { noop: true });
           return;
         }
         message = formatMessages(mailboxMessages, this.agents);
@@ -249,10 +262,19 @@ export class TeammateManager extends EventEmitter {
       // resets it via handleResponseStream → resetWakeTimeout. It only fires
       // when the agent has been silent for WAKE_TIMEOUT_MS with no finish event.
       this.resetWakeTimeout(slotId);
+
+      // W1e: log the successful wake (post-sendMessage, before turn completes).
+      this.logWakeEvent(slotId, wakeStart, true, {
+        promptKind: needsFullPrompt ? 'full' : 'messages-only',
+        mailboxCount: mailboxMessages.length,
+      });
     } catch (error) {
       console.error(`[TeammateManager] wake(${slotId}) failed:`, error);
       this.setStatus(slotId, 'failed');
       this.activeWakes.delete(slotId);
+      this.logWakeEvent(slotId, wakeStart, false, {
+        error: error instanceof Error ? error.message : String(error),
+      });
       throw error;
     }
     // activeWakes entry is removed when turnCompleted fires (or by timeout)
@@ -280,12 +302,70 @@ export class TeammateManager extends EventEmitter {
   // Private stream handlers
   // ---------------------------------------------------------------------------
 
+  /**
+   * W1e — emit a `'wake'` event with duration + success flag. Helper so the
+   * three wake() exit points (noop, success, failure) all share one schema.
+   */
+  private logWakeEvent(
+    slotId: string,
+    startedAt: number,
+    success: boolean,
+    extra: Record<string, unknown> = {}
+  ): void {
+    if (!this.eventLogger) return;
+    void this.eventLogger.append({
+      teamId: this.teamId,
+      eventType: 'wake',
+      actorSlotId: slotId,
+      payload: {
+        success,
+        duration_ms: Date.now() - startedAt,
+        ...extra,
+      },
+    });
+  }
+
   private handleResponseStream(msg: IResponseMessage): void {
     // Fast O(1) check: skip events for conversations not owned by this team
     if (!this.ownedConversationIds.has(msg.conversation_id)) return;
 
     const agent = this.agents.find((a) => a.conversationId === msg.conversation_id);
     if (!agent) return;
+
+    // W1e: token-usage events flow through the response stream as `acp_context_usage`.
+    // Capture them as `'token_usage'` rows so the W2d cost meter can sum tokens
+    // and cost across teammates. We don't have a clean prompt/completion split
+    // from this stream (ACP emits `used` total + optional `cost`), so the split
+    // fields default to 0 with the actual total preserved as `total_tokens`.
+    if (msg.type === 'acp_context_usage') {
+      const usage = msg.data as
+        | { used?: number; size?: number; cost?: { amount?: number; currency?: string } }
+        | null;
+      if (usage && typeof usage.used === 'number') {
+        const costAmount = typeof usage.cost?.amount === 'number' ? usage.cost.amount : 0;
+        const currency = usage.cost?.currency ?? 'USD';
+        // Only USD cost estimates are meaningful for the W2d meter; other
+        // currencies are recorded but normalized to 0 in cost_estimate_usd.
+        const costUsd = currency === 'USD' ? costAmount : 0;
+        if (this.eventLogger) {
+          void this.eventLogger.append({
+            teamId: this.teamId,
+            eventType: 'token_usage',
+            actorSlotId: agent.slotId,
+            payload: {
+              slot_id: agent.slotId,
+              backend: agent.agentType,
+              prompt_tokens: usage.used,
+              completion_tokens: 0,
+              cost_estimate_usd: costUsd,
+              total_tokens: usage.used,
+              currency,
+              context_window: typeof usage.size === 'number' ? usage.size : 0,
+            },
+          });
+        }
+      }
+    }
 
     // Detect agent crash:
     // 1. AcpAgent.handleDisconnect emits finish with agentCrash flag (wrapper process dies)
