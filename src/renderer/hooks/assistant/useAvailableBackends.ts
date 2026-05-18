@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import {
   recommendBackend,
   resolveAvailableBackends,
@@ -11,6 +11,10 @@ import { useDetectedAgents } from './useDetectedAgents';
  *
  * Bridges `useDetectedAgents()` (which returns `{ availableBackends: AvailableBackend[] }`)
  * into the plain `BackendId[]` shape the pure functions expect.
+ *
+ * `available` and `recommend` are both memoized with `detected` as the only
+ * dependency, so consumers can safely include them in `useMemo` / `useEffect`
+ * dep arrays without triggering re-renders on every parent update.
  */
 export function useAvailableBackends() {
   const { availableBackends } = useDetectedAgents();
@@ -19,8 +23,10 @@ export function useAvailableBackends() {
 
   const available = useMemo<BackendId[]>(() => resolveAvailableBackends(detected), [detected]);
 
-  return {
-    available,
-    recommend: (presetAgentType?: string) => recommendBackend(detected, presetAgentType),
-  };
+  const recommend = useCallback(
+    (presetAgentType?: string) => recommendBackend(detected, presetAgentType),
+    [detected]
+  );
+
+  return { available, recommend };
 }
