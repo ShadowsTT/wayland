@@ -275,6 +275,19 @@ export const ExtAssistantSchema = z.object({
   models: z.array(z.string()).optional(),
   enabledSkills: z.array(z.string()).optional(),
   prompts: z.array(z.string()).optional(),
+  /** W1a — Roster of specialist assistant IDs that compose this launcher (kind==='team' only). */
+  teammates: z.array(z.string()).optional(),
+  /** W1a — Recurring rituals declared by the launcher (e.g. weekly standup). */
+  rituals: z
+    .array(
+      z.object({
+        name: z.string(),
+        cadence: z.string(),
+      })
+    )
+    .optional(),
+  /** W1a / TRIAGE C4 — Marks Standing Companies (always-on multi-role orgs). True for the 5 standing teams only. */
+  standing: z.boolean().optional(),
 });
 
 // ============ Skill Schema ============

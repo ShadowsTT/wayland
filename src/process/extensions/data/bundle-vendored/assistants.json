@@ -412,7 +412,13 @@
       "I have 200 prospects - assemble the team."
     ],
     "category": "sell",
-    "kind": "team"
+    "kind": "team",
+    "teammates": [
+      "research",
+      "copy",
+      "sales"
+    ],
+    "standing": false
   },
   {
     "id": "product-launch",
@@ -427,7 +433,15 @@
       "Coordinate the launch: research, brand, copy, channels, sales."
     ],
     "category": "sell",
-    "kind": "team"
+    "kind": "team",
+    "teammates": [
+      "research",
+      "mira",
+      "copy",
+      "beacon",
+      "sales"
+    ],
+    "standing": false
   },
   {
     "id": "sales-pipeline",
@@ -442,7 +456,13 @@
       "Audit my ICP against my actual won deals."
     ],
     "category": "sell",
-    "kind": "team"
+    "kind": "team",
+    "teammates": [
+      "research",
+      "sales",
+      "forge"
+    ],
+    "standing": false
   },
   {
     "id": "info-product-launch",
@@ -457,7 +477,14 @@
       "Cohort vs evergreen for my [topic] course?"
     ],
     "category": "sell",
-    "kind": "team"
+    "kind": "team",
+    "teammates": [
+      "spark",
+      "copy",
+      "mira",
+      "beacon"
+    ],
+    "standing": false
   },
   {
     "id": "validate-before-build",
@@ -472,7 +499,13 @@
       "Cheapest experiment to validate [assumption]?"
     ],
     "category": "research",
-    "kind": "team"
+    "kind": "team",
+    "teammates": [
+      "probe",
+      "research",
+      "forge"
+    ],
+    "standing": false
   },
   {
     "id": "first-customers",
@@ -487,7 +520,14 @@
       "Outbound-first strategy for first customers."
     ],
     "category": "sell",
-    "kind": "team"
+    "kind": "team",
+    "teammates": [
+      "research",
+      "sales",
+      "copy",
+      "beacon"
+    ],
+    "standing": false
   },
   {
     "id": "fundraise",
@@ -502,7 +542,14 @@
       "Rehearse the partner-meeting Q&A."
     ],
     "category": "sell",
-    "kind": "team"
+    "kind": "team",
+    "teammates": [
+      "stage",
+      "coin",
+      "mira",
+      "copy"
+    ],
+    "standing": false
   },
   {
     "id": "founder-setup",
@@ -517,7 +564,14 @@
       "Pre-revenue founder setup - what's the minimum I need?"
     ],
     "category": "run",
-    "kind": "team"
+    "kind": "team",
+    "teammates": [
+      "sentry",
+      "coin",
+      "mira",
+      "patch"
+    ],
+    "standing": false
   },
   {
     "id": "bootstrap-profit",
@@ -532,7 +586,14 @@
       "Diagnose the highest-impact lever for margin."
     ],
     "category": "sell",
-    "kind": "team"
+    "kind": "team",
+    "teammates": [
+      "coin",
+      "forge",
+      "beacon",
+      "sales"
+    ],
+    "standing": false
   },
   {
     "id": "affiliate-site-engine",
@@ -547,7 +608,14 @@
       "Set up the measurement framework for affiliate revenue."
     ],
     "category": "sell",
-    "kind": "team"
+    "kind": "team",
+    "teammates": [
+      "research",
+      "copy",
+      "beacon",
+      "lens"
+    ],
+    "standing": false
   },
   {
     "id": "support-stack",
@@ -562,7 +630,13 @@
       "Reduce my churn rate - design the playbook."
     ],
     "category": "run",
-    "kind": "team"
+    "kind": "team",
+    "teammates": [
+      "mend",
+      "patch",
+      "copy"
+    ],
+    "standing": false
   },
   {
     "id": "growth-loop",
@@ -577,7 +651,13 @@
       "Experiment design for moving [activation / retention]."
     ],
     "category": "sell",
-    "kind": "team"
+    "kind": "team",
+    "teammates": [
+      "lens",
+      "research",
+      "beacon"
+    ],
+    "standing": false
   },
   {
     "id": "creator-studio",
@@ -592,7 +672,14 @@
       "Diversify creator monetization beyond sponsorships."
     ],
     "category": "write",
-    "kind": "team"
+    "kind": "team",
+    "teammates": [
+      "copy",
+      "mira",
+      "beacon",
+      "spark"
+    ],
+    "standing": false
   },
   {
     "id": "ecommerce-engine",
@@ -607,7 +694,15 @@
       "Multi-channel ecommerce: Shopify + Amazon + marketplaces."
     ],
     "category": "sell",
-    "kind": "team"
+    "kind": "team",
+    "teammates": [
+      "vault",
+      "copy",
+      "beacon",
+      "mira",
+      "mend"
+    ],
+    "standing": false
   },
   {
     "id": "saas-mvp-sprint",
@@ -622,7 +717,14 @@
       "Spec the MVP my coding agent can actually build."
     ],
     "category": "build",
-    "kind": "team"
+    "kind": "team",
+    "teammates": [
+      "smith",
+      "probe",
+      "copy",
+      "mira"
+    ],
+    "standing": false
   },
   {
     "id": "content-studio",
@@ -637,7 +739,14 @@
       "Strategy → packaging → hooks → clarity → positioning → … → verdict."
     ],
     "category": "write",
-    "kind": "team"
+    "kind": "team",
+    "teammates": [
+      "beacon",
+      "copy",
+      "mira",
+      "verdict"
+    ],
+    "standing": false
   },
   {
     "id": "service-studio",
@@ -652,7 +761,14 @@
       "Design the SOW + delivery rhythm for my consultancy."
     ],
     "category": "run",
-    "kind": "team"
+    "kind": "team",
+    "teammates": [
+      "research",
+      "sales",
+      "forge",
+      "patch"
+    ],
+    "standing": false
   },
   {
     "id": "marketing-strategy",
@@ -667,7 +783,18 @@
       "Marketing strategy with measurement framework and kill criteria."
     ],
     "category": "sell",
-    "kind": "team"
+    "kind": "team",
+    "teammates": [
+      "research",
+      "mira",
+      "forge",
+      "beacon",
+      "coin",
+      "copy",
+      "lens",
+      "verdict"
+    ],
+    "standing": false
   },
   {
     "id": "damage-control",
@@ -682,7 +809,14 @@
       "Regulatory inquiry came in. We have a week. Walk us through it."
     ],
     "category": "run",
-    "kind": "team"
+    "kind": "team",
+    "teammates": [
+      "research",
+      "sentry",
+      "copy",
+      "mira"
+    ],
+    "standing": false
   },
   {
     "id": "marketing-agency",
@@ -700,7 +834,21 @@
       "Plan a campaign for [product/audience] with the team."
     ],
     "category": "sell",
-    "kind": "team"
+    "kind": "team",
+    "teammates": [
+      "research",
+      "mira",
+      "beacon",
+      "copy",
+      "lens"
+    ],
+    "standing": true,
+    "rituals": [
+      {
+        "name": "weekly-checkin",
+        "cadence": "weekly:monday:09:00"
+      }
+    ]
   },
   {
     "id": "sales-org",
@@ -718,7 +866,20 @@
       "Plan an outbound sequence for [segment] with the team."
     ],
     "category": "sell",
-    "kind": "team"
+    "kind": "team",
+    "teammates": [
+      "sales",
+      "research",
+      "forge",
+      "lens"
+    ],
+    "standing": true,
+    "rituals": [
+      {
+        "name": "weekly-checkin",
+        "cadence": "weekly:monday:08:00"
+      }
+    ]
   },
   {
     "id": "customer-success-org",
@@ -736,7 +897,20 @@
       "Save a churning account [name] with the team."
     ],
     "category": "run",
-    "kind": "team"
+    "kind": "team",
+    "teammates": [
+      "mend",
+      "sales",
+      "lens",
+      "patch"
+    ],
+    "standing": true,
+    "rituals": [
+      {
+        "name": "weekly-checkin",
+        "cadence": "weekly:monday:10:00"
+      }
+    ]
   },
   {
     "id": "editorial-newsroom",
@@ -754,7 +928,21 @@
       "Plan an issue or series on [topic] with the team."
     ],
     "category": "write",
-    "kind": "team"
+    "kind": "team",
+    "teammates": [
+      "copy",
+      "research",
+      "mira",
+      "beacon",
+      "lens"
+    ],
+    "standing": true,
+    "rituals": [
+      {
+        "name": "weekly-checkin",
+        "cadence": "weekly:sunday:18:00"
+      }
+    ]
   },
   {
     "id": "dev-shop",
@@ -772,6 +960,19 @@
       "Ship a feature: [name] with the team."
     ],
     "category": "build",
-    "kind": "team"
+    "kind": "team",
+    "teammates": [
+      "smith",
+      "patch",
+      "verdict",
+      "sentry"
+    ],
+    "standing": true,
+    "rituals": [
+      {
+        "name": "weekly-standup",
+        "cadence": "weekly:monday:11:00"
+      }
+    ]
   }
 ]

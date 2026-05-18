@@ -92,6 +92,12 @@ async function convertAssistant(
     // Bundle-declared category ('sell' | 'write' | ...). Lets the library's
     // domain filter rail count and filter ext-contributed assistants.
     category: assistant.category,
+    // W1a — Pass through teammates roster, rituals cadence, and standing-company
+    // flag so the renderer can render pre-configured spawn (W2b) and the
+    // Standing Companies sub-group (W2a).
+    teammates: assistant.teammates,
+    rituals: assistant.rituals,
+    standing: assistant.standing,
   };
 }
 

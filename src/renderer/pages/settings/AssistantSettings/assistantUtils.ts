@@ -106,6 +106,14 @@ export const normalizeExtensionAssistants = (extensionAssistants: Record<string,
             : typeof ext._kind === 'string'
               ? ext._kind
               : undefined,
+        // W1a — Carry the launcher roster, ritual cadences, and standing flag
+        // through to the renderer so W2a (Standing Companies sub-group) and
+        // W2b (pre-configured spawn) can render without re-reading bundle.
+        _teammates: Array.isArray(ext.teammates) ? (ext.teammates as string[]) : undefined,
+        _rituals: Array.isArray(ext.rituals)
+          ? (ext.rituals as Array<{ name: string; cadence: string }>)
+          : undefined,
+        _standing: typeof ext.standing === 'boolean' ? ext.standing : undefined,
       } as AssistantListItem;
     })
     .filter((item): item is AssistantListItem => item !== null);
