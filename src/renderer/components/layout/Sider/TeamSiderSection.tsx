@@ -20,6 +20,9 @@ import TeamCreateModal from '@renderer/pages/team/components/TeamCreateModal';
 import { ipcBridge } from '@/common';
 import SiderItem from './SiderItem';
 import type { SiderMenuItem } from './SiderItem';
+import ActiveTeamGroup from './ActiveTeamGroup';
+import { useTeamGroupPersistence } from './useTeamGroupPersistence';
+import type { TeamAgent } from '@/common/types/teamTypes';
 
 const TEAM_PINNED_KEY = 'team-pinned-ids';
 
@@ -43,6 +46,7 @@ const TeamSiderSection: React.FC<TeamSiderSectionProps> = ({
   const { teams, mutate: refreshTeams, removeTeam } = useTeamList();
   const teamBadgeCounts = useSiderTeamBadges(teams);
   const { mutate: globalMutate } = useSWRConfig();
+  const { isExpanded, toggle: toggleGroup } = useTeamGroupPersistence();
 
   const [createTeamVisible, setCreateTeamVisible] = useState(false);
 
@@ -96,6 +100,24 @@ const TeamSiderSection: React.FC<TeamSiderSectionProps> = ({
     (teamId: string) => {
       cleanupSiderTooltips();
       blurActiveElement();
+      Promise.resolve(navigate(`/team/${teamId}`)).catch(console.error);
+      if (onSessionClick) onSessionClick();
+    },
+    [navigate, onSessionClick]
+  );
+
+  const handleTeammateClick = useCallback(
+    (teamId: string, teammate: TeamAgent) => {
+      cleanupSiderTooltips();
+      blurActiveElement();
+      // Persist the chosen slot so TeamTabsContext picks it up as the initial active tab.
+      // The storage key mirrors `team-active-slot-${teamId}` from TeamTabsContext.
+      try {
+        localStorage.setItem(`team-active-slot-${teamId}`, teammate.slotId);
+      } catch {
+        // localStorage failures (private mode, quota) are non-actionable here;
+        // the user lands on the team's last-known tab instead.
+      }
       Promise.resolve(navigate(`/team/${teamId}`)).catch(console.error);
       if (onSessionClick) onSessionClick();
     },
@@ -171,8 +193,8 @@ const TeamSiderSection: React.FC<TeamSiderSectionProps> = ({
                 },
               ];
               const teamBadge = teamBadgeCounts.get(team.id) ?? 0;
-              return (
-                <div key={team.id} className='relative group'>
+              const header = (
+                <div className='relative group flex-1 min-w-0'>
                   <SiderItem
                     icon={<Users size={20} color={iconColors.primary} style={{ lineHeight: 0 }} />}
                     name={team.name}
@@ -211,13 +233,23 @@ const TeamSiderSection: React.FC<TeamSiderSectionProps> = ({
                   />
                   {teamBadge > 0 && (
                     <span
-                      className='absolute right-11px top-1/2 -translate-y-1/2 w-18px h-18px rounded-full text-10px font-bold flex items-center justify-center pointer-events-none z-10 group-hover:hidden'
+                      className='absolute right-11px top-1/2 -translate-y-1/2 min-w-18px h-18px px-5px rounded-full text-10px font-bold flex items-center justify-center pointer-events-none z-10 group-hover:hidden'
                       style={{ backgroundColor: '#F53F3F', color: '#fff', lineHeight: 1 }}
                     >
                       {teamBadge > 99 ? '99+' : teamBadge}
                     </span>
                   )}
                 </div>
+              );
+              return (
+                <ActiveTeamGroup
+                  key={team.id}
+                  team={team}
+                  expanded={isExpanded(team.id)}
+                  onToggle={() => toggleGroup(team.id)}
+                  header={header}
+                  onTeammateClick={(teammate) => handleTeammateClick(team.id, teammate)}
+                />
               );
             })}
         </div>
