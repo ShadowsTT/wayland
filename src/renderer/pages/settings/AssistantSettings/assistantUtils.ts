@@ -97,7 +97,15 @@ export const normalizeExtensionAssistants = (extensionAssistants: Record<string,
         enabled: true,
         _source: 'extension',
         _extensionName: typeof ext._extensionName === 'string' ? ext._extensionName : undefined,
-        _kind: typeof ext._kind === 'string' ? ext._kind : undefined,
+        // Prefer the bundle-declared `kind` ('team' | 'specialist' for the
+        // /assistants library page). Fall back to legacy `_kind` if older
+        // bundles set it.
+        _kind:
+          typeof ext.kind === 'string'
+            ? ext.kind
+            : typeof ext._kind === 'string'
+              ? ext._kind
+              : undefined,
       } as AssistantListItem;
     })
     .filter((item): item is AssistantListItem => item !== null);

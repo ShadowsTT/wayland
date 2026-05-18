@@ -10,7 +10,7 @@
   "buildMyOwn": {
     "label": "Build my own",
     "hint": "Start from a blank assistant",
-    "cta": "+ Build my own"
+    "cta": "Build my own"
   },
   "group": {
     "teams": "Teams",

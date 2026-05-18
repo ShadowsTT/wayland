@@ -47,7 +47,7 @@ const buildAssistant = (overrides: Partial<AssistantListItem> = {}): AssistantLi
   }) as AssistantListItem;
 
 describe('AssistantCard', () => {
-  it('renders name, description and backend hint', () => {
+  it('renders name and description (backend hint intentionally removed in F3)', () => {
     render(
       <AssistantCard
         assistant={buildAssistant()}
@@ -60,7 +60,9 @@ describe('AssistantCard', () => {
 
     expect(screen.getByText('Word Creator')).toBeTruthy();
     expect(screen.getByText('Build Word docs')).toBeTruthy();
-    expect(screen.getByText(/Runs on Gemini/i)).toBeTruthy();
+    // Backend hint was removed per Sean's F3 — the chat-input model selector
+    // is the only override surface. The card must NOT advertise a backend.
+    expect(screen.queryByText(/Runs on/i)).toBeNull();
   });
 
   it('invokes onLaunch when the card body is clicked', () => {

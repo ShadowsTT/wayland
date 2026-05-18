@@ -27,9 +27,6 @@ const isImageAvatar = (resolved: string): boolean =>
   /\.(svg|png|jpe?g|webp|gif)$/i.test(resolved) ||
   /^(https?:|wayland-asset:\/\/|file:\/\/|data:)/i.test(resolved);
 
-const formatBackendLabel = (backend: string): string =>
-  backend.charAt(0).toUpperCase() + backend.slice(1);
-
 const AssistantCard: React.FC<AssistantCardProps> = ({ assistant, type, localeKey, onLaunch, onMenuClick }) => {
   const { t } = useTranslation();
   const name = assistant.nameI18n?.[localeKey] || assistant.nameI18n?.['en-US'] || assistant.name || assistant.id;
@@ -39,13 +36,6 @@ const AssistantCard: React.FC<AssistantCardProps> = ({ assistant, type, localeKe
   const mapped = avatarValue ? CUSTOM_AVATAR_IMAGE_MAP[avatarValue] : undefined;
   const resolved = avatarValue ? mapped || resolveExtensionAssetUrl(avatarValue) || avatarValue : undefined;
   const showImage = resolved ? isImageAvatar(resolved) : false;
-
-  const backend = assistant.presetAgentType ?? 'gemini';
-  const backendLabel = formatBackendLabel(backend);
-  const backendHint = t('assistants.card.backendHint', {
-    backend: backendLabel,
-    defaultValue: '· Runs on {{backend}} · change ⌄',
-  });
 
   const dotClass =
     type === 'team' ? styles.typeDotTeam : type === 'specialist' ? styles.typeDotSpecialist : styles.typeDotBuiltin;
@@ -105,7 +95,6 @@ const AssistantCard: React.FC<AssistantCardProps> = ({ assistant, type, localeKe
         </div>
       </div>
       {description && <div className={styles.description}>{description}</div>}
-      <div className={styles.backendHint}>{backendHint}</div>
       <div
         role='button'
         tabIndex={0}

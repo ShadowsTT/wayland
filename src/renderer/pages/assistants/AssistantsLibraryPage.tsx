@@ -58,10 +58,24 @@ type CardEntry = {
   category: AssistantCategory;
 };
 
+/**
+ * Classify a card. Order matters:
+ *  1. Built-ins are always 'builtin' regardless of any other signal.
+ *  2. Extension-contributed assistants prefer their bundle-declared `_kind`
+ *     ('team' | 'specialist') — that comes from the bundle's `kind` field
+ *     which the manifest schema accepts and normalizeExtensionAssistants
+ *     carries through. The bundle is the source of truth for whether an
+ *     assistant composes multiple roles (team) or is a single role (specialist).
+ *  3. Older bundles without `kind` fall back to the heuristic that the team
+ *     categories (sell, run) are most likely to be team-launchers.
+ */
 const TEAM_CATEGORIES: ReadonlySet<AssistantCategory> = new Set<AssistantCategory>(['sell', 'run']);
 
 const classifyAssistant = (assistant: AssistantListItem, category: AssistantCategory): AssistantCardType => {
   if (assistant.isBuiltin) return 'builtin';
+  if (assistant._kind === 'team') return 'team';
+  if (assistant._kind === 'specialist') return 'specialist';
+  // Legacy fallback for bundles that didn't declare `kind`.
   if (TEAM_CATEGORIES.has(category)) return 'team';
   return 'specialist';
 };

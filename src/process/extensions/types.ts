@@ -265,6 +265,12 @@ export const ExtAssistantSchema = z.object({
   ]),
   /** Optional category aligned with built-in AssistantPreset.category for Phase 2 routing. */
   category: z.enum(ASSISTANT_CATEGORIES).optional(),
+  /**
+   * Optional library-grouping kind. 'team' = composes multiple roles into a
+   * workflow (Standing Companies, launchers). 'specialist' = single role.
+   * Used by the /assistants library page (Phase 3) to split the 3-group grid.
+   */
+  kind: z.enum(['team', 'specialist']).optional(),
   contextFile: z.string().min(1, 'contextFile is required'),
   models: z.array(z.string()).optional(),
   enabledSkills: z.array(z.string()).optional(),

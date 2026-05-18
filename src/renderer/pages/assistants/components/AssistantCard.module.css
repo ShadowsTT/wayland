@@ -3,20 +3,23 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 14px 14px 12px;
+  padding: 12px 14px 10px;
   border: 1px solid var(--color-border-2);
   border-radius: 12px;
   background: var(--color-bg-2);
   cursor: pointer;
-  transition: border-color 0.16s ease, background 0.16s ease, transform 0.16s ease;
-  min-height: 122px;
+  transition: border-color 0.16s ease, background 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease;
+  /* Compact card now that the backend hint is gone (F3) — gives the
+     description room to breathe across up to 3 lines instead of 2 padded. */
+  min-height: 104px;
   text-align: left;
   user-select: none;
 }
 
 .card:hover {
-  border-color: var(--color-border-3);
+  border-color: rgb(var(--primary-6));
   background: var(--color-fill-1);
+  box-shadow: 0 0 0 1px rgb(var(--primary-6) / 0.4);
 }
 
 .card:active {
@@ -47,6 +50,16 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+/**
+ * Bundle SVG icons use stroke="currentColor" but render as <img> so
+ * they default to black-on-transparent. Invert in dark mode so they
+ * read as light icons on the dark card background. Light mode leaves
+ * them as-is (already legible).
+ */
+:global([data-theme='dark']) .avatar img {
+  filter: invert(1) brightness(1.6);
 }
 
 .avatar span {
@@ -97,17 +110,10 @@
   color: var(--color-text-3);
   line-height: 18px;
   display: -webkit-box;
-  -webkit-line-clamp: 2;
+  /* Description now uses the space the backend hint vacated — up to 3 lines. */
+  -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
-  min-height: 36px;
-}
-
-.backendHint {
-  margin-top: auto;
-  font-size: 11.5px;
-  color: var(--color-text-4);
-  line-height: 16px;
 }
 
 .menuButton {
