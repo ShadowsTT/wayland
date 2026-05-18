@@ -1600,6 +1600,28 @@ const migration_v36: IMigration = {
   },
 };
 
+const migration_v37: IMigration = {
+  version: 37,
+  name: 'Add promote-to-Standing tracking columns to teams table',
+  up: (db) => {
+    const cols = new Set((db.pragma('table_info(teams)') as Array<{ name: string }>).map((c) => c.name));
+    if (!cols.has('promoted_to_standing')) {
+      db.exec('ALTER TABLE teams ADD COLUMN promoted_to_standing INTEGER NOT NULL DEFAULT 0');
+    }
+    if (!cols.has('session_count')) {
+      db.exec('ALTER TABLE teams ADD COLUMN session_count INTEGER NOT NULL DEFAULT 0');
+    }
+    if (!cols.has('first_active_at')) {
+      db.exec('ALTER TABLE teams ADD COLUMN first_active_at INTEGER');
+    }
+    console.log('[Migration v37] Added promote-to-Standing tracking columns to teams table');
+  },
+  down: (_db) => {
+    // SQLite cannot DROP COLUMN cleanly without table rebuild; tracking-only columns are safe to leave.
+    console.log('[Migration v37] No-op rollback (columns are tracking-only)');
+  },
+};
+
 /**
  * All migrations in order
  */
@@ -1611,6 +1633,7 @@ export const ALL_MIGRATIONS: IMigration[] = [
   migration_v19, migration_v20, migration_v21, migration_v22, migration_v23, migration_v24,
   migration_v25, migration_v26, migration_v27, migration_v28, migration_v29, migration_v30,
   migration_v31, migration_v32, migration_v33, migration_v34, migration_v35, migration_v36,
+  migration_v37,
 ];
 
 /**

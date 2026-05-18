@@ -4,6 +4,21 @@
   "siderEntry": "Teams",
   "emptyState": "No teams available yet.",
   "standingBadge": "Standing",
+  "standing": {
+    "promoteCta": "Promote to Standing",
+    "promoteCtaTooltip": "Eligible: {{sessionsRemaining}} sessions or {{daysRemaining}} days remaining",
+    "modalTitle": "Promote to Standing Company",
+    "modalDescription": "Standing Companies persist across sessions, appear in the dedicated Standing section of the library, and carry a permanent visual badge.",
+    "optIn1": "I understand this team will be marked as a Standing Company across the app.",
+    "optIn2": "I can demote this team back to a regular team at any time.",
+    "confirmButton": "Promote to Standing",
+    "cancelButton": "Cancel",
+    "demoteAction": "Demote",
+    "promoteSuccess": "Team promoted to Standing",
+    "promoteError": "Failed to promote team",
+    "demoteSuccess": "Team demoted to regular",
+    "demoteError": "Failed to demote team"
+  },
   "card": {
     "rolesCount": "{{count}} roles"
   },

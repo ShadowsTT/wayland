@@ -1413,6 +1413,10 @@ export const team = {
   renameTeam: buildProvider<void, { id: string; name: string }>('team.rename'),
   setSessionMode: buildProvider<void, { teamId: string; sessionMode: string }>('team.set-session-mode'),
   updateWorkspace: buildProvider<void, { teamId: string; workspace: string }>('team.update-workspace'),
+  /** W3b — promote a user-spawned team to Standing Company status. Idempotent. */
+  promoteToStanding: buildProvider<void, { teamId: string }>('team.promote-to-standing'),
+  /** W3b — reverse a previous promotion. Idempotent. */
+  demoteFromStanding: buildProvider<void, { teamId: string }>('team.demote-from-standing'),
   /**
    * W1e — list rows from `team_event_log`, newest-first. Paged via `limit`
    * (default 100) and `since` (only events with `createdAt > since`).

@@ -4,6 +4,21 @@
   "siderEntry": "[TODO:translate] Teams",
   "emptyState": "[TODO:translate] No teams available yet.",
   "standingBadge": "[TODO:translate] Standing",
+  "standing": {
+    "promoteCta": "[TODO:translate] Promote to Standing",
+    "promoteCtaTooltip": "[TODO:translate] Eligible: {{sessionsRemaining}} sessions or {{daysRemaining}} days remaining",
+    "modalTitle": "[TODO:translate] Promote to Standing Company",
+    "modalDescription": "[TODO:translate] Standing Companies persist across sessions, appear in the dedicated Standing section of the library, and carry a permanent visual badge.",
+    "optIn1": "[TODO:translate] I understand this team will be marked as a Standing Company across the app.",
+    "optIn2": "[TODO:translate] I can demote this team back to a regular team at any time.",
+    "confirmButton": "[TODO:translate] Promote to Standing",
+    "cancelButton": "[TODO:translate] Cancel",
+    "demoteAction": "[TODO:translate] Demote",
+    "promoteSuccess": "[TODO:translate] Team promoted to Standing",
+    "promoteError": "[TODO:translate] Failed to promote team",
+    "demoteSuccess": "[TODO:translate] Team demoted to regular",
+    "demoteError": "[TODO:translate] Failed to demote team"
+  },
   "card": {
     "rolesCount": "[TODO:translate] {{count}} roles"
   },

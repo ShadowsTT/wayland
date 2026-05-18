@@ -98,6 +98,20 @@ export function initTeamBridge(teamSessionService: TeamSessionService): void {
     })
   );
 
+  // W3b — promote/demote handlers. Service methods are idempotent; the
+  // provider just translates IPC → service and surfaces errors via safeProvider.
+  ipcBridge.team.promoteToStanding.provider(
+    safeProvider(async ({ teamId }) => {
+      await teamSessionService.promoteTeamToStanding(teamId);
+    })
+  );
+
+  ipcBridge.team.demoteFromStanding.provider(
+    safeProvider(async ({ teamId }) => {
+      await teamSessionService.demoteTeamFromStanding(teamId);
+    })
+  );
+
   ipcBridge.team.sendMessage.provider(
     safeProvider(async ({ teamId, content, files }) => {
       const session = await teamSessionService.getOrStartSession(teamId);

@@ -21,10 +21,12 @@ import TeamAgentIdentity from './components/TeamAgentIdentity';
 import TeamRightRail from './components/TeamRightRail';
 import TeamActivityTab from './components/TeamActivityTab';
 import TeamHeaderBadges from './components/TeamHeaderBadges';
+import PromoteToStandingModal from './components/PromoteToStandingModal';
 import { TeamTabsProvider, useTeamTabs } from './hooks/TeamTabsContext';
 import { TeamPermissionProvider } from './hooks/TeamPermissionContext';
 import { useTeamSession } from './hooks/useTeamSession';
 import { useTeamSourceLauncher } from './hooks/useTeamSourceLauncher';
+import { useStandingEligibility } from './hooks/useStandingEligibility';
 import { resolveConversationType } from './components/agentSelectUtils';
 import { dispatchWorkspaceHasFilesEvent } from '@/renderer/utils/workspace/workspaceEvents';
 import type { AssistantListItem } from '@/renderer/pages/settings/AssistantSettings/types';
@@ -418,13 +420,69 @@ const TeamPageContent: React.FC<TeamPageContentProps> = ({ team, onRenameTeam })
     [handleTabClick, slotPendingCounts, viewMode]
   );
 
+  // W3b — Standing-promotion state: eligibility predicate + modal visibility +
+  // pending IPC flag. The promote/demote handlers are intentionally thin —
+  // service-side methods are idempotent and emit listChanged('standing_changed')
+  // which the page-level subscription picks up to refresh the team record.
+  const eligibility = useStandingEligibility(team);
+  const [promoteModalVisible, setPromoteModalVisible] = useState(false);
+  const [promoteLoading, setPromoteLoading] = useState(false);
+
+  const handlePromoteClick = useCallback(() => setPromoteModalVisible(true), []);
+  const handlePromoteCancel = useCallback(() => setPromoteModalVisible(false), []);
+
+  const handlePromoteConfirm = useCallback(async () => {
+    setPromoteLoading(true);
+    try {
+      const result = (await ipcBridge.team.promoteToStanding.invoke({ teamId: team.id })) as
+        | void
+        | { __bridgeError: true; message?: string };
+      if (result && typeof result === 'object' && '__bridgeError' in result) {
+        Message.error(result.message ?? t('teams.standing.promoteError', { defaultValue: 'Failed to promote team' }));
+        return;
+      }
+      Message.success(t('teams.standing.promoteSuccess', { defaultValue: 'Team promoted to Standing' }));
+      setPromoteModalVisible(false);
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      Message.error(msg || t('teams.standing.promoteError', { defaultValue: 'Failed to promote team' }));
+    } finally {
+      setPromoteLoading(false);
+    }
+  }, [team.id, t]);
+
+  const handleDemote = useCallback(async () => {
+    try {
+      const result = (await ipcBridge.team.demoteFromStanding.invoke({ teamId: team.id })) as
+        | void
+        | { __bridgeError: true; message?: string };
+      if (result && typeof result === 'object' && '__bridgeError' in result) {
+        Message.error(result.message ?? t('teams.standing.demoteError', { defaultValue: 'Failed to demote team' }));
+        return;
+      }
+      Message.success(t('teams.standing.demoteSuccess', { defaultValue: 'Team demoted to regular' }));
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      Message.error(msg || t('teams.standing.demoteError', { defaultValue: 'Failed to demote team' }));
+    }
+  }, [team.id, t]);
+
   // W2c — header extras: Standing badge + backend rollup. We keep the
   // title slot as the raw `team.name` string so the inline rename flow
   // (useTitleRename → canRenameTitle requires a string title) keeps
-  // working unchanged.
+  // working unchanged. W3b adds the Promote CTA + Demote action.
   const headerExtra = useMemo(
-    () => <TeamHeaderBadges agents={agents} launcher={launcher} />,
-    [agents, launcher]
+    () => (
+      <TeamHeaderBadges
+        agents={agents}
+        launcher={launcher}
+        team={team}
+        eligibility={eligibility}
+        onPromoteClick={handlePromoteClick}
+        onDemote={handleDemote}
+      />
+    ),
+    [agents, launcher, team, eligibility, handlePromoteClick, handleDemote]
   );
 
   return (
@@ -551,6 +609,13 @@ const TeamPageContent: React.FC<TeamPageContentProps> = ({ team, onRenameTeam })
             onTeammateAdded={handleAddTeammate}
           />
         </div>
+        <PromoteToStandingModal
+          visible={promoteModalVisible}
+          teamName={team.name}
+          onConfirm={handlePromoteConfirm}
+          onCancel={handlePromoteCancel}
+          loading={promoteLoading}
+        />
       </ChatLayout>
     </TeamPermissionProvider>
   );

@@ -806,6 +806,56 @@ export class TeamSessionService {
     });
   }
 
+  /**
+   * W3b — User-driven promotion of a team to Standing Company status.
+   * Idempotent: a no-op if the team is already promoted. The flag is
+   * persisted, a `decision` event is appended for the Activity tab, and a
+   * `standing_changed` listChanged event signals SWR caches to revalidate.
+   */
+  async promoteTeamToStanding(teamId: string): Promise<void> {
+    const team = await this.repo.findById(teamId);
+    if (!team) throw new Error(`Team "${teamId}" not found`);
+    if (team.promotedToStanding === true) return;
+
+    await this.repo.update(teamId, { promotedToStanding: true, updatedAt: Date.now() });
+
+    void this.eventLogger.append({
+      teamId,
+      eventType: 'decision',
+      payload: {
+        outcome: 'promoted_to_standing',
+        actor: 'user',
+      },
+    });
+
+    ipcBridge.team.listChanged.emit({ teamId, action: 'standing_changed' });
+  }
+
+  /**
+   * W3b — Reverse a previous promotion. Idempotent when the team was never
+   * promoted (or has already been demoted). Bundle-derived Standing teams
+   * (`launcher._standing`) are unaffected because the flag we toggle is the
+   * user-promotion flag, not the bundle attribute.
+   */
+  async demoteTeamFromStanding(teamId: string): Promise<void> {
+    const team = await this.repo.findById(teamId);
+    if (!team) throw new Error(`Team "${teamId}" not found`);
+    if (!team.promotedToStanding) return;
+
+    await this.repo.update(teamId, { promotedToStanding: false, updatedAt: Date.now() });
+
+    void this.eventLogger.append({
+      teamId,
+      eventType: 'decision',
+      payload: {
+        outcome: 'demoted_from_standing',
+        actor: 'user',
+      },
+    });
+
+    ipcBridge.team.listChanged.emit({ teamId, action: 'standing_changed' });
+  }
+
   async removeAgent(teamId: string, slotId: string): Promise<void> {
     const team = await this.repo.findById(teamId);
     if (!team) throw new Error(`Team "${teamId}" not found`);
@@ -893,6 +943,20 @@ export class TeamSessionService {
       console.error(`[TeamSessionService] Failed to start session for team ${teamId}:`, err);
       throw err;
     }
+
+    // W3b — best-effort bump of the promote-to-Standing eligibility counters.
+    // First successful in-process start for this team increments sessionCount
+    // and stamps firstActiveAt (if unset). Failures are logged and swallowed —
+    // the counters are tracking-only and must never block session start.
+    const nextSessionCount = (team.sessionCount ?? 0) + 1;
+    const nextFirstActiveAt = team.firstActiveAt ?? Date.now();
+    void this.repo
+      .update(teamId, {
+        sessionCount: nextSessionCount,
+        firstActiveAt: nextFirstActiveAt,
+        updatedAt: Date.now(),
+      })
+      .catch((err) => console.warn('[TeamSessionService] failed to bump sessionCount', err));
 
     // Only register the session after full initialization so that getOrStartSession
     // always returns a session with a live MCP server and injected DB config.

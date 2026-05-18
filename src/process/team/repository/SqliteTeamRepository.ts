@@ -18,6 +18,9 @@ type TeamRow = {
   agents: string;
   session_mode: string | null;
   source_launcher_id: string | null;
+  promoted_to_standing: number;
+  session_count: number;
+  first_active_at: number | null;
   created_at: number;
   updated_at: number;
 };
@@ -74,6 +77,9 @@ function rowToTeam(row: TeamRow): TTeam {
     agents: JSON.parse(row.agents) as TeamAgent[],
     sessionMode: row.session_mode ?? undefined,
     sourceLauncherId: row.source_launcher_id ?? undefined,
+    promotedToStanding: row.promoted_to_standing === 1,
+    sessionCount: row.session_count,
+    firstActiveAt: row.first_active_at ?? undefined,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -150,8 +156,8 @@ export class SqliteTeamRepository implements ITeamRepository {
   async create(team: TTeam): Promise<TTeam> {
     const db = await this.getDb();
     db.prepare(
-      `INSERT INTO teams (id, user_id, name, workspace, workspace_mode, lead_agent_id, agents, session_mode, source_launcher_id, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      `INSERT INTO teams (id, user_id, name, workspace, workspace_mode, lead_agent_id, agents, session_mode, source_launcher_id, promoted_to_standing, session_count, first_active_at, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     ).run(
       team.id,
       team.userId,
@@ -162,6 +168,9 @@ export class SqliteTeamRepository implements ITeamRepository {
       JSON.stringify(team.agents),
       team.sessionMode ?? null,
       team.sourceLauncherId ?? null,
+      team.promotedToStanding ? 1 : 0,
+      team.sessionCount ?? 0,
+      team.firstActiveAt ?? null,
       team.createdAt,
       team.updatedAt
     );
@@ -187,7 +196,7 @@ export class SqliteTeamRepository implements ITeamRepository {
     const db = await this.getDb();
     db.prepare(
       `UPDATE teams
-       SET name = ?, workspace = ?, workspace_mode = ?, lead_agent_id = ?, agents = ?, session_mode = ?, source_launcher_id = ?, updated_at = ?
+       SET name = ?, workspace = ?, workspace_mode = ?, lead_agent_id = ?, agents = ?, session_mode = ?, source_launcher_id = ?, promoted_to_standing = ?, session_count = ?, first_active_at = ?, updated_at = ?
        WHERE id = ?`
     ).run(
       merged.name,
@@ -197,6 +206,9 @@ export class SqliteTeamRepository implements ITeamRepository {
       JSON.stringify(merged.agents),
       merged.sessionMode ?? null,
       merged.sourceLauncherId ?? null,
+      merged.promotedToStanding ? 1 : 0,
+      merged.sessionCount ?? 0,
+      merged.firstActiveAt ?? null,
       merged.updatedAt,
       id
     );

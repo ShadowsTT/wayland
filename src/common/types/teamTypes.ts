@@ -77,6 +77,12 @@ export type TTeam = {
   sourceLauncherId?: string;
   /** Current session permission mode (e.g. 'plan', 'auto'). Persisted so newly spawned agents inherit it. */
   sessionMode?: string;
+  /** User-promoted Standing flag. Distinct from launcher._standing which is bundle-derived. */
+  promotedToStanding?: boolean;
+  /** Cumulative count of `getOrStartSession` calls. Used for promote-to-Standing eligibility. */
+  sessionCount?: number;
+  /** Unix-ms timestamp of the first session start. Used for "14 days" eligibility. */
+  firstActiveAt?: number;
   createdAt: number;
   updatedAt: number;
 };
@@ -112,7 +118,7 @@ export type ITeamAgentRenamedEvent = {
 /** IPC event pushed to renderer when the team list changes (created/removed/agent changes) */
 export type ITeamListChangedEvent = {
   teamId: string;
-  action: 'created' | 'removed' | 'agent_added' | 'agent_removed';
+  action: 'created' | 'removed' | 'agent_added' | 'agent_removed' | 'standing_changed';
 };
 
 /** IPC event for streaming agent messages to renderer */
