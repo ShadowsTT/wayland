@@ -25,7 +25,7 @@
  */
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Button, Input, Message, Tooltip } from '@arco-design/web-react';
+import { Button, Input, Message } from '@arco-design/web-react';
 import { ArrowLeft, Users } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -36,6 +36,10 @@ import { useAvailableBackends } from '@/renderer/hooks/assistant/useAvailableBac
 import { useAuth } from '@/renderer/hooks/context/AuthContext';
 import type { AssistantListItem } from '@/renderer/pages/settings/AssistantSettings/types';
 import type { TTeam, TeamAgent } from '@/common/types/teamTypes';
+import type {
+  SuggestRosterResult,
+  SuggestSpecialist,
+} from '@process/team/suggestRoster';
 import { resolveExtensionAssetUrl } from '@/renderer/utils/platform';
 import { isImageAvatar } from '@/renderer/utils/avatar';
 import { resolveConversationType } from '../team/components/agentSelectUtils';
@@ -121,6 +125,7 @@ const TeamLauncherPage: React.FC = () => {
   }, []);
 
   const [launching, setLaunching] = useState(false);
+  const [suggesting, setSuggesting] = useState(false);
   const [pickerVisible, setPickerVisible] = useState(false);
   const [pickerMode, setPickerMode] = useState<'leader' | 'teammate'>('teammate');
 
@@ -218,6 +223,60 @@ const TeamLauncherPage: React.FC = () => {
     },
     [markTouched, pickerMode, recommend, specialistsById]
   );
+
+  const handleSuggest = async () => {
+    const trimmed = state.goalText.trim();
+    if (!trimmed) return;
+    markTouched();
+    setSuggesting(true);
+    try {
+      const pool: SuggestSpecialist[] = specialists.map((s) => ({
+        id: s.id,
+        name: s.nameI18n?.[localeKey] || s.nameI18n?.['en-US'] || s.name || s.id,
+        description: s.descriptionI18n?.[localeKey] || s.descriptionI18n?.['en-US'] || s.description || '',
+        agentType: s.presetAgentType,
+      }));
+
+      const result = (await ipcBridge.team.suggestRoster.invoke({
+        goalText: trimmed,
+        specialists: pool,
+        detectedBackends: available,
+        targetSize: 5,
+      })) as SuggestRosterResult & { __bridgeError?: boolean; message?: string };
+
+      if (result && result.__bridgeError) {
+        Message.error(
+          result.message ?? t('teams.launcher.suggestError', { defaultValue: 'Failed to suggest roster' })
+        );
+        return;
+      }
+
+      setState((prev) => ({
+        ...prev,
+        leader: result.leader
+          ? { specialistId: result.leader.specialistId, backend: result.leader.backend, slotName: '' }
+          : prev.leader,
+        teammates: result.teammates.map((e) => ({
+          specialistId: e.specialistId,
+          backend: e.backend,
+          slotName: '',
+        })),
+      }));
+
+      Message.success(
+        result.fellBackToDefaults
+          ? t('teams.launcher.suggestFellBackToDefaults', {
+              defaultValue: 'Picked a default roster (no goal keywords matched)',
+            })
+          : t('teams.launcher.suggestSuccess', { defaultValue: 'Roster suggested' })
+      );
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      Message.error(msg || t('teams.launcher.suggestError', { defaultValue: 'Failed to suggest roster' }));
+    } finally {
+      setSuggesting(false);
+    }
+  };
 
   const handleBack = () => {
     void Promise.resolve(navigate('/teams')).catch(console.error);
@@ -452,14 +511,16 @@ const TeamLauncherPage: React.FC = () => {
                 data-testid='launcher-goal-input'
               />
               <div className={styles.goalActions}>
-                <Tooltip
-                  content={t('teams.launcher.suggestComingSoon', { defaultValue: 'Coming in W3c' })}
-                  position='top'
+                <Button
+                  type='outline'
+                  size='small'
+                  loading={suggesting}
+                  disabled={state.goalText.trim().length === 0 || suggesting}
+                  onClick={handleSuggest}
+                  data-testid='launcher-suggest-btn'
                 >
-                  <Button type='outline' size='small' disabled data-testid='launcher-suggest-btn'>
-                    {t('teams.launcher.suggestCta', { defaultValue: 'Suggest' })}
-                  </Button>
-                </Tooltip>
+                  {t('teams.launcher.suggestCta', { defaultValue: 'Suggest' })}
+                </Button>
               </div>
             </div>
           )}

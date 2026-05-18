@@ -5,6 +5,7 @@
  */
 
 import { ipcBridge } from '@/common';
+import { suggestRoster } from '@process/team/suggestRoster';
 import type { TeamSessionService } from '@process/team/TeamSessionService';
 
 /**
@@ -142,6 +143,14 @@ export function initTeamBridge(teamSessionService: TeamSessionService): void {
   ipcBridge.team.listEvents.provider(
     safeProvider(async ({ teamId, since, limit, eventType }) => {
       return teamSessionService.listEvents(teamId, { since, limit, eventType });
+    })
+  );
+
+  // W3c — pure server-side roster suggester. No I/O; runs the keyword
+  // scorer + recommendBackend over the renderer-provided specialist pool.
+  ipcBridge.team.suggestRoster.provider(
+    safeProvider(async (params) => {
+      return suggestRoster(params);
     })
   );
 }

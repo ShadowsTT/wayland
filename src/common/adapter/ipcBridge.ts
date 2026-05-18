@@ -1432,6 +1432,20 @@ export const team = {
       eventType?: import('@process/team/types').TeamEventType;
     }
   >('team.list-events'),
+  /**
+   * W3c — Build-my-own AI-suggest. Pure server-side suggester scores the
+   * provided specialist pool against the user's goal text and returns a
+   * pre-fill roster (leader + 4-5 teammates).
+   */
+  suggestRoster: buildProvider<
+    import('@process/team/suggestRoster').SuggestRosterResult,
+    {
+      goalText: string;
+      specialists: import('@process/team/suggestRoster').SuggestSpecialist[];
+      detectedBackends: string[];
+      targetSize?: number;
+    }
+  >('team.suggest-roster'),
   agentStatusChanged: buildEmitter<import('@process/team/types').ITeamAgentStatusEvent>('team.agent.status'),
   agentSpawned: buildEmitter<import('@/common/types/teamTypes').ITeamAgentSpawnedEvent>('team.agent.spawned'),
   agentRemoved: buildEmitter<import('@/common/types/teamTypes').ITeamAgentRemovedEvent>('team.agent.removed'),
