@@ -577,6 +577,11 @@ export class TeamSessionService {
       updatedAt: now,
     };
     await this.repo.create(team);
+    // Notify the sidebar + library page so newly-created teams appear without
+    // a manual refresh. Without this emit, useTeamList()'s SWR cache only
+    // re-fetched on revalidation triggers, and brand-new teams were invisible
+    // in the sidebar until the user reloaded.
+    ipcBridge.team.listChanged.emit({ teamId: team.id, action: 'created' });
     return team;
   }
 
@@ -630,6 +635,9 @@ export class TeamSessionService {
     await this.repo.deleteMailboxByTeam(id);
     await this.repo.deleteTasksByTeam(id);
     await this.repo.delete(id);
+    // Mirror the create-emit so the sidebar/library removes the row without
+    // a manual refresh.
+    ipcBridge.team.listChanged.emit({ teamId: id, action: 'removed' });
   }
 
   async addAgent(teamId: string, agent: Omit<TeamAgent, 'slotId'>): Promise<TeamAgent> {
