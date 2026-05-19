@@ -1,0 +1,175 @@
+/**
+ * @license
+ * Copyright 2025 AionUi (aionui.com)
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/**
+ * Vendored-bundle overlay (live-smoke fix #1, 2026-05-19).
+ *
+ * The on-disk waylandteams bundle (loaded via the dev symlink at
+ * ~/Library/Application Support/Wayland*\/wayland/extensions/) lags the
+ * in-repo vendored snapshot at `./assistants.json` for the schema fields
+ * added during the team-blitz (`standing`, `teammates`, `rituals`). The
+ * vendored bundle README declares itself the source of truth for the
+ * running app, but no install path actually wires that promise up.
+ *
+ * Rather than try to make the vendored directory loadable as an
+ * independent extension (it would need a manifest + all 44 contextFile
+ * mirrors + icons + i18n + lifecycle scripts), we apply a narrow runtime
+ * overlay: for each live-loaded assistant whose id matches an entry in
+ * the vendored manifest, copy ONLY the three blitz fields when they
+ * are missing on the live record. This:
+ *   - keeps the live bundle's icons/contextFile/i18n authoritative
+ *   - respects the app-repo boundary (no edits to ~/dev/waylandteams)
+ *   - is idempotent (already-populated fields win)
+ *   - degrades cleanly when the vendored file is unreadable (logs +
+ *     returns the input unchanged)
+ *
+ * Delete this overlay (and the call site in ExtensionRegistry) once the
+ * symlinked bundle is bumped to include the team-blitz schema fields and
+ * the v0.6.0-wayland-teams release ships per the vendored README's
+ * "Sync policy" section.
+ */
+
+import fs from 'fs/promises';
+import * as path from 'path';
+
+type VendoredOverlayEntry = {
+  standing?: boolean;
+  teammates?: string[];
+  rituals?: Array<{ name: string; cadence: string }>;
+};
+
+type VendoredOverlayMap = Map<string, VendoredOverlayEntry>;
+
+let cachedOverlay: VendoredOverlayMap | null = null;
+let cachedOverlayPromise: Promise<VendoredOverlayMap> | null = null;
+
+const VENDORED_ASSISTANTS_PATH = path.join(__dirname, 'assistants.json');
+
+/**
+ * Load the vendored manifest from disk. Cached after the first successful
+ * read. On parse failure or missing file, the cache is populated with an
+ * empty map so callers degrade to a no-op overlay without retrying every
+ * invocation.
+ */
+async function loadOverlay(): Promise<VendoredOverlayMap> {
+  if (cachedOverlay) return cachedOverlay;
+  if (cachedOverlayPromise) return cachedOverlayPromise;
+
+  cachedOverlayPromise = (async (): Promise<VendoredOverlayMap> => {
+    const map: VendoredOverlayMap = new Map();
+    try {
+      const raw = await fs.readFile(VENDORED_ASSISTANTS_PATH, 'utf-8');
+      const parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed)) {
+        console.warn('[Extensions] Vendored overlay: assistants.json is not an array; overlay disabled.');
+        cachedOverlay = map;
+        return map;
+      }
+      for (const entry of parsed) {
+        if (!entry || typeof entry !== 'object') continue;
+        const id = (entry as { id?: unknown }).id;
+        if (typeof id !== 'string' || id.length === 0) continue;
+        const overlay: VendoredOverlayEntry = {};
+        const standing = (entry as { standing?: unknown }).standing;
+        if (typeof standing === 'boolean') overlay.standing = standing;
+        const teammates = (entry as { teammates?: unknown }).teammates;
+        if (Array.isArray(teammates) && teammates.every((t) => typeof t === 'string')) {
+          overlay.teammates = teammates as string[];
+        }
+        const rituals = (entry as { rituals?: unknown }).rituals;
+        if (
+          Array.isArray(rituals) &&
+          rituals.every(
+            (r) =>
+              r !== null &&
+              typeof r === 'object' &&
+              typeof (r as { name?: unknown }).name === 'string' &&
+              typeof (r as { cadence?: unknown }).cadence === 'string'
+          )
+        ) {
+          overlay.rituals = rituals as Array<{ name: string; cadence: string }>;
+        }
+        map.set(id, overlay);
+      }
+      cachedOverlay = map;
+      return map;
+    } catch (error) {
+      console.warn(
+        '[Extensions] Vendored overlay: failed to load assistants.json; overlay disabled.',
+        error instanceof Error ? error.message : error
+      );
+      cachedOverlay = map;
+      return map;
+    } finally {
+      cachedOverlayPromise = null;
+    }
+  })();
+
+  return cachedOverlayPromise;
+}
+
+/**
+ * Apply the vendored overlay to a list of resolved assistants in place.
+ *
+ * For each assistant whose unprefixed id matches an overlay entry, copy
+ * only the fields that are NOT already set on the live record. The
+ * registry uses `ext-<id>` prefixed ids; we strip the prefix for the
+ * lookup so this works regardless of which side of the prefix boundary
+ * the caller passes in.
+ *
+ * Returns the same array reference for caller ergonomics.
+ */
+export async function applyVendoredOverlay(
+  assistants: Record<string, unknown>[]
+): Promise<Record<string, unknown>[]> {
+  const overlay = await loadOverlay();
+  if (overlay.size === 0) return assistants;
+
+  let patched = 0;
+  for (const assistant of assistants) {
+    const rawId = (assistant as { id?: unknown }).id;
+    if (typeof rawId !== 'string') continue;
+    const lookupId = rawId.startsWith('ext-') ? rawId.slice(4) : rawId;
+    const overlayEntry = overlay.get(lookupId);
+    if (!overlayEntry) continue;
+
+    let touched = false;
+    if (
+      overlayEntry.standing !== undefined &&
+      (assistant as { standing?: unknown }).standing === undefined
+    ) {
+      (assistant as { standing?: boolean }).standing = overlayEntry.standing;
+      touched = true;
+    }
+    if (
+      overlayEntry.teammates !== undefined &&
+      (assistant as { teammates?: unknown }).teammates === undefined
+    ) {
+      (assistant as { teammates?: string[] }).teammates = overlayEntry.teammates;
+      touched = true;
+    }
+    if (
+      overlayEntry.rituals !== undefined &&
+      (assistant as { rituals?: unknown }).rituals === undefined
+    ) {
+      (assistant as { rituals?: Array<{ name: string; cadence: string }> }).rituals =
+        overlayEntry.rituals;
+      touched = true;
+    }
+    if (touched) patched += 1;
+  }
+
+  if (patched > 0) {
+    console.log(`[Extensions] Vendored overlay: patched ${patched} assistant(s) with blitz schema fields.`);
+  }
+  return assistants;
+}
+
+/** Test-only hook: clear cached overlay so the next call re-reads from disk. */
+export function __resetVendoredOverlayCacheForTests(): void {
+  cachedOverlay = null;
+  cachedOverlayPromise = null;
+}
