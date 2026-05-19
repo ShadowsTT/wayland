@@ -80,7 +80,12 @@ const TeamLauncherPage: React.FC = () => {
 
   const launcher = useMemo<AssistantListItem | null>(() => {
     if (!teamId) return null;
-    const launcherId = `${SPECIALIST_PREFIX}${teamId}`;
+    // TeamsLibraryPage navigates with the already-prefixed assistant id
+    // (`/teams/${team.id}/launch` where team.id is `ext-<slug>`). Older
+    // call sites may pass the bare slug. Accept both shapes — never
+    // double-prefix — so the launcher resolves in either flow. Mirrors
+    // the teammate-id normalization a few lines down.
+    const launcherId = teamId.startsWith(SPECIALIST_PREFIX) ? teamId : `${SPECIALIST_PREFIX}${teamId}`;
     return assistants.find((a) => a.id === launcherId && a._kind === 'team') ?? null;
   }, [assistants, teamId]);
 
