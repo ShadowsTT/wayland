@@ -233,18 +233,28 @@ export class SkillLibrary {
   }
 
   /**
-   * Return aggregate statistics.
+   * Return aggregate statistics, optionally over a subset of the library.
+   *
    * `pinned` reads from `skills.preferences.pinned` via ProcessConfig; if
    * storage is unavailable it falls back to 0.
+   *
+   * The optional `filter.type` lets callers scope the stats to a single
+   * entry kind. The Skills page passes `{ type: 'skill' }` so workflows
+   * (107) and agent-profiles (25) don't pad the displayed counts — they
+   * route to the Workflows page and Assistants nav respectively.
    */
-  async stats(): Promise<SkillStats> {
+  async stats(filter?: { type?: SkillIndexEntry['type'] }): Promise<SkillStats> {
     await this.ensureLoaded();
+
+    const entries = filter?.type
+      ? this.entries.filter((e) => e.type === filter.type)
+      : this.entries;
 
     const bySource = {} as Record<SkillSource, number>;
     let flagged = 0;
     let verified = 0;
 
-    for (const entry of this.entries) {
+    for (const entry of entries) {
       bySource[entry.source] = (bySource[entry.source] ?? 0) + 1;
       const verdict = entry.security?.verdict;
       // Flagged = SkillGuard saw a real problem. Unscanned/clean don't count
@@ -269,7 +279,7 @@ export class SkillLibrary {
       // treat as 0.
     }
 
-    return { total: this.entries.length, bySource, pinned, flagged, verified };
+    return { total: entries.length, bySource, pinned, flagged, verified };
   }
 
   /**

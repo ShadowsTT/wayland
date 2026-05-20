@@ -49,13 +49,21 @@ export function initSkillsBridge(): void {
   ipcBridge.skills.import.singleSkillMd.provider(async ({ srcPath }) => importer.importSingleSkillMd(srcPath));
 
   ipcBridge.skills.list.provider(async () => {
+    // Skills page contract: surface ONLY `type === 'skill'`. The vendored
+    // library also carries 107 workflows (routed to Workspace > Workflows)
+    // and 25 agent-profiles (merged into Workspace > Assistants via the
+    // vendoredAssistantOverlay). Mixing them onto the Skills page misleads
+    // users into thinking workflows/personas are skills.
     const lib = SkillLibrary.getInstance();
-    return lib.list();
+    return lib.list({ type: 'skill' });
   });
 
   ipcBridge.skills.stats.provider(async () => {
+    // Stats must mirror the list filter so the four health cards count the
+    // same set the user is browsing. Otherwise the page shows e.g.
+    // "2,105 skills" while the row list has 1,973.
     const lib = SkillLibrary.getInstance();
-    return lib.stats();
+    return lib.stats({ type: 'skill' });
   });
 
   ipcBridge.skills.setPinned.provider(async ({ name, pinned }) => {
