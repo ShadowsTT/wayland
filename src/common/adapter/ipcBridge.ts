@@ -390,7 +390,7 @@ export const skills = {
    * scan it via SkillGuard, register in SkillLibrary, and return the verdict.
    */
   save: buildProvider<
-    { name: string; verdict: SkillVerdict },
+    { name: string; verdict: SkillVerdict; quarantinedAt?: string },
     { name: string; description: string; category: string; tags: string[]; body: string }
   >('skills.save'),
 };

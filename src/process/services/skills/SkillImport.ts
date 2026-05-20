@@ -121,12 +121,15 @@ export type ImportResult = {
 // Allowlisted git host patterns
 // ---------------------------------------------------------------------------
 
-// Accepts https:// and git+ssh / git@github.com: forms. Rejects file://, http://,
-// and everything else that could read arbitrary local paths.
+// Accepts https:// and the short-form `git@<host>:` SSH URL. Rejects
+// file://, http://, and — critically — bare `ssh://` because that pattern
+// has no host restriction and would let a malicious caller submit
+// `ssh://internal.host/internal-repo` and clone against an arbitrary
+// internal SSH host (SSRF). The `git@<host>:` short form already covers
+// GitHub/GitLab SSH use cases. (H5 fix.)
 const GIT_ALLOWLIST = [
   /^https:\/\//,
   /^git@[a-zA-Z0-9.\-]+:/,
-  /^ssh:\/\//,
 ];
 
 function isAllowedGitUrl(url: string): boolean {
@@ -202,6 +205,23 @@ export class SkillImport {
     const warnings: string[] = [];
     try {
       const entries = await this.io.unzip(zipPath, tmpDir);
+
+      // H4: reject multi-skill zips. The previous implementation flattened
+      // every `.md` into `path.basename(entry.path)`, so `skill-a/SKILL.md`
+      // and `skill-b/SKILL.md` collided and a malicious caller could engineer
+      // the order so the surviving body differed from what was scanned. One
+      // skill per zip is the well-formed contract — bulk import is folder-
+      // based via importFolder.
+      const skillMdCount = entries.filter(
+        (e) => !e.isSymlink && path.basename(e.path) === 'SKILL.md'
+      ).length;
+      if (skillMdCount > 1) {
+        throw new Error(
+          `Rejected: zip contains ${skillMdCount} SKILL.md files. ` +
+            'Import a single skill per zip, or use the folder import for bundles.'
+        );
+      }
+
       for (const entry of entries) {
         // Reject symlink entries.
         if (entry.isSymlink) {
@@ -221,7 +241,8 @@ export class SkillImport {
         if (EXECUTABLE_REF_RE.test(body)) {
           warnings.push(`Warning: ${entry.path} references a relative executable path`);
         }
-        // Write only .md files to tmpDir.
+        // Write only .md files to tmpDir, flattening to the basename. Safe
+        // now because the multi-SKILL.md guard above rejects ambiguous zips.
         const destFile = path.join(tmpDir, path.basename(entry.path));
         await this.io.writeFile(destFile, entry.data);
       }
@@ -271,6 +292,14 @@ export class SkillImport {
       const destFile = path.join(destDir, file);
       // Only copy .md files (SKILL.md + any supporting docs).
       if (!file.endsWith('.md')) continue;
+      // H6: per-child lstat. importFolder lstats the root only; without
+      // this check a folder containing `SKILL.md -> /etc/passwd` (or any
+      // other attacker-pointed symlink) would have its target read and
+      // copied into the user's skills directory.
+      const childStat = await this.io.lstat(srcFile);
+      if (childStat.isSymbolicLink()) {
+        throw new Error(`Rejected: source folder contains a symlink — ${srcFile}`);
+      }
       await this.io.copyFile(srcFile, destFile);
       if (file === 'SKILL.md') {
         body = (await this.io.readFile(srcFile)).toString('utf-8');

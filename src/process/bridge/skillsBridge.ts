@@ -11,6 +11,7 @@ import { ipcBridge } from '@/common';
 import { SkillGuard } from '@process/services/skills/SkillGuard';
 import { SkillLibrary } from '@process/services/skills/SkillLibrary';
 import { SkillImport } from '@process/services/skills/SkillImport';
+import { SkillQuarantine } from '@process/services/skills/SkillQuarantine';
 import { ProcessConfig } from '@process/utils/initStorage';
 
 export function initSkillsBridge(): void {
@@ -102,26 +103,35 @@ export function initSkillsBridge(): void {
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-+|-+$/g, '');
 
+    // C3: scan BEFORE writing. The previous flow wrote the body to
+    // ~/.wayland/skills/<name>/SKILL.md, scanned it, and only skipped the
+    // SkillLibrary registration when blocked — leaving the body permanently
+    // on the user's filesystem. Now the body never lands in the live skills
+    // tree until the verdict is known. Blocked content goes straight to
+    // ~/.wayland/skills/.quarantine/<name>/SKILL.md instead.
+    const [report] = await SkillGuard.scan([{ name: kebab, body, description, tags }], { llm: true });
+
+    if (report.verdict === 'blocked') {
+      const quarantinedAt = await SkillQuarantine.quarantineFromMemory({ name: kebab, body });
+      return { name: kebab, verdict: report.verdict, quarantinedAt };
+    }
+
     const destDir = path.join(homedir(), '.wayland', 'skills', kebab);
     await mkdir(destDir, { recursive: true });
     const destFile = path.join(destDir, 'SKILL.md');
     await writeFile(destFile, body, 'utf-8');
 
-    const [report] = await SkillGuard.scan([{ name: kebab, body, description, tags }]);
-
-    if (report.verdict !== 'blocked') {
-      SkillLibrary.getInstance().registerSource([
-        {
-          name: kebab,
-          description,
-          type: 'skill',
-          source: 'user',
-          metadata: { tags, category: category || undefined },
-          path: destFile,
-          security: report,
-        },
-      ]);
-    }
+    SkillLibrary.getInstance().registerSource([
+      {
+        name: kebab,
+        description,
+        type: 'skill',
+        source: 'user',
+        metadata: { tags, category: category || undefined },
+        path: destFile,
+        security: report,
+      },
+    ]);
 
     return { name: kebab, verdict: report.verdict };
   });

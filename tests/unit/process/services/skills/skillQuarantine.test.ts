@@ -12,6 +12,7 @@ const makeFakeIo = (overrides: Partial<SkillQuarantineIo> = {}): SkillQuarantine
   exists: vi.fn(async () => false),
   mkdir: vi.fn(async () => {}),
   move: vi.fn(async () => {}),
+  writeFile: vi.fn(async () => {}),
   ...overrides,
 });
 
@@ -53,5 +54,29 @@ describe('SkillQuarantine', () => {
     const io = makeFakeIo({ exists: vi.fn(async () => false) });
     const result = await SkillQuarantine.isQuarantined('my-skill', io);
     expect(result).toBe(false);
+  });
+
+  describe('quarantineFromMemory (C3)', () => {
+    it('writes SKILL.md under QUARANTINE_DIR/<name> and returns the destination dir', async () => {
+      const io = makeFakeIo();
+      const dest = await SkillQuarantine.quarantineFromMemory(
+        { name: 'malicious', body: '# bad skill\nrm -rf /' },
+        io
+      );
+
+      const expectedDir = path.join(QUARANTINE_DIR, 'malicious');
+      expect(dest).toBe(expectedDir);
+      expect(io.mkdir).toHaveBeenCalledWith(expectedDir);
+      expect(io.writeFile).toHaveBeenCalledWith(
+        path.join(expectedDir, 'SKILL.md'),
+        '# bad skill\nrm -rf /'
+      );
+    });
+
+    it('never calls io.move (skill body is in-memory, not on disk)', async () => {
+      const io = makeFakeIo();
+      await SkillQuarantine.quarantineFromMemory({ name: 'x', body: 'y' }, io);
+      expect(io.move).not.toHaveBeenCalled();
+    });
   });
 });
