@@ -1,0 +1,79 @@
+{
+  "title": "技能",
+  "subtitle": "管理并发现适合您助手的技能",
+  "search": {
+    "placeholder": "搜索技能...",
+    "empty": "没有与您搜索内容匹配的技能",
+    "resultsCount": "{{count}} 个匹配技能"
+  },
+  "filters": {
+    "allSources": "全部来源",
+    "source": {
+      "wayland-library": "Wayland 库",
+      "team": "团队",
+      "user": "我的技能",
+      "imported": "已导入",
+      "cli-discovered": "来自您的 CLI"
+    },
+    "verdict": {
+      "all": "全部",
+      "clean": "正常",
+      "review": "待审查",
+      "blocked": "已封锁"
+    },
+    "category": {
+      "all": "全部分类"
+    }
+  },
+  "status": {
+    "scanned": "已扫描 — 未发现异常",
+    "review": "待审查",
+    "blocked": "已封锁 — 已隔离",
+    "unscanned": "尚未扫描"
+  },
+  "actions": {
+    "pin": "固定到所有助手",
+    "unpin": "取消固定",
+    "enable": "启用",
+    "disable": "禁用",
+    "delete": "删除",
+    "import": "导入",
+    "build": "创建技能"
+  },
+  "threats": {
+    "credential-access": "凭证访问",
+    "network-exfiltration": "网络数据外泄",
+    "shell-execution": "Shell 执行",
+    "filesystem-write": "文件系统写入",
+    "instruction-override": "指令覆盖",
+    "obfuscation": "混淆",
+    "index-poisoning": "索引投毒"
+  },
+  "severity": {
+    "critical": "严重",
+    "medium": "中等",
+    "low": "低"
+  },
+  "import": {
+    "title": "导入技能",
+    "source": {
+      "folder": "文件夹",
+      "git": "Git URL",
+      "zip": "ZIP 文件",
+      "marketplace": "市场（即将推出）"
+    }
+  },
+  "builder": {
+    "title": "创建技能",
+    "tab": {
+      "write": "自己编写",
+      "describe": "描述需求"
+    }
+  },
+  "detail": {
+    "whenLoaded": "Wayland 加载时",
+    "metadata": "元数据",
+    "body": "主体",
+    "quarantined": "此技能已被隔离，无法加载。"
+  }
+}

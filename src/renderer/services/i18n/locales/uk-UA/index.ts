@@ -24,6 +24,7 @@ import agent from './agent.json';
 import team from './team.json';
 import assistants from './assistants.json';
 import teams from './teams.json';
+import skills from './skills.json';
 
 export default {
   common,
@@ -47,4 +48,5 @@ export default {
   team,
   assistants,
   teams,
+  skills,
 };

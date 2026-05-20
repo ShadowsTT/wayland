@@ -1,0 +1,79 @@
+{
+  "title": "Skills",
+  "subtitle": "Manage and discover skills for your assistants",
+  "search": {
+    "placeholder": "Search skills...",
+    "empty": "No skills match your search",
+    "resultsCount": "{{count}} matching skills"
+  },
+  "filters": {
+    "allSources": "All sources",
+    "source": {
+      "wayland-library": "Wayland library",
+      "team": "Team",
+      "user": "My skills",
+      "imported": "Imported",
+      "cli-discovered": "From your CLIs"
+    },
+    "verdict": {
+      "all": "All",
+      "clean": "Clean",
+      "review": "Needs review",
+      "blocked": "Blocked"
+    },
+    "category": {
+      "all": "All categories"
+    }
+  },
+  "status": {
+    "scanned": "Scanned — no red flags found",
+    "review": "Needs review",
+    "blocked": "Blocked — quarantined",
+    "unscanned": "Not yet scanned"
+  },
+  "actions": {
+    "pin": "Pin to all assistants",
+    "unpin": "Unpin",
+    "enable": "Enable",
+    "disable": "Disable",
+    "delete": "Delete",
+    "import": "Import",
+    "build": "Build a skill"
+  },
+  "threats": {
+    "credential-access": "Credential access",
+    "network-exfiltration": "Network exfiltration",
+    "shell-execution": "Shell execution",
+    "filesystem-write": "Filesystem write",
+    "instruction-override": "Instruction override",
+    "obfuscation": "Obfuscation",
+    "index-poisoning": "Index poisoning"
+  },
+  "severity": {
+    "critical": "Critical",
+    "medium": "Medium",
+    "low": "Low"
+  },
+  "import": {
+    "title": "Import skill",
+    "source": {
+      "folder": "Folder",
+      "git": "Git URL",
+      "zip": "ZIP file",
+      "marketplace": "Marketplace (coming soon)"
+    }
+  },
+  "builder": {
+    "title": "Build a skill",
+    "tab": {
+      "write": "Write it myself",
+      "describe": "Describe it"
+    }
+  },
+  "detail": {
+    "whenLoaded": "When Wayland loads this",
+    "metadata": "Metadata",
+    "body": "Body",
+    "quarantined": "This skill is quarantined and cannot be loaded."
+  }
+}
