@@ -26,8 +26,15 @@ import type {
 import type { ProtocolDetectionRequest, ProtocolDetectionResponse } from '../utils/protocolDetector';
 import type { SpeechToTextRequest, SpeechToTextResult } from '../types/speech';
 import type { DownloadResult, VoiceAsset } from '../types/voiceAsset';
-import type { SkillSecurityReport } from '../types/skillTypes';
+import type { SkillSecurityReport, SkillIndexEntry, SkillSource } from '../types/skillTypes';
 import type { ImportResult } from '../../process/services/skills/SkillImport';
+
+export type SkillStats = {
+  total: number;
+  bySource: Record<SkillSource, number>;
+  pinned: number;
+  flagged: number;
+};
 
 export const shell = {
   openFile: buildProvider<void, string>('open-file'), // Open file with the system default program
@@ -365,6 +372,12 @@ export const skills = {
     /** Import a single SKILL.md file. */
     singleSkillMd: buildProvider<ImportResult, { srcPath: string }>('skills.import.single-skill-md'),
   },
+  /** Return all entries from the SkillLibrary index. */
+  list: buildProvider<SkillIndexEntry[], void>('skills.list'),
+  /** Return aggregate library statistics. */
+  stats: buildProvider<SkillStats, void>('skills.stats'),
+  /** Pin or unpin a skill by name. */
+  setPinned: buildProvider<void, { name: string; pinned: boolean }>('skills.set-pinned'),
 };
 
 export const voiceAsset = {

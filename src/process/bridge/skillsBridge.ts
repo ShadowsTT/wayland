@@ -7,6 +7,7 @@
 import { ipcBridge } from '@/common';
 import { SkillLibrary } from '@process/services/skills/SkillLibrary';
 import { SkillImport } from '@process/services/skills/SkillImport';
+import { ProcessConfig } from '@process/utils/initStorage';
 
 export function initSkillsBridge(): void {
   ipcBridge.skills.scan.provider(async ({ name }) => {
@@ -37,19 +38,25 @@ export function initSkillsBridge(): void {
 
   const importer = new SkillImport();
 
-  ipcBridge.skills.import.folder.provider(async ({ srcPath }) => {
-    return importer.importFolder(srcPath);
+  ipcBridge.skills.import.folder.provider(async ({ srcPath }) => importer.importFolder(srcPath));
+  ipcBridge.skills.import.git.provider(async ({ url }) => importer.importGit(url));
+  ipcBridge.skills.import.zip.provider(async ({ zipPath }) => importer.importZip(zipPath));
+  ipcBridge.skills.import.singleSkillMd.provider(async ({ srcPath }) => importer.importSingleSkillMd(srcPath));
+
+  ipcBridge.skills.list.provider(async () => {
+    const lib = SkillLibrary.getInstance();
+    return lib.list();
   });
 
-  ipcBridge.skills.import.git.provider(async ({ url }) => {
-    return importer.importGit(url);
+  ipcBridge.skills.stats.provider(async () => {
+    const lib = SkillLibrary.getInstance();
+    return lib.stats();
   });
 
-  ipcBridge.skills.import.zip.provider(async ({ zipPath }) => {
-    return importer.importZip(zipPath);
-  });
-
-  ipcBridge.skills.import.singleSkillMd.provider(async ({ srcPath }) => {
-    return importer.importSingleSkillMd(srcPath);
+  ipcBridge.skills.setPinned.provider(async ({ name, pinned }) => {
+    const prefs = (await ProcessConfig.get('skills.preferences')) ?? {};
+    const current: string[] = Array.isArray(prefs.pinned) ? prefs.pinned : [];
+    const next = pinned ? [...new Set([...current, name])] : current.filter((n) => n !== name);
+    await ProcessConfig.set('skills.preferences', { ...prefs, pinned: next });
   });
 }
