@@ -1768,7 +1768,10 @@
     "resetConfirmTitle": "Reset Constitution?",
     "resetConfirmBody": "Your current edits will be lost. The default Constitution will be restored.",
     "resetCancel": "Cancel",
-    "loading": "Loading…"
+    "loading": "Loading…",
+    "tokenCount": "{{value}} tokens",
+    "tokenWarning": "Approaching adherence ceiling (~2,000 tokens). Consider splitting into specialist overlays.",
+    "tokenError": "Past the adherence ceiling. Move sections into specialist overlays at ~/.wayland/specialists/<id>.md."
   },
   "agentsPage": {
     "title": "Agents",

@@ -15,6 +15,7 @@ import { BaseApprovalStore, type IApprovalKey } from '@/common/chat/approval';
 import { ToolConfirmationOutcome } from '../agent/gemini/cli/tools/tools';
 import { WCoreAgent, type StdioMcpOption } from '@process/agent/wcore';
 import type { WCoreCapabilities } from '@process/agent/wcore/protocol';
+import { composePrompt } from '@process/services/constitution/composePrompt';
 import { getDatabase } from '@process/services/database';
 import { addMessage, addOrUpdateMessage } from '@process/utils/message';
 import { uuid } from '@/common/utils';
@@ -88,6 +89,7 @@ type WCoreManagerData = {
   conversation_id: string;
   yoloMode?: boolean;
   presetRules?: string;
+  presetAssistantId?: string;
   maxTokens?: number;
   maxTurns?: number;
   sessionMode?: string;
@@ -179,12 +181,24 @@ export class WCoreManager extends BaseAgentManager<WCoreManagerData, string> {
       if (teamGuide) stdioMcpServers.push(teamGuide);
     }
 
+    // Prepend Wayland Constitution + optional specialist overlay above the
+    // existing preset rules. wcore delivers these via `init_history` as
+    // `[Assistant System Rules]\n...` on the first turn. composePrompt
+    // returns '' when no Constitution file exists, preserving the prior
+    // "no presetRules" behaviour for fresh installs. Byte-identical
+    // turn-to-turn for cache stability.
+    const composedRules = composePrompt({
+      assistantId: mergedData.presetAssistantId,
+      basePrompt: mergedData.presetRules,
+    }).text;
+    const effectivePresetRules = composedRules.length > 0 ? composedRules : mergedData.presetRules;
+
     const agent = new WCoreAgent({
       workspace: mergedData.workspace,
       model: mergedData.model,
       proxy: mergedData.proxy,
       yoloMode: mergedData.yoloMode,
-      presetRules: mergedData.presetRules,
+      presetRules: effectivePresetRules,
       maxTokens: mergedData.maxTokens,
       maxTurns: mergedData.maxTurns,
       sessionId: mergedData.sessionId,

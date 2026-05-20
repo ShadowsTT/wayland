@@ -41,6 +41,7 @@ import { extractAndStripThinkTags } from './ThinkTagDetector';
 import type { AgentKillReason } from './IAgentManager';
 import { hasNativeSkillSupport } from '@/common/types/acpTypes';
 import { prepareFirstMessageWithSkillsIndex } from '@process/task/agentUtils';
+import { composePrompt } from '@process/services/constitution/composePrompt';
 import { shouldInjectTeamGuideMcp } from '@process/team/prompts/teamGuideCapability.ts';
 import { extractTextFromMessage, processCronInMessage } from './MessageMiddleware';
 import { ConversationTurnCompletionService } from './ConversationTurnCompletionService';
@@ -1062,10 +1063,16 @@ ${collectedResponses.join('\n')}`;
               );
               parts.push(getTeamGuidePrompt({ backend: this.options.backend, leaderLabel }));
             }
-            if (parts.length > 0) {
-              contentToSend = `[Assistant Rules - You MUST follow these instructions]\n${parts.join(
-                '\n\n'
-              )}\n\n[User Request]\n${contentToSend}`;
+            // Prepend Wayland Constitution + optional specialist overlay above
+            // the preset rules + team guide. composePrompt returns '' when no
+            // Constitution file exists, preserving the prior "skip rules block
+            // when empty" behaviour for fresh installs.
+            const rulesBody = composePrompt({
+              assistantId: this.options.presetAssistantId || this.options.customAgentId,
+              basePrompt: parts.join('\n\n'),
+            }).text;
+            if (rulesBody.length > 0) {
+              contentToSend = `[Assistant Rules - You MUST follow these instructions]\n${rulesBody}\n\n[User Request]\n${contentToSend}`;
             }
           } else {
             // Custom workspace or no native support — inject rules + skills via prompt

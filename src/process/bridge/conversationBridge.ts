@@ -559,8 +559,19 @@ export function initConversationBridge(
     // because the CLI may not proactively read SKILL.md files the way ACP agents do.
     let agentContent = other.input;
     if (other.injectSkills?.length) {
+      // Resolve assistantId from the conversation record so the Constitution
+      // composer can apply the matching specialist overlay. Best-effort —
+      // missing record falls back to "no overlay" (Constitution alone).
+      const conversation = await conversationService
+        .getConversation(conversation_id)
+        .catch((): undefined => undefined);
+      const presetAssistantId =
+        (conversation?.extra as { presetAssistantId?: string; customAgentId?: string } | undefined)
+          ?.presetAssistantId ||
+        (conversation?.extra as { presetAssistantId?: string; customAgentId?: string } | undefined)?.customAgentId;
       agentContent = await prepareFirstMessage(other.input, {
         enabledSkills: other.injectSkills,
+        presetAssistantId,
       });
       // Provide absolute skills directory so agent can resolve relative script paths
       // e.g. "skills/star-office-helper/scripts/..." → "${skillsDir}/star-office-helper/scripts/..."

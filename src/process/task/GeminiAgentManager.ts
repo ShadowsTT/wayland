@@ -255,6 +255,18 @@ export class GeminiAgentManager extends BaseAgentManager<
           effectivePresetRules = effectivePresetRules ? `${effectivePresetRules}\n\n${teamGuide}` : teamGuide;
         }
 
+        // Prepend Wayland Constitution + optional specialist overlay above the
+        // existing preset rules + team guide. composePrompt returns '' when no
+        // Constitution file exists, preserving the prior "no presetRules"
+        // behaviour for fresh installs. Byte-identical turn-to-turn for cache
+        // stability.
+        const { composePrompt } = await import('@process/services/constitution/composePrompt');
+        const composed = composePrompt({
+          assistantId: this.presetAssistantId,
+          basePrompt: effectivePresetRules,
+        }).text;
+        effectivePresetRules = composed.length > 0 ? composed : effectivePresetRules;
+
         return this.start({
           ...config,
           GOOGLE_CLOUD_PROJECT: projectId,

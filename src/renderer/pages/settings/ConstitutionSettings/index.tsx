@@ -133,6 +133,18 @@ const ConstitutionSettings: React.FC = () => {
 
   const toc = useMemo(() => parseToc(value), [value]);
 
+  // Token estimate uses the same heuristic as composePrompt so the
+  // user-visible number matches what the backend composer estimates.
+  const approxTokens = Math.ceil(value.length / 4);
+  const tokenLevel: 'ok' | 'warning' | 'error' =
+    approxTokens >= 3000 ? 'error' : approxTokens >= 2000 ? 'warning' : 'ok';
+  const tokenCountClass =
+    tokenLevel === 'error'
+      ? 'text-danger'
+      : tokenLevel === 'warning'
+        ? 'text-warning'
+        : 'text-t-tertiary';
+
   const scrollToHeading = useCallback((id: string, text: string): void => {
     const root = editorRoot.current;
     if (!root) return;
@@ -201,8 +213,33 @@ const ConstitutionSettings: React.FC = () => {
         </div>
       ) : (
         <div className='flex gap-16px items-start'>
-          <div ref={editorRoot} className='flex-1 min-w-0'>
-            <TipTapMarkdownEditor key={editorKey} value={value} onChange={handleChange} />
+          <div className='flex-1 min-w-0 flex flex-col gap-8px'>
+            <div className='flex flex-col gap-2px'>
+              <span className={`text-12px font-medium ${tokenCountClass}`}>
+                {t('settings.constitutionPage.tokenCount', '{{value}} tokens', {
+                  value: approxTokens.toLocaleString(),
+                })}
+              </span>
+              {tokenLevel === 'warning' && (
+                <span className='text-11px text-warning'>
+                  {t(
+                    'settings.constitutionPage.tokenWarning',
+                    'Approaching adherence ceiling (~2,000 tokens). Consider splitting into specialist overlays.'
+                  )}
+                </span>
+              )}
+              {tokenLevel === 'error' && (
+                <span className='text-11px text-danger'>
+                  {t(
+                    'settings.constitutionPage.tokenError',
+                    'Past the adherence ceiling. Move sections into specialist overlays at ~/.wayland/specialists/<id>.md.'
+                  )}
+                </span>
+              )}
+            </div>
+            <div ref={editorRoot}>
+              <TipTapMarkdownEditor key={editorKey} value={value} onChange={handleChange} />
+            </div>
           </div>
           <aside className='w-200px shrink-0 sticky top-16px max-h-[calc(100vh-180px)] overflow-y-auto'>
             <div className='text-11px font-medium text-t-tertiary uppercase tracking-wider mb-8px px-8px'>

@@ -30,6 +30,8 @@ import { join } from 'path';
 const WAYLAND_HOME_DIR = '.wayland';
 const CONSTITUTION_NAME = 'CONSTITUTION.md';
 const LEGACY_SOUL_NAME = 'SOUL.md';
+const SPECIALISTS_DIR = 'specialists';
+const ASSISTANT_ID_PATTERN = /^[A-Za-z0-9_-]+$/;
 
 /**
  * The default Constitution shipped with the app — 11 sections, ~1,050 words.
@@ -227,12 +229,43 @@ const resetConstitution = (): string => {
 };
 
 /**
+ * Read the active Constitution plus an optional per-specialist overlay.
+ *
+ * Overlays are opt-in by file existence at
+ * `~/.wayland/specialists/<assistantId>.md`. The assistantId is restricted to
+ * `[A-Za-z0-9_-]+` to prevent path traversal; anything else returns
+ * `overlay: null` without throwing.
+ */
+export function readConstitutionWithOverlay(assistantId?: string): {
+  constitution: string;
+  overlay: string | null;
+} {
+  const constitution = readConstitution();
+  if (!assistantId || !ASSISTANT_ID_PATTERN.test(assistantId)) {
+    return { constitution, overlay: null };
+  }
+  const { dir } = resolveConstitutionPaths();
+  const overlayPath = join(dir, SPECIALISTS_DIR, `${assistantId}.md`);
+  if (!existsSync(overlayPath)) {
+    return { constitution, overlay: null };
+  }
+  try {
+    return { constitution, overlay: readFileSync(overlayPath, 'utf-8') };
+  } catch {
+    return { constitution, overlay: null };
+  }
+}
+
+/**
  * Register the Constitution IPC handlers. Called once from initAllBridges.
  */
 export function initConstitutionBridge(): void {
   ipcMain.handle('constitution:read', () => readConstitution());
   ipcMain.handle('constitution:write', (_event, content: string) => writeConstitution(content));
   ipcMain.handle('constitution:reset', () => resetConstitution());
+  ipcMain.handle('constitution:readWithOverlay', (_event, assistantId?: string) =>
+    readConstitutionWithOverlay(assistantId),
+  );
 }
 
 // Exported for tests
@@ -242,4 +275,5 @@ export const __test__ = {
   writeConstitution,
   resetConstitution,
   resolveConstitutionPaths,
+  readConstitutionWithOverlay,
 };

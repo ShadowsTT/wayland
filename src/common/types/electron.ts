@@ -71,6 +71,7 @@ export interface ElectronBridgeAPI {
   readConstitution?: () => Promise<string>;
   writeConstitution?: (content: string) => Promise<boolean>;
   resetConstitution?: () => Promise<string>;
+  readConstitutionWithOverlay?: (assistantId?: string) => Promise<{ constitution: string; overlay: string | null }>;
 }
 
 declare global {

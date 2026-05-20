@@ -49,6 +49,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   readConstitution: (): Promise<string> => ipcRenderer.invoke('constitution:read'),
   writeConstitution: (content: string): Promise<boolean> => ipcRenderer.invoke('constitution:write', content),
   resetConstitution: (): Promise<string> => ipcRenderer.invoke('constitution:reset'),
+  readConstitutionWithOverlay: (assistantId?: string): Promise<{ constitution: string; overlay: string | null }> =>
+    ipcRenderer.invoke('constitution:readWithOverlay', assistantId),
   // 生��二维码 token / Generate QR token
   webuiGenerateQRToken: () => ipcRenderer.invoke('webui-direct-generate-qr-token'),
   // WeChat login IPC
