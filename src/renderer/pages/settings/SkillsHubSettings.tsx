@@ -24,21 +24,22 @@ interface ExternalSource {
   skills: Array<{ name: string; description: string; path: string }>;
 }
 
-const getAvatarColorClass = (name: string) => {
-  if (!name) return 'bg-[#165DFF] text-white';
-  const colors = [
-    'bg-[#165DFF] text-white', // Blue
-    'bg-[#00B42A] text-white', // Green
-    'bg-[#722ED1] text-white', // Purple
-    'bg-[#F5319D] text-white', // Pink
-    'bg-[#F77234] text-white', // Orange
-    'bg-[#14C9C9] text-white', // Cyan
-  ];
+const AVATAR_PALETTE: Array<{ background: string; color: string }> = [
+  { background: 'var(--brand)', color: 'var(--text-white)' },                      // orange
+  { background: 'var(--success)', color: 'var(--text-white)' },                    // green
+  { background: 'rgb(var(--color-team))', color: 'var(--text-white)' },            // indigo
+  { background: 'var(--danger)', color: 'var(--text-white)' },                     // red
+  { background: 'var(--warning)', color: 'var(--text-primary)' },                  // amber — dark fg for contrast
+  { background: 'rgb(var(--color-specialist))', color: 'var(--text-white)' },      // emerald
+];
+
+const getAvatarStyle = (name: string): React.CSSProperties => {
+  if (!name) return AVATAR_PALETTE[0];
   let hash = 0;
   for (let i = 0; i < name.length; i++) {
     hash = name.charCodeAt(i) + ((hash << 5) - hash);
   }
-  return colors[Math.abs(hash) % colors.length];
+  return AVATAR_PALETTE[Math.abs(hash) % AVATAR_PALETTE.length];
 };
 
 interface SkillsHubSettingsProps {
@@ -454,7 +455,8 @@ const SkillsHubSettings: React.FC<SkillsHubSettingsProps> = ({ withWrapper = tru
                 >
                   <div className='shrink-0 flex items-start sm:mt-2px'>
                     <div
-                      className={`w-40px h-40px rd-10px flex items-center justify-center font-bold text-16px shadow-sm text-transform-uppercase ${getAvatarColorClass(skill.name)}`}
+                      className='w-40px h-40px rd-10px flex items-center justify-center font-bold text-16px shadow-sm text-transform-uppercase'
+                      style={getAvatarStyle(skill.name)}
                     >
                       {skill.name.charAt(0).toUpperCase()}
                     </div>
