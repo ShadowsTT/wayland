@@ -244,6 +244,13 @@ export interface IConfigStorageRefer {
   };
   /** Migration flag: skills.preferences seeded from existing assistant enabledSkills. */
   'migration.skillsPreferences_v1'?: boolean;
+  /**
+   * Opt-in mirror of locally-installed CLI tool skills (`~/.claude/skills`,
+   * `~/.codex/skills`, `~/.gemini/skills`). Default off — surfaces the
+   * user's parallel tooling as discoverable on the Skills page filter rail.
+   * Requires app restart to take effect (no live re-scan yet).
+   */
+  'skills.cliDiscovery.enabled'?: boolean;
   // Ambient Mode (M1 skeleton): enable bubble + agent-driven UI flow
   'ambient.enabled'?: boolean;
   // Ambient Mode: persisted bubble window position (displayId used for multi-monitor recovery)

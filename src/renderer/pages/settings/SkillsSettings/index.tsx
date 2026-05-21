@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { Button, Input } from '@arco-design/web-react';
+import { Button, Input, Switch } from '@arco-design/web-react';
 import { Download, Sparkles } from 'lucide-react';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -29,6 +29,12 @@ const SkillsSettings: React.FC = () => {
   const [query, setQuery] = useState('');
   const [buildModalVisible, setBuildModalVisible] = useState(false);
 
+  // CLI discovery flag (default off). Reads/writes via the skills bridge.
+  // Flipping shows a restart-required hint — the discovery only fires once
+  // at boot.
+  const [cliDiscoveryEnabled, setCliDiscoveryEnabled] = useState(false);
+  const [cliDiscoveryDirty, setCliDiscoveryDirty] = useState(false);
+
   // Filter rail state — empty set = all selected (no filter applied)
   const [selectedSources, setSelectedSources] = useState<Set<SkillSource>>(new Set());
   const [selectedVerdicts, setSelectedVerdicts] = useState<Set<SkillVerdict>>(new Set());
@@ -49,7 +55,20 @@ const SkillsSettings: React.FC = () => {
 
   useEffect(() => {
     void fetchData();
+    void ipcBridge.skills.getCliDiscoveryEnabled.invoke().then((v) => setCliDiscoveryEnabled(v));
   }, [fetchData]);
+
+  const handleCliDiscoveryToggle = useCallback(async (next: boolean) => {
+    setCliDiscoveryEnabled(next);
+    setCliDiscoveryDirty(true);
+    try {
+      await ipcBridge.skills.setCliDiscoveryEnabled.invoke({ enabled: next });
+    } catch {
+      // Revert on failure — keep the dirty hint hidden since nothing landed.
+      setCliDiscoveryEnabled(!next);
+      setCliDiscoveryDirty(false);
+    }
+  }, []);
 
   const filtered = useMemo(() => {
     let result = entries;
@@ -190,6 +209,40 @@ const SkillsSettings: React.FC = () => {
         >
           {t('actions.build')}
         </Button>
+      </div>
+
+      {/* CLI discovery toggle — opt-in mirror of ~/.claude/skills,
+          ~/.codex/skills, ~/.gemini/skills. Default off because surfacing
+          third-party slash-command files without consent is bad form;
+          flipping requires a restart to take effect (the discovery fires
+          once at boot). */}
+      <div
+        className='flex items-center justify-between px-14px py-10px rd-10px'
+        style={{
+          background: 'var(--fill-1)',
+          border: '1px solid var(--border-1)',
+        }}
+      >
+        <div className='flex-1 min-w-0'>
+          <div className='text-13px font-medium' style={{ color: 'var(--text-primary)' }}>
+            {t('cliDiscovery.title', 'Mirror skills from installed CLI tools')}
+          </div>
+          <div className='text-12px mt-2px' style={{ color: 'var(--text-secondary)' }}>
+            {t(
+              'cliDiscovery.subtitle',
+              'Surface skills from ~/.claude/skills, ~/.codex/skills, and ~/.gemini/skills so they show up on your Skills page. Opt-in. Restart required to take effect.',
+            )}
+            {cliDiscoveryDirty ? (
+              <span style={{ color: 'var(--warning, #e9a40e)', marginLeft: 6 }}>
+                {t('cliDiscovery.restartNeeded', '— restart the app to apply.')}
+              </span>
+            ) : null}
+          </div>
+        </div>
+        <Switch
+          checked={cliDiscoveryEnabled}
+          onChange={(v) => { void handleCliDiscoveryToggle(v); }}
+        />
       </div>
 
       <BuildSkillModal

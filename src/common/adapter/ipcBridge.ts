@@ -380,6 +380,14 @@ export const skills = {
   stats: buildProvider<SkillStats, void>('skills.stats'),
   /** Pin or unpin a skill by name. */
   setPinned: buildProvider<void, { name: string; pinned: boolean }>('skills.set-pinned'),
+  /**
+   * Read / write the opt-in flag for CLI skill discovery
+   * (`skills.cliDiscovery.enabled`). Toggling takes effect on the next
+   * app restart — there's no live re-scan yet, so the renderer surfaces
+   * a restart-required hint when the user flips it.
+   */
+  getCliDiscoveryEnabled: buildProvider<boolean, void>('skills.cli-discovery.get'),
+  setCliDiscoveryEnabled: buildProvider<void, { enabled: boolean }>('skills.cli-discovery.set'),
   build: {
     /**
      * Draft a SKILL.md from a plain-text description.

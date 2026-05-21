@@ -52,6 +52,11 @@
     "import": "Import",
     "build": "Build a skill"
   },
+  "cliDiscovery": {
+    "title": "Mirror skills from installed CLI tools",
+    "subtitle": "Surface skills from ~/.claude/skills, ~/.codex/skills, and ~/.gemini/skills so they show up on your Skills page. Opt-in. Restart required to take effect.",
+    "restartNeeded": "— restart the app to apply."
+  },
   "threats": {
     "credential-access": "Credential access",
     "network-exfiltration": "Network exfiltration",

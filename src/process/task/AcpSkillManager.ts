@@ -45,7 +45,7 @@ export type SkillIndex = {
 };
 
 /** Result type returned by parseFrontmatter */
-type ParsedFrontmatter = {
+export type ParsedFrontmatter = {
   name: string;
   description?: string;
   type?: SkillType;
@@ -63,8 +63,13 @@ function splitSpaceList(value: string): string[] {
 /**
  * Parse frontmatter from SKILL.md.
  * Returns null when the frontmatter block is absent or the name field is missing/empty.
+ *
+ * Tolerant of CLI-tool SKILL.md formats that omit the `metadata:` block
+ * (Claude Code / Codex / Gemini CLI slash-command files use a flat
+ * `name + description + argument-hint + allowed-tools` shape); those
+ * surface with `metadata: { tags: [] }` and no other fields.
  */
-function parseFrontmatter(content: string): ParsedFrontmatter | null {
+export function parseFrontmatter(content: string): ParsedFrontmatter | null {
   const frontmatterMatch = content.match(/^---\s*\n([\s\S]*?)\n---/);
   if (!frontmatterMatch) return null;
 

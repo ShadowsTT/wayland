@@ -14,6 +14,7 @@ import { SkillImport } from '@process/services/skills/SkillImport';
 import { SkillQuarantine } from '@process/services/skills/SkillQuarantine';
 import { ProcessConfig } from '@process/utils/initStorage';
 import { loadTeamSkills } from '@process/extensions/data/bundle-vendored/teamSkillMerge';
+import { loadCliSkills } from '@process/services/skills/CliSkillDiscovery';
 
 export function initSkillsBridge(): void {
   // Register the waylandteams bundle's 88 curated skills as the second
@@ -21,6 +22,11 @@ export function initSkillsBridge(): void {
   // skills). Runs once per process, fail-soft when the bundle isn't on
   // disk (e.g. packaged build with no team install).
   loadTeamSkills();
+  // Opt-in CLI skill discovery (~/.claude/skills, ~/.codex/skills,
+  // ~/.gemini/skills). Default off — gated on the
+  // `skills.cliDiscovery.enabled` config flag. Async-fire-and-forget
+  // because each root requires fs I/O; we don't block boot waiting.
+  void loadCliSkills();
   ipcBridge.skills.scan.provider(async ({ name }) => {
     const lib = SkillLibrary.getInstance();
     return lib.rescanIfStale(name) ?? null;
@@ -70,6 +76,14 @@ export function initSkillsBridge(): void {
     // "2,105 skills" while the row list has 1,973.
     const lib = SkillLibrary.getInstance();
     return lib.stats({ type: 'skill' });
+  });
+
+  // CLI skill discovery flag (default off; restart required to take effect).
+  ipcBridge.skills.getCliDiscoveryEnabled.provider(async () => {
+    return (await ProcessConfig.get('skills.cliDiscovery.enabled')) ?? false;
+  });
+  ipcBridge.skills.setCliDiscoveryEnabled.provider(async ({ enabled }) => {
+    await ProcessConfig.set('skills.cliDiscovery.enabled', enabled);
   });
 
   ipcBridge.skills.setPinned.provider(async ({ name, pinned }) => {
