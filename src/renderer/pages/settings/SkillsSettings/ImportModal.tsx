@@ -105,16 +105,20 @@ const ScanResultsScreen: React.FC<{
         ))}
       </div>
 
-      <div className='flex items-center justify-end gap-8px pt-4px'>
-        <Button onClick={onCancel}>
+      <div className='flex items-center justify-end gap-12px pt-4px'>
+        <Button onClick={onCancel} style={{ borderRadius: 8 }} className='px-16px'>
           {t('skills.import.actions.cancel', { defaultValue: 'Cancel' })}
         </Button>
         {hasReview && (
-          <Button onClick={onReviewAndSelect}>
+          <Button onClick={onReviewAndSelect} style={{ borderRadius: 8 }} className='px-16px'>
             {t('skills.import.actions.reviewAndSelect', { defaultValue: 'Review and select' })}
           </Button>
         )}
-        <Button type='primary' onClick={onImportAllClean}>
+        <Button
+          type='primary'
+          onClick={onImportAllClean}
+          className='!rounded-[100px] !h-32px !px-16px'
+        >
           {t('skills.import.actions.importAllClean', { defaultValue: 'Import all clean' })}
         </Button>
       </div>
@@ -220,6 +224,7 @@ const ImportModal: React.FC<ImportModalProps> = ({ visible, onClose, onImported 
         onCancel={handleClose}
         footer={null}
         title={t('skills.import.title', { defaultValue: 'Import skill' })}
+        style={{ width: 640 }}
         focusLock
         autoFocus={false}
       >
@@ -351,8 +356,8 @@ const ImportModal: React.FC<ImportModalProps> = ({ visible, onClose, onImported 
           <span className='text-12px text-[rgb(var(--danger-6))]'>{error}</span>
         )}
 
-        <div className='flex items-center justify-end gap-8px'>
-          <Button onClick={handleClose}>
+        <div className='flex items-center justify-end gap-12px'>
+          <Button onClick={handleClose} style={{ borderRadius: 8 }} className='px-16px'>
             {t('skills.import.actions.cancel', { defaultValue: 'Cancel' })}
           </Button>
           <Button
@@ -360,6 +365,7 @@ const ImportModal: React.FC<ImportModalProps> = ({ visible, onClose, onImported 
             loading={loading}
             disabled={!canImport}
             onClick={() => void handleImport()}
+            className='!rounded-[100px] !h-32px !px-16px'
           >
             {loading
               ? t('skills.import.actions.importing', { defaultValue: 'Importing…' })
