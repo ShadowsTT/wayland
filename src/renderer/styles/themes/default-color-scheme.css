@@ -301,17 +301,19 @@ body[arco-theme='dark'] {
 
   /* Surfaces — dark (cinematic — deeper than #0d, per Direction C) */
   /* Background surface ladder — dark mode.
-     Direction B per .planning/ui-audit/FINDINGS.md: bump --bg-1 (cards)
-     from #111 to #1a so a dense tile grid (Channels / Agents) has a
-     readable card-to-page delta. Bible's strict scale isn't violated —
-     we're just using its --p-grey-3 tier for cards instead of --p-grey-1.
-     The rest shifts up by one tier to keep the hover/deeper-fill
-     hierarchy intact. Border-base (#2a) remains 16-step lighter than
-     #1a, so card edges read cleanly. */
+     Push 2 (then 3) iterations:
+       v1 (Bible strict):    --bg-1 = #0f  → cards invisible against #0a page
+       v2 (B per FINDINGS):  --bg-1 = #1a  → 16-step delta — still too subtle
+                                              at retina on dense tile grids
+       v3 (current):         --bg-1 = #222 → 24-step delta, clearly distinct
+     Still on the Bible's strict primitive scale (--p-grey-4 = #222222).
+     hover (--bg-2) goes to #2a (p-grey-5), deepest fill (--bg-3) to #353535
+     (p-grey-6). Border-base climbs to --p-grey-7 (#4d4d4d) so the hairline
+     edge is unambiguously legible against the bumped card surface. */
   --bg-base: #0a0a0a;
-  --bg-1: #1a1a1a;
-  --bg-2: #222222;
-  --bg-3: #2a2a2a;
+  --bg-1: #222222;
+  --bg-2: #2a2a2a;
+  --bg-3: #353535;
   --bg-4: #222222;
   --bg-5: #2a2a2a;
   --bg-6: #4d4d4d;
@@ -337,16 +339,14 @@ body[arco-theme='dark'] {
   --input-border: #383838;
   --input-border-focus: var(--brand);
 
-  /* Borders — dark. Bible's --border-default maps to --p-grey-5 (#2a2a2a),
-     but against #1a card bg at 1px on retina, that reads as a hairline
-     that's still hard to perceive in dense tile grids. Use the Bible's
-     next tier up (--p-grey-6 #353535) for the default card border so
-     cards have a confident edge. Strict-scale: --p-grey-6 is still a
-     defined primitive — not an off-scale value. */
-  --border-base: #353535;
-  --border-light: #2a2a2a;
-  --border-bright: #4d4d4d;
-  --border-mid: #404040;
+  /* Borders — dark. Card surface bumped to #222 (Bible's --p-grey-4);
+     border climbs in lockstep to --p-grey-7 (#4d4d4d) so the edge stays
+     a confident 43-step delta from the card fill. Still strict-scale
+     Bible primitives (p-grey-6 / p-grey-7 / p-grey-8). */
+  --border-base: #4d4d4d;
+  --border-light: #353535;
+  --border-bright: #777777;
+  --border-mid: #4d4d4d;
 
   /* Brand — dark (same orange across modes by design) */
   --brand: #ff6b35;
