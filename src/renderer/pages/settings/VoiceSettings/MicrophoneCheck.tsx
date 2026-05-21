@@ -8,6 +8,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@arco-design/web-react';
 import { Mic } from 'lucide-react';
+import WaylandSelect from '@/renderer/components/base/WaylandSelect';
 
 type CheckState = 'idle' | 'requesting' | 'live' | 'done' | 'error';
 
@@ -15,16 +16,15 @@ const TEST_DURATION_MS = 5000;
 // Silence threshold: peak amplitude % under this for the full window = "muted".
 const SILENCE_PEAK_PCT = 2;
 
-/**
- * Microphone check — requests user media, plots a live amplitude bar for
- * 5 seconds, then reports success / silence / permission-denied. All streams
- * are released on cleanup.
- */
+const DEFAULT_DEVICE_ID = '';
+
 const MicrophoneCheck: React.FC = () => {
   const { t } = useTranslation();
   const [state, setState] = useState<CheckState>('idle');
   const [errorMsg, setErrorMsg] = useState('');
   const [level, setLevel] = useState(0);
+  const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
+  const [selectedDeviceId, setSelectedDeviceId] = useState<string>(DEFAULT_DEVICE_ID);
 
   const streamRef = useRef<MediaStream | null>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
@@ -32,6 +32,26 @@ const MicrophoneCheck: React.FC = () => {
   const rafRef = useRef<number | null>(null);
   const peakRef = useRef(0);
   const stopTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const refreshDevices = useCallback(async () => {
+    if (!navigator.mediaDevices?.enumerateDevices) return;
+    try {
+      const list = await navigator.mediaDevices.enumerateDevices();
+      setDevices(list.filter((d) => d.kind === 'audioinput'));
+    } catch {
+      // best-effort — leave list empty
+    }
+  }, []);
+
+  // Enumerate once on mount. Labels stay empty until the user grants permission
+  // at least once; we re-enumerate after the first successful Test below.
+  useEffect(() => {
+    void refreshDevices();
+    if (!navigator.mediaDevices?.addEventListener) return;
+    const handler = () => void refreshDevices();
+    navigator.mediaDevices.addEventListener('devicechange', handler);
+    return () => navigator.mediaDevices.removeEventListener('devicechange', handler);
+  }, [refreshDevices]);
 
   const cleanup = useCallback(() => {
     if (rafRef.current != null) {
@@ -53,7 +73,6 @@ const MicrophoneCheck: React.FC = () => {
     analyserRef.current = null;
   }, []);
 
-  // Always release on unmount.
   useEffect(() => cleanup, [cleanup]);
 
   const handleStart = useCallback(async () => {
@@ -62,9 +81,13 @@ const MicrophoneCheck: React.FC = () => {
     setLevel(0);
     peakRef.current = 0;
 
+    const constraints: MediaStreamConstraints = {
+      audio: selectedDeviceId ? { deviceId: { exact: selectedDeviceId } } : true,
+    };
+
     let stream: MediaStream;
     try {
-      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream = await navigator.mediaDevices.getUserMedia(constraints);
     } catch (err) {
       cleanup();
       setState('error');
@@ -75,6 +98,10 @@ const MicrophoneCheck: React.FC = () => {
             'settings.voiceMicPermissionBlocked',
             'Microphone access blocked. Open System Settings → Privacy → Microphone and enable Wayland.'
           )
+        );
+      } else if (name === 'NotFoundError' || name === 'OverconstrainedError') {
+        setErrorMsg(
+          t('settings.voiceMicNotFound', 'Selected microphone is not available. Pick another input device.')
         );
       } else {
         setErrorMsg(err instanceof Error ? err.message : String(err));
@@ -89,9 +116,12 @@ const MicrophoneCheck: React.FC = () => {
     audioCtxRef.current = ctx;
     const source = ctx.createMediaStreamSource(stream);
     const analyser = ctx.createAnalyser();
-    analyser.fftSize = 128; // 64 frequency bins
+    analyser.fftSize = 128;
     source.connect(analyser);
     analyserRef.current = analyser;
+
+    // First permission grant unlocks device labels — re-enumerate now.
+    void refreshDevices();
 
     setState('live');
     const buffer = new Uint8Array(analyser.frequencyBinCount);
@@ -120,7 +150,7 @@ const MicrophoneCheck: React.FC = () => {
         setState('done');
       }
     }, TEST_DURATION_MS);
-  }, [cleanup, t]);
+  }, [cleanup, refreshDevices, selectedDeviceId, t]);
 
   const buttonLabel =
     state === 'requesting'
@@ -129,9 +159,31 @@ const MicrophoneCheck: React.FC = () => {
         ? t('settings.voiceMicListening', 'Listening…')
         : t('settings.voiceMicTest', 'Test microphone');
 
+  const deviceOptionLabel = (d: MediaDeviceInfo, index: number): string => {
+    if (d.label) return d.label;
+    // No permission yet → device.label is empty per spec.
+    return t('settings.voiceMicDeviceFallback', { defaultValue: 'Microphone {{n}}', n: index + 1 });
+  };
+
   return (
     <div className='flex flex-col gap-8px'>
-      <div className='flex items-center gap-12px'>
+      <div className='flex items-center gap-12px flex-wrap'>
+        <WaylandSelect
+          size='small'
+          value={selectedDeviceId}
+          onChange={(value: string) => setSelectedDeviceId(value)}
+          disabled={state === 'requesting' || state === 'live'}
+          style={{ minWidth: 220 }}
+        >
+          <WaylandSelect.Option value={DEFAULT_DEVICE_ID}>
+            {t('settings.voiceMicDeviceDefault', 'System default microphone')}
+          </WaylandSelect.Option>
+          {devices.map((device, index) => (
+            <WaylandSelect.Option key={device.deviceId} value={device.deviceId}>
+              {deviceOptionLabel(device, index)}
+            </WaylandSelect.Option>
+          ))}
+        </WaylandSelect>
         <Button
           type='outline'
           size='small'
@@ -143,7 +195,7 @@ const MicrophoneCheck: React.FC = () => {
           {buttonLabel}
         </Button>
         {state === 'live' && (
-          <div className='flex-1 h-8px rd-full bg-[var(--color-fill-2)] overflow-hidden'>
+          <div className='flex-1 h-8px rd-full bg-[var(--color-fill-2)] overflow-hidden min-w-120px'>
             <div
               className='h-full bg-[rgb(var(--primary-6))] transition-[width] duration-75'
               style={{ width: `${level}%` }}
