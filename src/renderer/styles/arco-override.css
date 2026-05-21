@@ -397,6 +397,27 @@ body[arco-theme='dark'] .arco-message-error {
   border-color: var(--input-border-focus);
 }
 
+/* ---------- Switch — Forge Orange across all states ----------
+   Arco's default disabled-checked rendering drops the active color to a
+   dim brown that reads as 'wrong shade' (see the Assistants page where
+   extension assistants — forced disabled={true} checked={true} — were
+   visually muddled with bright user-toggled ones). Pin the checked state
+   to full Forge Orange and keep disabled-checked at full saturation so
+   every toggle across the system renders the same green-light tone.
+   Semantic non-interactivity is communicated by surrounding chrome (an
+   'EXTENSION' badge etc.), not by dimming the orange. */
+.arco-switch.arco-switch-checked,
+.arco-switch.arco-switch-checked.arco-switch-disabled {
+  background-color: rgb(var(--primary-6)) !important;
+}
+.arco-switch.arco-switch-checked.arco-switch-disabled {
+  opacity: 1;
+  cursor: not-allowed;
+}
+.arco-switch.arco-switch-checked.arco-switch-disabled .arco-switch-dot {
+  background-color: #ffffff;
+}
+
 /* WebUI / Channels tabs in Remote settings */
 .settings-remote-tabs {
   .arco-tabs-nav {

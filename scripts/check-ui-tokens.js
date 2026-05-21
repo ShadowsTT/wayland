@@ -30,6 +30,7 @@ const BANNED_TOKENS = [
   { pattern: /var\(--fill-3\)/g, replace: 'var(--color-fill-3)' },
   { pattern: /var\(--fill-4\)/g, replace: 'var(--color-fill-4)' },
   { pattern: /var\(--bg\)(?!-)/g, replace: 'var(--color-bg-1)' },
+  { pattern: /var\(--border-strong\)/g, replace: 'var(--color-border-3)' },
 ];
 
 // Files where hex literals are the source of truth, not drift.
