@@ -48,9 +48,13 @@ const MicrophoneCheck: React.FC = () => {
   useEffect(() => {
     void refreshDevices();
     if (!navigator.mediaDevices?.addEventListener) return;
-    const handler = () => void refreshDevices();
+    const handler = (): void => {
+      void refreshDevices();
+    };
     navigator.mediaDevices.addEventListener('devicechange', handler);
-    return () => navigator.mediaDevices.removeEventListener('devicechange', handler);
+    return (): void => {
+      navigator.mediaDevices.removeEventListener('devicechange', handler);
+    };
   }, [refreshDevices]);
 
   const cleanup = useCallback(() => {
