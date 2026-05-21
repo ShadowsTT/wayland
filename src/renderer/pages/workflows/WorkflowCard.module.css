@@ -84,17 +84,55 @@
   align-self: flex-start;
 }
 
-/* Featured tier — subtle orange accent border + slightly lifted
-   background so the curated picks read as a distinct tier without
-   shouting. */
+/* Featured tier — mirrors the Standing Companies treatment on the
+   Teams page so the two 'headline tier' callouts share one visual
+   idiom. Three signals reinforce 'this is the tier to start with':
+   (1) Forge Orange gradient background, (2) FEATURED pill top-right,
+   (3) orange dot before the title. */
 .cardFeatured {
   border-color: rgb(var(--primary-6) / 0.5);
-  background: linear-gradient(180deg, var(--color-fill-1) 0%, rgb(var(--primary-6) / 0.04) 100%);
+  background: linear-gradient(180deg, var(--color-fill-1) 0%, rgb(var(--primary-6) / 0.10) 100%);
+  padding-right: 90px; /* reserve space so the pill never overlaps text */
 }
 
 .cardFeatured:hover {
   border-color: rgb(var(--primary-6));
-  background: linear-gradient(180deg, var(--color-fill-2) 0%, rgb(var(--primary-6) / 0.08) 100%);
+  background: linear-gradient(180deg, var(--color-fill-2) 0%, rgb(var(--primary-6) / 0.14) 100%);
+}
+
+.featuredBadge {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgb(var(--primary-6) / 0.18);
+  color: rgb(var(--primary-6));
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.featuredBadgeDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgb(var(--primary-6));
+}
+
+.titleDot {
+  flex-shrink: 0;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgb(var(--primary-6));
+  display: inline-block;
+  margin-right: 6px;
+  align-self: center;
 }
 
 .description {

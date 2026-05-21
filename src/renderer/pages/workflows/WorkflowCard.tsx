@@ -52,14 +52,30 @@ const WorkflowCard: React.FC<WorkflowCardProps> = ({ entry, onClick, featured = 
 
   return (
     <button type='button' onClick={handleClick} className={className}>
+      {/* Featured pill — mirrors the 'STANDING' badge on Standing
+          Companies cards (Teams page), corner-anchored so the curated
+          tier reads at a glance. */}
+      {featured && (
+        <span className={styles.featuredBadge}>
+          <span className={styles.featuredBadgeDot} aria-hidden='true' />
+          Featured
+        </span>
+      )}
       <div className={styles.header}>
         <div className={styles.iconWrap}>
           <WorkflowIcon size={18} />
         </div>
         <div className={styles.body}>
           <div className={styles.titleRow}>
-            <span className={styles.title} title={toDisplayName(entry.name)}>
-              {toDisplayName(entry.name)}
+            <span
+              className={styles.title}
+              title={toDisplayName(entry.name)}
+              style={{ display: 'flex', alignItems: 'center' }}
+            >
+              {featured && <span className={styles.titleDot} aria-hidden='true' />}
+              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {toDisplayName(entry.name)}
+              </span>
             </span>
             <span className={styles.pill} style={{ background: src.bg }}>
               {src.label}
