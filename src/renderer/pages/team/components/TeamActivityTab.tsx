@@ -209,7 +209,7 @@ const TeamActivityTab: React.FC<Props> = ({ teamId, pollIntervalMs = POLL_INTERV
               className='flex items-start gap-12px p-12px rd-8px bg-[color:var(--color-bg-2)] border border-solid border-[color:var(--border-base)]'
             >
               <span
-                className='shrink-0 w-28px h-28px rd-full flex items-center justify-center bg-[color:var(--fill-2)] text-[color:var(--color-text-2)]'
+                className='shrink-0 w-28px h-28px rd-full flex items-center justify-center bg-[color:var(--color-fill-2)] text-[color:var(--color-text-2)]'
                 aria-hidden='true'
               >
                 {icon}

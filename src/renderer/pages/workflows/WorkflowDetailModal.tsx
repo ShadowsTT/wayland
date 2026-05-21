@@ -139,8 +139,8 @@ const WorkflowDetailModal: React.FC<WorkflowDetailModalProps> = ({ entry, onClos
           <div
             className='p-12px rd-8px text-12px'
             style={{
-              background: 'var(--fill-1)',
-              border: '1px solid var(--border-1)',
+              background: 'var(--color-fill-1)',
+              border: '1px solid var(--color-border-1)',
               color: 'var(--text-secondary)',
             }}
           >
@@ -173,7 +173,7 @@ const WorkflowDetailModal: React.FC<WorkflowDetailModalProps> = ({ entry, onClos
               >
                 <Sparkles size={12} />
                 <span>{t('depends.title', 'Uses these skills')}</span>
-                <span style={{ color: 'var(--text-tertiary)', fontWeight: 400 }}>
+                <span style={{ color: 'var(--color-text-3)', fontWeight: 400 }}>
                   · {depends.length}
                 </span>
               </div>
@@ -185,8 +185,8 @@ const WorkflowDetailModal: React.FC<WorkflowDetailModalProps> = ({ entry, onClos
                     onClick={() => handleSkillClick(slug)}
                     className='text-12px px-8px py-3px rd-6px cursor-pointer transition-colors'
                     style={{
-                      background: 'var(--fill-2)',
-                      border: '1px solid var(--border-1)',
+                      background: 'var(--color-fill-2)',
+                      border: '1px solid var(--color-border-1)',
                       color: 'var(--text-secondary)',
                     }}
                     title={t('depends.openSkill', 'Open in Skills page')}

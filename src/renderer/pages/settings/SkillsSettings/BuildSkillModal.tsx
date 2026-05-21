@@ -213,7 +213,7 @@ const BuildSkillModal: React.FC<BuildSkillModalProps> = ({ visible, onClose, onS
                 </label>
                 <div
                   className='rd-8px border overflow-hidden'
-                  style={{ borderColor: 'var(--border-1)', minHeight: 240 }}
+                  style={{ borderColor: 'var(--color-border-1)', minHeight: 240 }}
                 >
                   <TipTapMarkdownEditor value={body} onChange={setBody} />
                 </div>

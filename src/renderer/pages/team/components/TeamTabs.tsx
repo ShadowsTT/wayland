@@ -96,7 +96,7 @@ const TeamTabView: React.FC<TeamTabViewProps> = ({
       className={`relative group flex items-center gap-8px px-12px h-full max-w-240px cursor-pointer transition-all duration-200 shrink-0 border-r border-[color:var(--border-base)] ${
         isActive
           ? 'bg-[color:var(--color-primary-1)] text-[color:var(--color-text-1)] border-t-2 border-t-solid border-t-[color:var(--color-primary-6)]'
-          : 'bg-2 text-[color:var(--color-text-3)] hover:text-[color:var(--color-text-2)] hover:bg-[color:var(--fill-2)] border-b border-[color:var(--border-base)]'
+          : 'bg-2 text-[color:var(--color-text-3)] hover:text-[color:var(--color-text-2)] hover:bg-[color:var(--color-fill-2)] border-b border-[color:var(--border-base)]'
       } ${isDragOver ? DRAG_OVER_CLASS : ''}`}
       style={isRunning ? { animation: 'team-tab-breathe 2s ease-in-out infinite' } : undefined}
       onClick={() => !editing && onSwitch(slotId)}
@@ -294,7 +294,7 @@ const TeamTabs: React.FC<TeamTabsProps> = ({
               className={`relative flex items-center gap-6px px-12px h-full shrink-0 border-r border-[color:var(--border-base)] cursor-pointer transition-all duration-200 bg-transparent border-none text-13.5px ${
                 activityActive
                   ? 'bg-[color:var(--color-primary-1)] text-[color:var(--color-text-1)] border-t-2 border-t-solid border-t-[color:var(--color-primary-6)]'
-                  : 'text-[color:var(--color-text-3)] hover:text-[color:var(--color-text-2)] hover:bg-[color:var(--fill-2)] border-b border-[color:var(--border-base)]'
+                  : 'text-[color:var(--color-text-3)] hover:text-[color:var(--color-text-2)] hover:bg-[color:var(--color-fill-2)] border-b border-[color:var(--border-base)]'
               }`}
             >
               <Activity size={14} />

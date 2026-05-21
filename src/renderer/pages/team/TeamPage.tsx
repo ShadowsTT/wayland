@@ -150,14 +150,14 @@ const AgentChatSlot: React.FC<{
           )}
           {!isLeader && onRemove && (
             <div
-              className='shrink-0 cursor-pointer hover:bg-[var(--fill-3)] p-4px rd-4px text-[color:var(--color-text-3)] hover:text-[color:var(--color-danger-6)] transition-colors'
+              className='shrink-0 cursor-pointer hover:bg-[var(--color-fill-3)] p-4px rd-4px text-[color:var(--color-text-3)] hover:text-[color:var(--color-danger-6)] transition-colors'
               onClick={onRemove}
             >
               <X size={16} />
             </div>
           )}
           <div
-            className='shrink-0 cursor-pointer hover:bg-[var(--fill-3)] p-4px rd-4px text-[color:var(--color-text-3)] hover:text-[color:var(--color-text-1)] transition-colors'
+            className='shrink-0 cursor-pointer hover:bg-[var(--color-fill-3)] p-4px rd-4px text-[color:var(--color-text-3)] hover:text-[color:var(--color-text-1)] transition-colors'
             onClick={() => onToggleFullscreen?.()}
           >
             {isFullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}

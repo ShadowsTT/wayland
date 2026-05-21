@@ -95,18 +95,18 @@ const TeammateRow: React.FC<{
   return (
     <div
       data-testid='team-right-rail-teammate'
-      className='flex items-center justify-between py-6px px-8px rd-6px hover:bg-[color:var(--fill-2)] cursor-default'
+      className='flex items-center justify-between py-6px px-8px rd-6px hover:bg-[color:var(--color-fill-2)] cursor-default'
     >
       <div className='flex items-center gap-8px min-w-0'>
         {showLogo ? (
           <img
             src={backendLogo!}
             alt={agent.agentType}
-            className='w-24px h-24px rd-full object-contain bg-[color:var(--fill-2)] p-2px shrink-0'
+            className='w-24px h-24px rd-full object-contain bg-[color:var(--color-fill-2)] p-2px shrink-0'
           />
         ) : (
           <span
-            className='w-24px h-24px rd-full flex items-center justify-center text-10px font-semibold bg-[color:var(--fill-2)] shrink-0'
+            className='w-24px h-24px rd-full flex items-center justify-center text-10px font-semibold bg-[color:var(--color-fill-2)] shrink-0'
             aria-hidden='true'
           >
             {initialsFromName(agent.agentName)}
@@ -127,7 +127,7 @@ const TeammateRow: React.FC<{
             onClick={handleRestart}
             aria-label={t('teams.rightRail.restartAgent', { defaultValue: 'Restart' })}
             title={t('teams.rightRail.restartAgent', { defaultValue: 'Restart' })}
-            className='flex items-center justify-center w-18px h-18px rd-4px text-[color:var(--color-text-3)] hover:text-[color:var(--color-text-1)] hover:bg-[color:var(--fill-3)] border-0 bg-transparent cursor-pointer p-0'
+            className='flex items-center justify-center w-18px h-18px rd-4px text-[color:var(--color-text-3)] hover:text-[color:var(--color-text-1)] hover:bg-[color:var(--color-fill-3)] border-0 bg-transparent cursor-pointer p-0'
           >
             <RotateCw size={12} />
           </button>

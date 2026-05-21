@@ -29,7 +29,7 @@ export const VERDICT_ICON: Record<SkillVerdict, React.ReactNode> = {
   clean: <Shield size={16} style={{ color: 'var(--success, #46c46a)' }} />,
   review: <ShieldAlert size={16} style={{ color: 'var(--warning, #e9a40e)' }} />,
   blocked: <ShieldOff size={16} style={{ color: 'var(--danger, #f05e42)' }} />,
-  unscanned: <ShieldQuestion size={16} style={{ color: 'var(--text-tertiary)' }} />,
+  unscanned: <ShieldQuestion size={16} style={{ color: 'var(--color-text-3)' }} />,
 };
 
 // Friendly source labels — also consumed by the detail drawer.
@@ -101,7 +101,7 @@ const SkillRow: React.FC<Props> = ({ entry, pinned, onTogglePin, onClick }) => {
   return (
     <div
       className='group flex items-start gap-12px px-16px py-12px hover:bg-fill-1 transition-colors cursor-pointer'
-      style={{ borderBottom: '1px solid var(--border-1)' }}
+      style={{ borderBottom: '1px solid var(--color-border-1)' }}
       onClick={() => onClick?.(entry)}
     >
       {/* Shield square — colour signals verdict at a glance. */}
@@ -117,7 +117,7 @@ const SkillRow: React.FC<Props> = ({ entry, pinned, onTogglePin, onClick }) => {
                 ? 'rgba(233,164,14,0.13)'
                 : verdict === 'clean'
                   ? 'rgba(70,196,106,0.13)'
-                  : 'var(--fill-2)',
+                  : 'var(--color-fill-2)',
         }}
         title={STATUS_LABEL[verdict]}
       >
@@ -183,7 +183,7 @@ const SkillRow: React.FC<Props> = ({ entry, pinned, onTogglePin, onClick }) => {
         {entry.metadata.category ? (
           <div
             className='text-10px uppercase font-medium'
-            style={{ color: 'var(--text-tertiary)', letterSpacing: '0.06em' }}
+            style={{ color: 'var(--color-text-3)', letterSpacing: '0.06em' }}
           >
             {toDisplayName(entry.metadata.category)}
           </div>
@@ -195,7 +195,7 @@ const SkillRow: React.FC<Props> = ({ entry, pinned, onTogglePin, onClick }) => {
         <button
           type='button'
           className='p-6px rd-6px outline-none border-none bg-transparent cursor-pointer transition-colors hover:bg-fill-2'
-          style={{ color: pinned ? 'var(--brand)' : 'var(--text-tertiary)' }}
+          style={{ color: pinned ? 'var(--brand)' : 'var(--color-text-3)' }}
           title={pinned ? t('actions.unpin', 'Unpin') : t('actions.pin', 'Pin')}
           onClick={handlePin}
         >
@@ -204,7 +204,7 @@ const SkillRow: React.FC<Props> = ({ entry, pinned, onTogglePin, onClick }) => {
         <button
           type='button'
           className='p-6px rd-6px outline-none border-none bg-transparent cursor-pointer transition-colors hover:bg-fill-2'
-          style={{ color: 'var(--text-tertiary)' }}
+          style={{ color: 'var(--color-text-3)' }}
           title='More'
           onClick={stopProp}
         >

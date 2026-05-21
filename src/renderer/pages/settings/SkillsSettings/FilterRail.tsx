@@ -83,7 +83,7 @@ const FilterRail: React.FC<Props> = ({
   return (
     <div
       className='flex flex-col gap-18px py-16px px-14px shrink-0'
-      style={{ width: 200, borderRight: '1px solid var(--border-1)' }}
+      style={{ width: 200, borderRight: '1px solid var(--color-border-1)' }}
     >
       {/* SOURCES */}
       <FilterGroup label={t('sections.sources', 'Sources')}>
@@ -146,7 +146,7 @@ const FilterGroup: React.FC<{ label: string; children: React.ReactNode }> = ({
   <div>
     <div
       className='text-10px uppercase font-semibold mb-8px'
-      style={{ color: 'var(--text-tertiary)', letterSpacing: '0.08em' }}
+      style={{ color: 'var(--color-text-3)', letterSpacing: '0.08em' }}
     >
       {label}
     </div>
@@ -172,7 +172,7 @@ const FilterItem: React.FC<FilterItemProps> = ({ label, count, active, onClick }
       fontWeight: active ? 550 : 400,
     }}
     onMouseEnter={(e) => {
-      if (!active) e.currentTarget.style.background = 'var(--fill-1)';
+      if (!active) e.currentTarget.style.background = 'var(--color-fill-1)';
     }}
     onMouseLeave={(e) => {
       if (!active) e.currentTarget.style.background = 'transparent';
@@ -183,7 +183,7 @@ const FilterItem: React.FC<FilterItemProps> = ({ label, count, active, onClick }
     </span>
     <span
       className='shrink-0 ml-6px text-11px tabular-nums'
-      style={{ color: active ? 'var(--brand)' : 'var(--text-tertiary)' }}
+      style={{ color: active ? 'var(--brand)' : 'var(--color-text-3)' }}
     >
       {count.toLocaleString()}
     </span>

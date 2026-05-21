@@ -39,7 +39,7 @@ const LibraryHealth: React.FC<Props> = ({ stats }) => {
       {/* 1. Skills ready */}
       <div
         className='rd-12px p-15px'
-        style={{ background: 'var(--fill-1)', border: '1px solid var(--border-1)' }}
+        style={{ background: 'var(--color-fill-1)', border: '1px solid var(--color-border-1)' }}
       >
         <div
           className='text-24px font-bold leading-none'
@@ -53,7 +53,7 @@ const LibraryHealth: React.FC<Props> = ({ stats }) => {
         >
           {t('stats.total', 'Skills ready')}
         </div>
-        <div className='text-11px mt-3px' style={{ color: 'var(--text-tertiary)' }}>
+        <div className='text-11px mt-3px' style={{ color: 'var(--color-text-3)' }}>
           {t('stats.totalSubtitle', 'Loaded on demand by every task')}
         </div>
       </div>
@@ -61,7 +61,7 @@ const LibraryHealth: React.FC<Props> = ({ stats }) => {
       {/* 2. Pinned always-on */}
       <div
         className='rd-12px p-15px'
-        style={{ background: 'var(--fill-1)', border: '1px solid var(--border-1)' }}
+        style={{ background: 'var(--color-fill-1)', border: '1px solid var(--color-border-1)' }}
       >
         <div
           className='text-24px font-bold leading-none'
@@ -75,7 +75,7 @@ const LibraryHealth: React.FC<Props> = ({ stats }) => {
         >
           {t('stats.pinned', 'Pinned always-on')}
         </div>
-        <div className='text-11px mt-3px' style={{ color: 'var(--text-tertiary)' }}>
+        <div className='text-11px mt-3px' style={{ color: 'var(--color-text-3)' }}>
           {t('stats.pinnedSubtitle', 'Loaded every conversation')}
         </div>
       </div>
@@ -83,7 +83,7 @@ const LibraryHealth: React.FC<Props> = ({ stats }) => {
       {/* 3. Sources, unified */}
       <div
         className='rd-12px p-15px'
-        style={{ background: 'var(--fill-1)', border: '1px solid var(--border-1)' }}
+        style={{ background: 'var(--color-fill-1)', border: '1px solid var(--color-border-1)' }}
       >
         <div
           className='text-24px font-bold leading-none'
@@ -145,7 +145,7 @@ const LibraryHealth: React.FC<Props> = ({ stats }) => {
         >
           {verified.toLocaleString()}
         </div>
-        <div className='text-11px mt-3px' style={{ color: 'var(--text-tertiary)' }}>
+        <div className='text-11px mt-3px' style={{ color: 'var(--color-text-3)' }}>
           {t('stats.guardSubtitle', 'verified safe')}
           {flagged > 0 ? (
             <>

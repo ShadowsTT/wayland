@@ -23,10 +23,10 @@ type Props = {
 type MetaRowProps = { label: string; value: React.ReactNode };
 
 const MetaRow: React.FC<MetaRowProps> = ({ label, value }) => (
-  <div className='flex gap-8px py-6px' style={{ borderBottom: '1px solid var(--border-1)' }}>
+  <div className='flex gap-8px py-6px' style={{ borderBottom: '1px solid var(--color-border-1)' }}>
     <Typography.Text
       className='shrink-0 text-12px'
-      style={{ color: 'var(--text-tertiary)', width: 90 }}
+      style={{ color: 'var(--color-text-3)', width: 90 }}
     >
       {label}
     </Typography.Text>
@@ -89,7 +89,7 @@ const SkillDetailDrawer: React.FC<Props> = ({ entry, open, onClose, onTogglePin 
         <div>
           <Typography.Text
             className='block mb-8px text-11px uppercase font-semibold'
-            style={{ color: 'var(--text-tertiary)', letterSpacing: '0.06em' }}
+            style={{ color: 'var(--color-text-3)', letterSpacing: '0.06em' }}
           >
             {t('detail.metadata')}
           </Typography.Text>
@@ -124,7 +124,7 @@ const SkillDetailDrawer: React.FC<Props> = ({ entry, open, onClose, onTogglePin 
         <div>
           <Typography.Text
             className='block mb-8px text-11px uppercase font-semibold'
-            style={{ color: 'var(--text-tertiary)', letterSpacing: '0.06em' }}
+            style={{ color: 'var(--color-text-3)', letterSpacing: '0.06em' }}
           >
             Security
           </Typography.Text>
@@ -140,7 +140,7 @@ const SkillDetailDrawer: React.FC<Props> = ({ entry, open, onClose, onTogglePin 
                 <div
                   key={i}
                   className='rd-6px p-10px text-12px'
-                  style={{ background: 'var(--fill-2)', border: '1px solid var(--border-1)' }}
+                  style={{ background: 'var(--color-fill-2)', border: '1px solid var(--color-border-1)' }}
                 >
                   <div className='flex items-center gap-6px mb-4px'>
                     <span
@@ -149,8 +149,8 @@ const SkillDetailDrawer: React.FC<Props> = ({ entry, open, onClose, onTogglePin 
                     >
                       {t(`threats.${f.threat}`)}
                     </span>
-                    <span style={{ color: 'var(--text-tertiary)' }}>·</span>
-                    <span style={{ color: 'var(--text-tertiary)' }}>{t(`severity.${f.severity}`)}</span>
+                    <span style={{ color: 'var(--color-text-3)' }}>·</span>
+                    <span style={{ color: 'var(--color-text-3)' }}>{t(`severity.${f.severity}`)}</span>
                   </div>
                   <Typography.Text className='text-11px break-all' style={{ color: 'var(--text-secondary)' }}>
                     {f.evidence}
@@ -165,7 +165,7 @@ const SkillDetailDrawer: React.FC<Props> = ({ entry, open, onClose, onTogglePin 
         <div>
           <Typography.Text
             className='block mb-6px text-11px uppercase font-semibold'
-            style={{ color: 'var(--text-tertiary)', letterSpacing: '0.06em' }}
+            style={{ color: 'var(--color-text-3)', letterSpacing: '0.06em' }}
           >
             {t('detail.whenLoaded')}
           </Typography.Text>

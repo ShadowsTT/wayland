@@ -223,8 +223,8 @@ const SkillsSettings: React.FC = () => {
       <div
         className='flex items-center justify-between px-14px py-10px rd-10px'
         style={{
-          background: 'var(--fill-1)',
-          border: '1px solid var(--border-1)',
+          background: 'var(--color-fill-1)',
+          border: '1px solid var(--color-border-1)',
         }}
       >
         <div className='flex-1 min-w-0'>
@@ -258,8 +258,8 @@ const SkillsSettings: React.FC = () => {
       <div
         className='skills-shell rd-12px overflow-hidden flex'
         style={{
-          background: 'var(--fill-1)',
-          border: '1px solid var(--border-1)',
+          background: 'var(--color-fill-1)',
+          border: '1px solid var(--color-border-1)',
         }}
       >
         <FilterRail
@@ -274,7 +274,7 @@ const SkillsSettings: React.FC = () => {
 
         <div
           className='flex-1 min-w-0 flex flex-col'
-          style={{ background: 'var(--bg)' }}
+          style={{ background: 'var(--color-bg-1)' }}
         >
           {/* Row-list header — count + filter summary, mirrors the mockup's
               "2,047 skills · showing all sources" affordance. */}
@@ -282,8 +282,8 @@ const SkillsSettings: React.FC = () => {
             <div
               className='flex items-center justify-between px-16px py-10px text-11px uppercase font-semibold'
               style={{
-                borderBottom: '1px solid var(--border-1)',
-                color: 'var(--text-tertiary)',
+                borderBottom: '1px solid var(--color-border-1)',
+                color: 'var(--color-text-3)',
                 letterSpacing: '0.08em',
               }}
             >
