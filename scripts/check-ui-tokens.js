@@ -34,11 +34,23 @@ const BANNED_TOKENS = [
 ];
 
 // Files where hex literals are the source of truth, not drift.
+// - styles/themes, arco-override, base, colors: canonical token definitions.
+// - Titlebar OS-spec red/white (Windows close button) — UX spec, not theme.
+// - Layout / main / ModelModalContent: console.log('%c…', 'color:#X') strings
+//   style the F12 DevTools console; they never paint UI pixels.
+// - ThoughtDisplay: gradient anchors swapped via theme const; theme-correct.
+// - TestShowcase: palette/token visual demo page; hex is the demo content.
 const HEX_ALLOWLIST = [
   /\/styles\/themes\//,
   /\/styles\/arco-override\.css$/,
   /\/styles\/base\.css$/,
   /\/styles\/colors\.ts$/,
+  /\/components\/layout\/Titlebar\/titlebar\.css$/,
+  /\/components\/layout\/Layout\.tsx$/,
+  /\/renderer\/main\.tsx$/,
+  /\/SettingsModal\/contents\/ModelModalContent\.tsx$/,
+  /\/components\/chat\/ThoughtDisplay\.tsx$/,
+  /\/pages\/TestShowcase\.tsx$/,
 ];
 
 const HEX_RE = /#[0-9a-fA-F]{3,8}\b/g;
