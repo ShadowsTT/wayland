@@ -84,27 +84,27 @@
   align-self: flex-start;
 }
 
-/* Featured tier — mirrors the Standing Companies treatment on the
-   Teams page so the two 'headline tier' callouts share one visual
-   idiom. Three signals reinforce 'this is the tier to start with':
-   (1) Forge Orange gradient background, (2) FEATURED pill top-right,
-   (3) orange dot before the title. */
+/* Featured tier — solid Forge Orange line border + flat orange-tinted
+   dark background. No gradient (Sean: 'a single line ... slightly
+   orange-grey background, still dark'). Three signals: (1) solid
+   orange perimeter, (2) FEATURED pill top-right, (3) orange dot
+   before the title. */
 .cardFeatured {
-  border-color: rgb(var(--primary-6) / 0.5);
-  background: linear-gradient(180deg, var(--color-fill-1) 0%, rgb(var(--primary-6) / 0.10) 100%);
+  border-color: rgb(var(--primary-6));
+  background: color-mix(in srgb, var(--color-fill-1) 88%, rgb(var(--primary-6)) 12%);
 }
 
 /* Reserve right padding ONLY on the title row of featured cards so the
    FEATURED pill never crashes into the title text. Description and body
-   get the full card width back (Sean's 'descriptions need to be full
-   width' fix). */
+   get the full card width back. */
 .cardFeatured .titleRow {
   padding-right: 90px;
 }
 
 .cardFeatured:hover {
   border-color: rgb(var(--primary-6));
-  background: linear-gradient(180deg, var(--color-fill-2) 0%, rgb(var(--primary-6) / 0.14) 100%);
+  background: color-mix(in srgb, var(--color-fill-2) 84%, rgb(var(--primary-6)) 16%);
+  box-shadow: 0 0 0 1px rgb(var(--primary-6) / 0.5);
 }
 
 .featuredBadge {
