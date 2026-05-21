@@ -108,7 +108,7 @@ const ChannelsIndex: React.FC = () => {
         return (
           <article
             key={channel.id}
-            className={`flex flex-col gap-12px p-18px rounded-12px bg-[var(--color-bg-2)] border border-[var(--color-border-2)] min-h-[150px] min-w-0 transition-all duration-160 ${
+            className={`flex flex-col gap-12px p-18px rounded-12px bg-[var(--color-bg-2)] border-2 border-solid border-[var(--color-border-2)] shadow-[var(--shadow-1)] min-h-[150px] min-w-0 transition-all duration-160 ${
               isComingSoon
                 ? 'hover:border-[var(--color-border-3)] hover:bg-[var(--color-bg-3)] cursor-pointer'
                 : 'hover:border-[var(--brand-soft-border)] hover:bg-[var(--color-bg-3)] hover:-translate-y-2px cursor-pointer'
