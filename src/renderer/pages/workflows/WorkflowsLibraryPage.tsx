@@ -141,27 +141,25 @@ const WorkflowsLibraryPage: React.FC = () => {
 
   return (
     <div
-      className='size-full overflow-y-auto overflow-x-hidden px-24px py-24px'
+      className='size-full overflow-hidden flex flex-col'
       style={{ background: 'var(--color-bg-1)' }}
     >
-      <div className='max-w-[1240px] mx-auto flex flex-col gap-20px min-w-0'>
-        <header className='flex items-start justify-between gap-16px flex-wrap'>
-          <div className='flex-1 min-w-0'>
+      <div className='flex-1 min-h-0 overflow-y-auto px-24px py-20px'>
+        <div className='flex flex-col gap-16px min-w-0'>
+        <header className='flex items-center justify-between gap-16px'>
+          <div className='flex items-baseline gap-12px min-w-0'>
             <h1
-              className='text-24px font-semibold m-0'
+              className='text-20px font-semibold m-0 truncate'
               style={{ color: 'var(--color-text-1)' }}
             >
               {t('title', 'Workflows')}
             </h1>
-            <p
-              className='text-14px mt-6px m-0'
-              style={{ color: 'var(--color-text-2)' }}
+            <span
+              className='text-13px shrink-0'
+              style={{ color: 'var(--color-text-3)' }}
             >
-              {t(
-                'subtitle',
-                'Step-by-step recipes you can launch in one click or schedule to run automatically. Pick a workflow, choose your engine, and the agent will walk you through it.',
-              )}
-            </p>
+              {t('count', '{{count}} workflow', { count: workflows.length })}
+            </span>
           </div>
           <div className='flex items-center gap-8px shrink-0'>
             <Button
@@ -268,7 +266,7 @@ const WorkflowsLibraryPage: React.FC = () => {
               ) : (
                 <div
                   className='grid gap-12px'
-                  style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))' }}
+                  style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(min(260px, 100%), 1fr))', minWidth: 0 }}
                 >
                   {searchFiltered.map((w) => (
                     <WorkflowCard key={w.name} entry={w} onClick={handleCardClick} />
@@ -293,7 +291,7 @@ const WorkflowsLibraryPage: React.FC = () => {
                     </h2>
                     <div
                       className='grid gap-12px'
-                      style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))' }}
+                      style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(min(260px, 100%), 1fr))', minWidth: 0 }}
                     >
                       {featured.map((w) => (
                         <WorkflowCard key={w.name} entry={w} onClick={handleCardClick} featured />
@@ -344,7 +342,7 @@ const WorkflowsLibraryPage: React.FC = () => {
                     </h2>
                     <div
                       className='grid gap-12px'
-                      style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))' }}
+                      style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(min(260px, 100%), 1fr))', minWidth: 0 }}
                     >
                       {s.entries.map((w) => (
                         <WorkflowCard key={w.name} entry={w} onClick={handleCardClick} />
@@ -358,6 +356,7 @@ const WorkflowsLibraryPage: React.FC = () => {
         </div>
 
         <WorkflowDetailModal entry={selected} onClose={() => setSelected(null)} />
+        </div>
       </div>
     </div>
   );
