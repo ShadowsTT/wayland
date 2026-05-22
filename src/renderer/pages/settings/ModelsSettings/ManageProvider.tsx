@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Button, Input, Message, Modal, Spin, Switch, Tooltip } from '@arco-design/web-react';
-import { Caution, Left, Refresh as RefreshIcon } from '@icon-park/react';
+import { AlertTriangle, ChevronLeft, RefreshCw as RefreshIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { IModelRegistryProviderView } from '@/common/adapter/ipcBridge';
 import type { CatalogModel, ConnectError, CuratedModel, ModelKind } from '@process/providers/types';
@@ -304,7 +304,7 @@ const ManageProvider: React.FC<Props> = ({ provider, onBack, onDisconnected }) =
   return (
     <div>
       <div className={styles.back}>
-        <Button type='text' size='small' icon={<Left theme='outline' size={14} />} onClick={onBack}>
+        <Button type='text' size='small' icon={<ChevronLeft size={14} aria-hidden='true' />} onClick={onBack}>
           {t('settings.modelsPage.title')}
         </Button>
       </div>
@@ -328,7 +328,7 @@ const ManageProvider: React.FC<Props> = ({ provider, onBack, onDisconnected }) =
         <div className={styles.headerActions}>
           <Button
             size='small'
-            icon={<RefreshIcon theme='outline' size={14} />}
+            icon={<RefreshIcon size={14} aria-hidden='true' />}
             loading={refreshing}
             onClick={() => void handleRefresh()}
           >
@@ -380,7 +380,7 @@ const ManageProvider: React.FC<Props> = ({ provider, onBack, onDisconnected }) =
 
         {!loading && loadError && (
           <div className={styles.cardState} role='alert'>
-            <Caution theme='outline' size={20} fill='var(--color-danger-6)' />
+            <AlertTriangle size={20} color='var(--color-danger-6)' aria-hidden='true' />
             <div className={styles.cardStateText}>{t('settings.modelsPage.manage.loadError')}</div>
             <Button size='small' onClick={() => void loadCatalog()}>
               {t('settings.modelsPage.manage.retry')}

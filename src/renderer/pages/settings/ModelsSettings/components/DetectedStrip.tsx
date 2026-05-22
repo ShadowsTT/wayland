@@ -1,6 +1,6 @@
 import React from 'react';
 import { Button } from '@arco-design/web-react';
-import { Magic } from '@icon-park/react';
+import { Wand2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { IModelRegistryDetectedKey } from '@/common/adapter/ipcBridge';
 import { providerMeta } from '../providerCatalog';
@@ -28,7 +28,7 @@ const DetectedStrip: React.FC<Props> = ({ detectedKey, onUse, onIgnore, busy }) 
   return (
     <div className={styles.detected}>
       <div className={styles.detectedIcon}>
-        <Magic theme='outline' size={15} fill='currentColor' />
+        <Wand2 size={15} aria-hidden='true' />
       </div>
       <div className={styles.detectedText}>
         {t('settings.modelsPage.detected.found', { provider: meta.displayName })}

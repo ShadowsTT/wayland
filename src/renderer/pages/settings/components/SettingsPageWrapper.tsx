@@ -68,11 +68,11 @@ export function getBuiltinSettingsNavItems(isDesktop: boolean, t: TranslateFn): 
       icon: <Zap size={16} />,
       path: 'skills',
     },
-    providers: {
-      id: 'providers',
-      label: t('settings.sider.providers', { defaultValue: 'Providers' }),
+    models: {
+      id: 'models',
+      label: t('settings.sider.models', { defaultValue: 'Models' }),
       icon: <Sparkles size={16} />,
-      path: 'providers',
+      path: 'models',
     },
     images: {
       id: 'images',

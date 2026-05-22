@@ -1,5 +1,5 @@
 import React from 'react';
-import { Layers } from '@icon-park/react';
+import { Layers } from 'lucide-react';
 import { Trans } from 'react-i18next';
 import styles from '../ModelsSettings.module.css';
 
@@ -11,7 +11,7 @@ import styles from '../ModelsSettings.module.css';
 const EmptyState: React.FC = () => (
   <div className={styles.emptyState}>
     <div className={styles.emptyNote}>
-      <Layers theme='outline' size={26} fill='currentColor' />
+      <Layers size={26} aria-hidden='true' />
       <div className={styles.emptyText}>
         <Trans i18nKey='settings.modelsPage.empty.note'>
           No providers connected yet. Connect one above — the fastest start is <b>Continue with Google</b>.

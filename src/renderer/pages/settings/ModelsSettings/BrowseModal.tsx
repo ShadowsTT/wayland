@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Button, Input, Modal } from '@arco-design/web-react';
-import { Caution, Check, Left } from '@icon-park/react';
+import { AlertTriangle, Check, ChevronLeft } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { IModelRegistryConnectResult } from '@/common/adapter/ipcBridge';
 import type { ConnectError, ProviderId } from '@process/providers/types';
@@ -189,7 +189,7 @@ const BrowseModal: React.FC<Props> = ({ visible, onClose, initialProvider }) => 
         </span>
         {connected && (
           <span className={styles.connectedTag}>
-            <Check theme='outline' size={10} fill='currentColor' />
+            <Check size={10} aria-hidden='true' />
             {t('settings.modelsPage.browse.connected')}
           </span>
         )}
@@ -216,7 +216,7 @@ const BrowseModal: React.FC<Props> = ({ visible, onClose, initialProvider }) => 
             className={styles.back}
             type='text'
             size='small'
-            icon={<Left theme='outline' size={14} />}
+            icon={<ChevronLeft size={14} aria-hidden='true' />}
             onClick={backToGrid}
           >
             {t('settings.modelsPage.browse.back')}
@@ -267,7 +267,7 @@ const BrowseModal: React.FC<Props> = ({ visible, onClose, initialProvider }) => 
           />
           {errorKey && (
             <div className={styles.keyError} role='alert'>
-              <Caution theme='outline' size={14} fill='currentColor' />
+              <AlertTriangle size={14} aria-hidden='true' />
               <span>{t(`settings.modelsPage.browse.${errorKey}`, { provider: view.provider.displayName })}</span>
             </div>
           )}

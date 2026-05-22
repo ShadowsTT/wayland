@@ -1,6 +1,6 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { Button, Input } from '@arco-design/web-react';
-import { Caution } from '@icon-park/react';
+import { AlertTriangle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { IModelRegistryConnectResult, IModelRegistryDetectedKey } from '@/common/adapter/ipcBridge';
 import type { ConnectError, ProviderId } from '@process/providers/types';
@@ -204,7 +204,7 @@ const ConnectPanel: React.FC<Props> = ({ detectedKeys, onConnectKey, onUseDetect
 
       {errorText && (
         <div className={styles.connectError} role='alert'>
-          <Caution theme='outline' size={14} fill='currentColor' />
+          <AlertTriangle size={14} aria-hidden='true' />
           <span>{errorText}</span>
         </div>
       )}
