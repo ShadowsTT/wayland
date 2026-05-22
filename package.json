@@ -92,6 +92,7 @@
     "@fontsource-variable/inter": "^5.2.8",
     "@google/genai": "^1.16.0",
     "@grammyjs/transformer-throttler": "^1.2.1",
+    "@huggingface/transformers": "^4.2.0",
     "@icon-park/react": "^1.4.2",
     "@larksuiteoapi/node-sdk": "^1.58.0",
     "@line/bot-sdk": "^11.0.0",

@@ -198,6 +198,7 @@ docs/superpowers/
 resources/bundled-bun
 resources/bundled-wayland-core
 resources/hub
+resources/voice-models
 
 # Server build output
 dist-server/
