@@ -193,9 +193,11 @@ function looksLikeEmbedding(model: ModelsDevModel): boolean {
 /**
  * Derive a stable family from a model id when models.dev does not supply one.
  *
- * Strips trailing **date/build stamps** (a pure-numeric token ≥ 4 digits, e.g.
- * `0613`, `1106`, `20250514`) and trailing **variant words** (`preview`, `exp`,
- * `latest`, `thinking`, …) — these never identify a family. It KEEPS every
+ * Strips trailing **date/build stamps** (a pure-numeric token ≥ 4 digits like
+ * `0613`, `1106`, `20250514`, AND multi-token dashed dates like `2024-07-18` or
+ * `2024-04`) and trailing **variant words** (`preview`, `exp`, `latest`,
+ * `thinking`, …, plus model-tier names like `nano`, `mini`, `pro` that aren't
+ * families) — none of these identify a family on their own. It KEEPS every
  * generation/version token: a 1–3 digit number (`4`, `3`), a dotted number
  * (`4.1`, `3.5`), or a generation slug (`4o`, `o3`, `v2`) stops the strip loop.
  *
@@ -210,8 +212,10 @@ function looksLikeEmbedding(model: ModelsDevModel): boolean {
  *
  * Examples: `gpt-4.1`→`gpt-4.1`; `gpt-4-0613`→`gpt-4`;
  * `gpt-4-1106-preview`→`gpt-4`; `gpt-4o-mini`→`gpt-4o-mini`;
+ * `gpt-4o-mini-2024-07-18`→`gpt-4o-mini`;
  * `claude-3-5-haiku-20241022`→`claude-3-5-haiku`;
- * `gemini-2.0-flash-thinking-exp`→`gemini-2.0-flash`; `o3`→`o3`.
+ * `gemini-2.0-flash-thinking-exp`→`gemini-2.0-flash`; `o3`→`o3`;
+ * `computer-use-preview-2025-03-11`→`computer-use`; `babbage-002`→`babbage`.
  */
 function deriveFamily(modelId: string): string {
   // Drop a vendor path prefix so it never leaks into the family name.
@@ -223,6 +227,17 @@ function deriveFamily(modelId: string): string {
   if (slash !== -1) id = id.slice(slash + 1);
 
   const tokens = id.split('-');
+
+  // First peel any trailing dashed-date pattern. A 4-digit year token (`2024`)
+  // followed by 1-2 trailing 1-2 digit numeric tokens is a `YYYY-MM` or
+  // `YYYY-MM-DD` date — strip every part of it. This catches the common
+  // OpenAI/Anthropic pattern (`gpt-4o-mini-2024-07-18`) that the plain
+  // ≥ 4-digit strip rule misses because the trailing token is `18` (≤ 3 digits).
+  while (tokens.length > 1 && hasTrailingDashedDate(tokens)) {
+    tokens.pop();
+  }
+
+  // Then the existing trailing-strip loop for build stamps and variant words.
   while (tokens.length > 1 && isTrailingStripToken(tokens[tokens.length - 1])) {
     tokens.pop();
   }
@@ -231,7 +246,41 @@ function deriveFamily(modelId: string): string {
   return family.length > 0 ? family : id;
 }
 
-/** Trailing variant words to strip — none of these identify a model family. */
+/**
+ * True when the tail of `tokens` carries a dashed-date pattern (`…-YYYY-MM` or
+ * `…-YYYY-MM-DD`) — the last token is a short pure-numeric (1–3 digits),
+ * preceded by a 4-digit year (or another short numeric that itself follows a
+ * year). The caller pops one token per call until the condition fails, which
+ * walks `DD`→`MM`→`YYYY` off the tail. A short numeric NOT preceded by another
+ * numeric is left alone (`o3`, `gpt-4`, `babbage-002` — see the `\d{4,}` rule
+ * below for `002`).
+ */
+function hasTrailingDashedDate(tokens: string[]): boolean {
+  const last = tokens[tokens.length - 1];
+  if (!/^\d{1,3}$/.test(last)) return false;
+  // Walk left until a non-numeric token — must hit a 4-digit year somewhere.
+  for (let i = tokens.length - 2; i >= 0; i--) {
+    const t = tokens[i];
+    if (/^\d{4}$/.test(t)) return true; // year found
+    if (!/^\d{1,3}$/.test(t)) return false; // non-numeric breaks the chain
+  }
+  return false;
+}
+
+/**
+ * Trailing variant words to strip — none of these identify a model family.
+ *
+ * Includes model-tier names (`mini`, `nano`, `pro`, `flash`, `turbo`, `ultra`,
+ * `large`, `medium`, `small`, `lite`) when they appear alone at the tail of a
+ * generation-less id (`babbage-002`→`babbage`). NOT stripped when a preceding
+ * version token is present — `gpt-4o-mini` keeps `mini` because the previous
+ * token `4o` is a version, not the start of a generation-less id. The strip
+ * loop's "stop at the first non-strippable token" rule preserves that.
+ *
+ * `legacy`/`base`/`002`/`003` etc are NOT in this list; the `\d{4,}` rule
+ * already handles 4+ digit build stamps. We deliberately keep `002`/`003` as
+ * version tokens — they're treated as 1-3 digit generation numbers.
+ */
 const VARIANT_WORDS = new Set([
   'preview',
   'exp',

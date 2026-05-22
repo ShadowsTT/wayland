@@ -365,6 +365,67 @@ describe('GuidModelSelector home picker', () => {
     expect(setCurrentModel).not.toHaveBeenCalled();
   });
 
+  it('renders a price tier on ACP-mode rows via fuzzy-matching against the curated set', async () => {
+    // Wave 4B R3 fix: ACP-mode CLI options (Claude Code, etc.) use short ids
+    // like `sonnet`/`haiku`/`opus` that never equal a curated model id like
+    // `claude-sonnet-4-5`. The tier resolver must fuzzy-match on family /
+    // displayName tokens so the $ / $$ / $$$ badge actually renders.
+    mockCuratedForAgent.mockResolvedValue([
+      curated({
+        id: 'claude-sonnet-4-5',
+        providerId: 'anthropic',
+        displayName: 'Claude Sonnet 4.5',
+        family: 'claude-sonnet',
+        costInPerM: 3,
+        costOutPerM: 15,
+      }),
+      curated({
+        id: 'claude-haiku-4-5',
+        providerId: 'anthropic',
+        displayName: 'Claude Haiku 4.5',
+        family: 'claude-haiku',
+        costInPerM: 0.8,
+        costOutPerM: 4,
+      }),
+      curated({
+        id: 'claude-opus-4-5',
+        providerId: 'anthropic',
+        displayName: 'Claude Opus 4.5',
+        family: 'claude-opus',
+        costInPerM: 5,
+        costOutPerM: 25,
+      }),
+    ]);
+    const acpInfo = {
+      currentModelId: 'sonnet',
+      currentModelLabel: 'Sonnet',
+      availableModels: [
+        { id: 'default', label: 'Default (recommended)' },
+        { id: 'sonnet', label: 'Sonnet' },
+        { id: 'sonnet[1m]', label: 'Sonnet (1M context)' },
+        { id: 'haiku', label: 'Haiku' },
+      ],
+      canSwitch: true,
+      source: 'models' as const,
+      sourceDetail: 'acp-models',
+    };
+    render(
+      <GuidModelSelector
+        {...baseProps}
+        isGeminiMode={false}
+        agentKey='claude'
+        currentAcpCachedModelInfo={acpInfo}
+        selectedAcpModel='sonnet'
+      />
+    );
+
+    // Sonnet (3/15) blended ≈ 12 → $$. Haiku (0.8/4) blended ≈ 3.2 → $.
+    // Two rows match Sonnet (regular + 1M context); both should render $$.
+    await screen.findByText('Sonnet');
+    expect(screen.getAllByText('$$').length).toBeGreaterThanOrEqual(2);
+    expect(screen.getByText('$')).toBeInTheDocument();
+  });
+
   it('passes the resolved chat-start payload through to setCurrentModel', async () => {
     // The resolver hands back the credentials + platform + baseUrl the
     // chat-start dispatch needs. The picker writes them straight into

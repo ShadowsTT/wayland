@@ -246,6 +246,43 @@ const GuidModelSelector: React.FC<GuidModelSelectorProps> = ({
     void handlePickCurated(curated[0]);
   }, [agentKey, curated, isGeminiMode, selectedCuratedKey, handlePickCurated]);
 
+  // Resolve a price tier for an ACP model entry. CLI-agent options use short
+  // ids/labels (`sonnet`, `haiku`, `Sonnet (1M context)`) that almost never
+  // equal a curated model id (`claude-sonnet-4-5`). Wave 4B R3 fix: match the
+  // ACP option against the curated set by family/displayName tokens so the
+  // tier badge actually renders. Exact-id match wins (handles a future ACP
+  // model that uses real catalog ids); fall back to a token-substring match
+  // against `family` and `displayName`. Returns null when nothing matches —
+  // the row shows no tier rather than a fabricated one.
+  const acpTierFor = React.useCallback(
+    (modelId: string, modelLabel: string): '$' | '$$' | '$$$' | null => {
+      if (!curated || curated.length === 0) return null;
+      // 1. Exact id match — preserves the previous behavior when the ACP id
+      //    happens to align with the catalog.
+      const exact = curated.find((m) => m.id === modelId);
+      if (exact) return costToPriceTier(exact.costInPerM, exact.costOutPerM);
+      // 2. Token match: try the ACP id and label against each curated family
+      //    + displayName. Lowercased, alphanumeric-only token list, longest
+      //    token first so `sonnet` matches `claude-sonnet` before `claude`.
+      const tokens = Array.from(
+        new Set(
+          `${modelId} ${modelLabel}`
+            .toLowerCase()
+            .split(/[^a-z0-9]+/)
+            .filter((token) => token.length >= 3)
+        )
+      ).toSorted((a, b) => b.length - a.length);
+      for (const token of tokens) {
+        const match = curated.find(
+          (m) => m.family.toLowerCase().includes(token) || m.displayName.toLowerCase().includes(token)
+        );
+        if (match) return costToPriceTier(match.costInPerM, match.costOutPerM);
+      }
+      return null;
+    },
+    [curated]
+  );
+
   // ── ACP model state (CLI agents) ─────────────────────────────────────────
   const acpSelectedLabel = React.useMemo(() => {
     return (
@@ -370,12 +407,6 @@ const GuidModelSelector: React.FC<GuidModelSelectorProps> = ({
   // ── CLI agents — ACP cached model selector ───────────────────────────────
   if (currentAcpCachedModelInfo && currentAcpCachedModelInfo.availableModels?.length > 0) {
     if (currentAcpCachedModelInfo.canSwitch) {
-      // Cost lookup for the agent's curated set — CLI model lists carry no
-      // cost data themselves, so the tier is sourced from the curated catalog.
-      const tierFor = (modelId: string): '$' | '$$' | '$$$' | null => {
-        const match = curated?.find((m) => m.id === modelId);
-        return match ? costToPriceTier(match.costInPerM, match.costOutPerM) : null;
-      };
       return (
         <Dropdown
           trigger='click'
@@ -383,7 +414,7 @@ const GuidModelSelector: React.FC<GuidModelSelectorProps> = ({
             <Menu selectedKeys={selectedAcpModel ? [selectedAcpModel] : []}>
               {scopeCaptionItem}
               {currentAcpCachedModelInfo.availableModels.map((model) => {
-                const tier = tierFor(model.id);
+                const tier = acpTierFor(model.id, model.label);
                 return (
                   <Menu.Item key={model.id} onClick={() => setSelectedAcpModel(model.id)}>
                     <div className='flex items-center gap-8px w-full'>

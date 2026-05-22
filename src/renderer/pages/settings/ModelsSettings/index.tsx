@@ -130,9 +130,15 @@ const ModelsSettingsInner: React.FC = () => {
     }
   }, []);
 
+  // Wave 4B R2 fix: never offer a detected key for a provider that's already
+  // connected. Without this, a fresh page mount (`ignoredKeys` is renderer-only
+  // state and resets) re-surfaces e.g. OpenAI in both the Connected list and
+  // the detected strip. The user just sees "OpenAI · Use it" next to "OpenAI ·
+  // Connected", which reads as a bug.
+  const connectedProviderIds = useMemo(() => new Set(providers.map((p) => p.providerId)), [providers]);
   const visibleDetected = useMemo(
-    () => detectedKeys.filter((dk) => !ignoredKeys.has(detectedKeyId(dk))),
-    [detectedKeys, ignoredKeys]
+    () => detectedKeys.filter((dk) => !ignoredKeys.has(detectedKeyId(dk)) && !connectedProviderIds.has(dk.providerId)),
+    [detectedKeys, ignoredKeys, connectedProviderIds]
   );
 
   const connectKey = useCallback((providerId: ProviderId, key: string) => connect(providerId, { key }), [connect]);

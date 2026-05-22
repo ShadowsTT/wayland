@@ -19,10 +19,22 @@
  * 2. Text models are grouped by `family`.
  * 3. Within a family, models are ordered newest-first by `releaseDate`. A model
  *    with no `releaseDate` sorts last.
- * 4. The newest model in a family → `recommended: true, enabled: true,
- *    role: 'flagship'`. The second-newest → `recommended: true, enabled: true,
- *    role: 'previous'`. A single-model family yields only a flagship.
- * 5. Every other model → `recommended: false, enabled: false`, no `role`.
+ * 4. **A family is eligible for the recommended set only when at least one of
+ *    its models is `enriched: true`.** models.dev enrichment is the local
+ *    quality signal that a family is current/relevant — providers like OpenAI
+ *    expose legacy ids on `/v1/models` (Babbage, Davinci, dated GPT-3.5
+ *    Turbos, internal Computer-Use previews, …) that models.dev correctly
+ *    declines to track. Without this filter every unmatched id becomes a
+ *    singleton "family" and every legacy model gets flagged Recommended, which
+ *    defeats the entire two-tier curation premise. Unenriched models still
+ *    flow through to the catalog (visible in "More in the catalog") — they
+ *    just don't get the `recommended: true` badge.
+ * 5. Within an eligible family, the newest model → `recommended: true,
+ *    enabled: true, role: 'flagship'`. The second-newest → `recommended: true,
+ *    enabled: true, role: 'previous'`. A single-model family yields only a
+ *    flagship.
+ * 6. Every other model — including every model in an ineligible (entirely
+ *    unenriched) family — gets `recommended: false, enabled: false`, no `role`.
  *
  * Fast/cheap families (Haiku, GPT mini, Gemini Flash) are NOT special-cased —
  * they form their own families and are surfaced by exactly the same rule. Cost
@@ -51,8 +63,13 @@ export class Curator {
     const curated: CuratedModel[] = [];
     for (const familyModels of families.values()) {
       const ordered = sortNewestFirst(familyModels);
+      // A family is eligible for recommendation only when at least one of its
+      // models was enriched against models.dev (Rule 4). Entirely-unenriched
+      // families surface every model as `recommended: false` — they're still
+      // pickable, just not flagged.
+      const eligible = ordered.some((model) => model.enriched);
       ordered.forEach((model, index) => {
-        curated.push(curateOne(model, index));
+        curated.push(curateOne(model, index, eligible));
       });
     }
     return curated;
@@ -96,13 +113,18 @@ function sortNewestFirst(models: CatalogModel[]): CatalogModel[] {
 
 /**
  * Convert a `CatalogModel` into a `CuratedModel` given its rank within its
- * family (0 = newest). Ranks 0 and 1 are recommended; everything else is not.
+ * family (0 = newest) and whether its family is eligible for recommendation
+ * (Rule 4 — at least one model in the family was enriched against models.dev).
+ *
+ * In an eligible family, ranks 0 and 1 are recommended; everything else is not.
+ * In an ineligible family every model is `recommended: false` — the model is
+ * still pickable from "More in the catalog" but doesn't get the flagship badge.
  */
-function curateOne(model: CatalogModel, rank: number): CuratedModel {
-  if (rank === 0) {
+function curateOne(model: CatalogModel, rank: number, familyEligible: boolean): CuratedModel {
+  if (familyEligible && rank === 0) {
     return { ...model, recommended: true, enabled: true, role: 'flagship' };
   }
-  if (rank === 1) {
+  if (familyEligible && rank === 1) {
     return { ...model, recommended: true, enabled: true, role: 'previous' };
   }
   return { ...model, recommended: false, enabled: false };

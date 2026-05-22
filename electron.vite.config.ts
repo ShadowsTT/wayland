@@ -16,33 +16,18 @@ function buildMcpServersPlugin() {
   };
 }
 
-// Icon Park transform plugin (replaces webpack icon-park-loader)
-function iconParkPlugin() {
-  return {
-    name: 'vite-plugin-icon-park',
-    enforce: 'pre' as const,
-    transform(source: string, id: string) {
-      if (!id.endsWith('.tsx') || id.includes('node_modules')) return null;
-      if (!source.includes('@icon-park/react')) return null;
-      const transformedSource = source.replace(
-        /import\s+\{\s+([a-zA-Z, ]*)\s+\}\s+from\s+['"]@icon-park\/react['"](;?)/g,
-        function (str, match) {
-          if (!match) return str;
-          const components = match.split(',');
-          const importComponent = str.replace(
-            match,
-            components.map((key: string) => `${key} as _${key.trim()}`).join(', ')
-          );
-          const hoc = `import IconParkHOC from '@renderer/components/IconParkHOC';
-          ${components.map((key: string) => `const ${key.trim()} = IconParkHOC(_${key.trim()})`).join(';\n')}`;
-          return importComponent + ';' + hoc;
-        }
-      );
-      if (transformedSource !== source) return { code: transformedSource, map: null } as { code: string; map: null };
-      return null;
-    },
-  };
-}
+// Icon Park transform plugin REMOVED in Wave 4B.
+//
+// Background: `IconParkHOC` was deleted in the brand-sweep commit (every
+// `@icon-park/react` import was migrated to lucide-react). The plugin's
+// transform rewrote a `@icon-park/react` import into
+// `import IconParkHOC from '@renderer/components/IconParkHOC'`, but that
+// target no longer resolves — any future `.tsx` that imports from
+// `@icon-park/react` silently broke Vite import-analysis with a cryptic
+// "Failed to resolve import" error (Wave 4A surfaced this when Wave 2's
+// ModelsSettings files unknowingly tripped it). New source files standardize
+// on lucide-react; the package itself stays in optimizeDeps.include so the
+// tests that `vi.mock('@icon-park/react', …)` keep resolving.
 
 // Common path aliases for main process and workers
 const mainAliases = {
@@ -186,21 +171,13 @@ export default defineConfig(({ mode }) => {
           // ~600ms first-render parse + ~200kB gzipped from the lazy code-block chunk.
           // Match both the bare specifier (shiki/wasm.mjs re-export target) and the
           // resolved path (in case anything imports the dist file directly).
-          '@shikijs/engine-oniguruma/wasm-inlined': resolve(
-            'src/renderer/shims/shiki-onig-wasm-shim.mjs'
-          ),
-          '@shikijs/engine-oniguruma/dist/wasm-inlined.mjs': resolve(
-            'src/renderer/shims/shiki-onig-wasm-shim.mjs'
-          ),
+          '@shikijs/engine-oniguruma/wasm-inlined': resolve('src/renderer/shims/shiki-onig-wasm-shim.mjs'),
+          '@shikijs/engine-oniguruma/dist/wasm-inlined.mjs': resolve('src/renderer/shims/shiki-onig-wasm-shim.mjs'),
         },
         extensions: ['.ts', '.tsx', '.js', '.jsx', '.css'],
         dedupe: ['react', 'react-dom', 'react-router-dom'],
       },
-      plugins: [
-        UnoCSS(unoConfig),
-        iconParkPlugin(),
-        ...(enableSentrySourceMaps ? [sentryVitePlugin(sentryPluginOptions)] : []),
-      ],
+      plugins: [UnoCSS(unoConfig), ...(enableSentrySourceMaps ? [sentryVitePlugin(sentryPluginOptions)] : [])],
       build: {
         target: 'es2022',
         sourcemap: enableSentrySourceMaps ? 'hidden' : isDevelopment,
@@ -272,8 +249,7 @@ export default defineConfig(({ mode }) => {
               )
                 return 'vendor-markdown';
 
-              if (pkg('react-syntax-highlighter') || pkg('refractor') || pkg('highlight.js'))
-                return 'vendor-highlight';
+              if (pkg('react-syntax-highlighter') || pkg('refractor') || pkg('highlight.js')) return 'vendor-highlight';
 
               // Editor family. NOTE: @monaco-editor/react is bundled HERE (not in
               // vendor-react) — it's a Monaco wrapper, not React core. Same for

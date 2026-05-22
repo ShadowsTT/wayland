@@ -270,6 +270,38 @@ describe('ModelsSettings page', () => {
     expect(mockConnect).not.toHaveBeenCalled();
   });
 
+  it('does not show a detected key for a provider that is already connected', async () => {
+    // Wave 4B R2 fix: the detected-keys strip filters out providers already in
+    // the connected list. Without this, OpenAI shows up twice on a fresh load:
+    // once as "Connected" and once as "Use it" in the detected strip.
+    const openaiConnected: IModelRegistryProviderView = {
+      providerId: 'openai',
+      connectedVia: 'api-key',
+      state: 'connected',
+      modelCount: 42,
+    };
+    const openaiDetected: IModelRegistryDetectedKey = {
+      providerId: 'openai',
+      source: 'env:OPENAI_API_KEY',
+    };
+    const groqDetected: IModelRegistryDetectedKey = {
+      providerId: 'groq',
+      source: 'env:GROQ_API_KEY',
+    };
+    mockList.mockResolvedValue([openaiConnected]);
+    mockDetectKeys.mockResolvedValue([openaiDetected, groqDetected]);
+
+    renderPage();
+
+    // OpenAI appears in Connected, NOT in the detected strip.
+    expect(await screen.findByText('OpenAI')).toBeInTheDocument();
+    // Groq is the only one offered as detected.
+    expect(await screen.findByText(/detected\.found:provider=Groq/)).toBeInTheDocument();
+    // The page should not announce a detected OpenAI key alongside the
+    // connected row — exactly one detected-row should be present.
+    expect(screen.queryByText(/detected\.found:provider=OpenAI/)).not.toBeInTheDocument();
+  });
+
   it('shares one providers snapshot across the page and the Browse modal (shared registry state)', async () => {
     // The page lists no providers; a successful connect from inside the
     // Browse modal must add a row to the parent without remounting it.

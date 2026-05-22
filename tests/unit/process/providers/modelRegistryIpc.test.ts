@@ -486,9 +486,25 @@ describe('modelRegistry IPC — getCatalog', () => {
       creds: { key: 'k' },
     });
     // Two models in one family — the Curator enables both (flagship + previous).
+    // `enriched: true` is required: Wave 4B added a Curator eligibility gate
+    // that only recommends a family when at least one model is enriched
+    // against models.dev (so legacy unmatched OpenAI ids don't all become
+    // singleton-family flagships).
     repo.replaceRegistryCatalog('openai', [
-      catalogModel({ id: 'gpt-4o', providerId: 'openai', family: 'gpt-4o', releaseDate: '2024-05-01' }),
-      catalogModel({ id: 'gpt-4o-old', providerId: 'openai', family: 'gpt-4o', releaseDate: '2024-01-01' }),
+      catalogModel({
+        id: 'gpt-4o',
+        providerId: 'openai',
+        family: 'gpt-4o',
+        releaseDate: '2024-05-01',
+        enriched: true,
+      }),
+      catalogModel({
+        id: 'gpt-4o-old',
+        providerId: 'openai',
+        family: 'gpt-4o',
+        releaseDate: '2024-01-01',
+        enriched: true,
+      }),
     ]);
     // The user explicitly disabled the flagship.
     repo.setRegistryOverride('openai', 'gpt-4o', false);

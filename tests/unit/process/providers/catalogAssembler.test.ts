@@ -278,4 +278,40 @@ describe('CatalogAssembler', () => {
     // `preview` (variant) and `1106` (build stamp) stripped; `gpt-4` survives.
     expect(catalog[0].family).toBe('gpt-4');
   });
+
+  it('collapses a dashed `YYYY-MM-DD` date suffix onto the base family', async () => {
+    // Wave 4B fix: the previous strip rule required a pure-numeric token ≥ 4
+    // digits, so dashed dates (`2024-07-18` → tail token `18`) escaped
+    // unstripped and `gpt-4o-mini-2024-07-18` became its own family — making
+    // every dated id look like a singleton family and over-recommending.
+    const source = fixedSource('api', 'openai', [
+      { id: 'gpt-4o-mini-2024-07-18', providerId: 'openai' },
+      { id: 'gpt-4o-2024-08-06', providerId: 'openai' },
+      { id: 'gpt-4-turbo-2024-04-09', providerId: 'openai' },
+    ]);
+    const { models: catalog } = await assembler.assemble([source], {});
+    const fam = new Map(catalog.map((m) => [m.id, m.family]));
+    expect(fam.get('gpt-4o-mini-2024-07-18')).toBe('gpt-4o-mini');
+    expect(fam.get('gpt-4o-2024-08-06')).toBe('gpt-4o');
+    expect(fam.get('gpt-4-turbo-2024-04-09')).toBe('gpt-4-turbo');
+  });
+
+  it('collapses `YYYY-MM` (no DD) dashed date suffixes onto the base family', async () => {
+    const source = fixedSource('api', 'openai', [{ id: 'something-2025-03', providerId: 'openai' }]);
+    const { models: catalog } = await assembler.assemble([source], {});
+    expect(catalog[0].family).toBe('something');
+  });
+
+  it('keeps a non-date short numeric suffix as a generation token', async () => {
+    // `o3` (1-digit version) and `gpt-4` (1-digit version) are NOT a date —
+    // no preceding year. The strip rule must leave them alone.
+    const source = fixedSource('api', 'openai', [
+      { id: 'o3', providerId: 'openai' },
+      { id: 'gpt-4', providerId: 'openai' },
+    ]);
+    const { models: catalog } = await assembler.assemble([source], {});
+    const fam = new Map(catalog.map((m) => [m.id, m.family]));
+    expect(fam.get('o3')).toBe('o3');
+    expect(fam.get('gpt-4')).toBe('gpt-4');
+  });
 });

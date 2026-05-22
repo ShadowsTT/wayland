@@ -204,4 +204,74 @@ describe('Curator', () => {
     expect(pick(first, 'gpt-4-y').role).toBe('previous');
     expect(pick(first, 'gpt-4-z').role).toBeUndefined();
   });
+
+  it('does not recommend any model in a family with zero enriched models', () => {
+    // Wave 4B fix: a family without models.dev enrichment is "uncurated" — every
+    // model in it surfaces as `recommended: false`. Without this, every legacy
+    // OpenAI id absent from models.dev (Babbage, Davinci, dated GPT-3.5
+    // Turbos, Computer-Use previews, …) became a singleton family and got
+    // tagged flagship, blowing up the recommended count to ~80 for OpenAI.
+    const input = [
+      model({ id: 'babbage-002', family: 'babbage', enriched: false }),
+      model({ id: 'davinci-002', family: 'davinci', enriched: false }),
+      model({ id: 'computer-use-preview', family: 'computer-use', enriched: false }),
+    ];
+    const curated = curator.curate(input);
+    expect(curated).toHaveLength(3);
+    expect(curated.every((m) => m.recommended === false)).toBe(true);
+    expect(curated.every((m) => m.enabled === false)).toBe(true);
+    expect(curated.every((m) => m.role === undefined)).toBe(true);
+  });
+
+  it('still recommends a family where at least one model is enriched', () => {
+    // Mixed family: the family becomes eligible when ANY model in it is
+    // enriched. The standard newest-first flagship/previous rule applies.
+    const input = [
+      model({ id: 'gpt-4o', family: 'gpt-4o', enriched: true, releaseDate: '2024-05-13' }),
+      model({ id: 'gpt-4o-legacy', family: 'gpt-4o', enriched: false, releaseDate: '2023-12-01' }),
+    ];
+    const curated = curator.curate(input);
+    expect(pick(curated, 'gpt-4o').role).toBe('flagship');
+    expect(pick(curated, 'gpt-4o-legacy').role).toBe('previous');
+  });
+
+  it('keeps the recommended share below 30% of a real-shaped OpenAI catalog', () => {
+    // Smoke-shape test: a representative OpenAI catalog mix — a few enriched
+    // current models plus many legacy / preview / dated ids the provider's
+    // /v1/models returns but models.dev correctly does not track. The Curator
+    // must surface a small recommended set, not flag the majority.
+    const enriched = [
+      model({ id: 'gpt-5', family: 'gpt', enriched: true, releaseDate: '2025-08-07' }),
+      model({ id: 'gpt-5.1', family: 'gpt', enriched: true, releaseDate: '2025-11-13' }),
+      model({ id: 'gpt-5-mini', family: 'gpt-mini', enriched: true, releaseDate: '2025-08-07' }),
+      model({ id: 'gpt-5.1-mini', family: 'gpt-mini', enriched: true, releaseDate: '2025-11-13' }),
+      model({ id: 'o3', family: 'o', enriched: true, releaseDate: '2025-04-01' }),
+      model({ id: 'o3-mini', family: 'o-mini', enriched: true, releaseDate: '2025-01-31' }),
+    ];
+    const legacyIds = [
+      'gpt-3.5-turbo',
+      'gpt-3.5-turbo-0125',
+      'gpt-3.5-turbo-16k',
+      'gpt-3.5-turbo-1106',
+      'gpt-4',
+      'gpt-4-0613',
+      'gpt-4-turbo',
+      'gpt-4-turbo-2024-04-09',
+      'gpt-4o-2024-05-13',
+      'babbage-002',
+      'davinci-002',
+      'computer-use-preview',
+      'computer-use-preview-2025-03-11',
+      'chatgpt-4o-latest',
+      'gpt-3.5-turbo-instruct',
+      'gpt-3.5-turbo-instruct-0914',
+    ];
+    const legacy = legacyIds.map((id) => model({ id, family: id, enriched: false }));
+    const total = enriched.length + legacy.length;
+    const curated = curator.curate([...enriched, ...legacy]);
+    const recommendedCount = curated.filter((m) => m.recommended).length;
+    // Under 30% recommended — the spec's "latest + one back per family" rule
+    // should never flag the majority of a real catalog.
+    expect(recommendedCount / total).toBeLessThan(0.3);
+  });
 });
