@@ -1,0 +1,224 @@
+/* Manage Provider page — mirrors prototype #screen-manage.
+   All colors use semantic tokens; the brand color is `var(--brand)`. */
+
+/* ---- Back link ---- */
+.back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  margin-bottom: 14px;
+}
+
+.back :global(.arco-btn) {
+  padding: 2px 4px;
+  height: auto;
+  color: var(--color-text-2);
+}
+
+.back :global(.arco-btn:hover) {
+  color: var(--color-text-1);
+}
+
+/* ---- Header ---- */
+.header {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  flex-wrap: wrap;
+}
+
+.avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 11px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.name {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.2px;
+  color: var(--color-text-1);
+}
+
+/* ---- Connection status badge ---- */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 600;
+}
+
+.badgeConnected {
+  background: var(--color-success-1);
+  color: var(--color-success-6);
+}
+
+.badgeTesting {
+  background: var(--brand-soft-bg, var(--color-primary-1));
+  color: var(--brand);
+}
+
+.badgeError {
+  background: var(--color-danger-1);
+  color: var(--color-danger-6);
+}
+
+.badgeDot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.headerSpacer {
+  flex: 1;
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* ---- Status line ---- */
+.statusLine {
+  font-size: 12px;
+  color: var(--color-text-2);
+  margin: 7px 0 2px 57px;
+  line-height: 1.5;
+}
+
+/* ---- Section heading ---- */
+.secLabel {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text-2);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  margin: 22px 2px 4px;
+}
+
+.secExplain {
+  font-size: 12.5px;
+  color: var(--color-text-2);
+  margin: 0 2px 11px;
+  line-height: 1.5;
+}
+
+/* ---- The model-list card ---- */
+.card {
+  background: var(--color-bg-2);
+  border: 1px solid var(--color-border-2);
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.search {
+  border-bottom: 1px solid var(--color-border-2);
+}
+
+.search :global(.arco-input-inner-wrapper) {
+  border: none;
+  border-radius: 0;
+  background: transparent;
+}
+
+/* ---- States inside the card ---- */
+.cardState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 40px 20px;
+  text-align: center;
+}
+
+.cardStateText {
+  font-size: 13px;
+  color: var(--color-text-2);
+  line-height: 1.5;
+}
+
+/* ---- List sub-headings ---- */
+.subHead {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--color-text-2);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 13px 16px 5px;
+}
+
+/* ---- Model rows ---- */
+.row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 16px;
+  border-top: 1px solid var(--color-border-2);
+}
+
+.subHead + .row {
+  border-top: none;
+}
+
+.modelName {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--color-text-1);
+}
+
+.rowOff .modelName,
+.rowOff .modelMeta {
+  opacity: 0.55;
+}
+
+/* ---- Recommended / role badge ---- */
+.recBadge {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 3px 7px;
+  border-radius: 6px;
+  background: var(--brand-soft-bg, var(--color-primary-1));
+  color: var(--brand);
+}
+
+/* ---- Capability tag (image / audio / embedding) ---- */
+.capTag {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 3px 7px;
+  border-radius: 6px;
+  background: var(--color-fill-2);
+  color: var(--color-text-2);
+  border: 1px solid var(--color-border-3);
+}
+
+/* ---- Per-row meta (context / cost) ---- */
+.modelMeta {
+  margin-left: auto;
+  font-size: 11.5px;
+  color: var(--color-text-2);
+  white-space: nowrap;
+}
+
+/* The toggle sits after the meta — keep a gap when meta pushes via margin. */
+.toggle {
+  flex-shrink: 0;
+}

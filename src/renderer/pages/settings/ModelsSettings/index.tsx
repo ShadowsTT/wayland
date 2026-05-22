@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Message, Spin } from '@arco-design/web-react';
+import { Spin } from '@arco-design/web-react';
 import { useTranslation } from 'react-i18next';
 import type { IModelRegistryDetectedKey, IModelRegistryProviderView } from '@/common/adapter/ipcBridge';
 import type { ProviderId } from '@process/providers/types';
@@ -8,6 +8,7 @@ import { useModelRegistry } from '@renderer/hooks/useModelRegistry';
 import ConnectPanel from './components/ConnectPanel';
 import ConnectedRow from './components/ConnectedRow';
 import EmptyState from './components/EmptyState';
+import ManageProvider from './ManageProvider';
 import styles from './ModelsSettings.module.css';
 
 /** Stable identity for a detected key (provider + source). */
@@ -28,10 +29,14 @@ function detectedKeyId(dk: IModelRegistryDetectedKey): string {
  */
 const ModelsSettings: React.FC = () => {
   const { t } = useTranslation();
-  const { providers, loading, error, connect, disconnect, detectKeys } = useModelRegistry();
+  const { providers, loading, error, connect, detectKeys } = useModelRegistry();
 
   const [detectedKeys, setDetectedKeys] = useState<IModelRegistryDetectedKey[]>([]);
   const [ignoredKeys, setIgnoredKeys] = useState<Set<string>>(new Set());
+
+  // View-switch seam: when a provider is selected for Manage, this holds its id
+  // and the page swaps to `ManageProvider` (prototype `#screen-manage`).
+  const [managedProviderId, setManagedProviderId] = useState<ProviderId | null>(null);
 
   // Auto-discover keys already on the machine (spec §4.4). Surfaced as the
   // consent strip — never used silently.
@@ -78,26 +83,46 @@ const ModelsSettings: React.FC = () => {
     // TODO(2C): open the Browse-all-providers modal built in Packet 2C.
   }, []);
 
-  const handleManage = useCallback((_provider: IModelRegistryProviderView) => {
-    // TODO(2B): navigate to the Manage page built in Packet 2B.
+  const handleManage = useCallback((provider: IModelRegistryProviderView) => {
+    setManagedProviderId(provider.providerId);
   }, []);
 
-  const handleFix = useCallback(
-    async (provider: IModelRegistryProviderView) => {
-      // TODO(2B): the Manage page owns the re-key dialog. Until 2B lands, the
-      // safe recovery is to disconnect so the user can re-connect cleanly.
-      try {
-        await disconnect(provider.providerId);
-      } catch {
-        // A failed disconnect leaves the errored provider in place — surface it
-        // rather than failing silently with an unhandled rejection.
-        Message.error(t('settings.modelsPage.fixFailed'));
-      }
-    },
-    [disconnect, t]
+  // An errored provider also opens the Manage page — its header carries the
+  // real Re-key dialog (spec §4.5), the proper recovery for a revoked key.
+  const handleFix = useCallback((provider: IModelRegistryProviderView) => {
+    setManagedProviderId(provider.providerId);
+  }, []);
+
+  const handleManageBack = useCallback(() => {
+    setManagedProviderId(null);
+  }, []);
+
+  // The Manage page disconnects via `useModelRegistry`; on success it returns
+  // here, since the provider it was managing no longer exists.
+  const handleManageDisconnected = useCallback(() => {
+    setManagedProviderId(null);
+  }, []);
+
+  const managedProvider = useMemo(
+    () => (managedProviderId ? (providers.find((p) => p.providerId === managedProviderId) ?? null) : null),
+    [managedProviderId, providers]
   );
 
+  // The managed provider was selected but is no longer in the list (e.g. it was
+  // disconnected from another surface) — fall back to the Models page.
+  useEffect(() => {
+    if (managedProviderId && !loading && !managedProvider) {
+      setManagedProviderId(null);
+    }
+  }, [managedProviderId, managedProvider, loading]);
+
   const showEmptyState = !loading && providers.length === 0 && visibleDetected.length === 0;
+
+  if (managedProvider) {
+    return (
+      <ManageProvider provider={managedProvider} onBack={handleManageBack} onDisconnected={handleManageDisconnected} />
+    );
+  }
 
   return (
     <SettingsPageShell
