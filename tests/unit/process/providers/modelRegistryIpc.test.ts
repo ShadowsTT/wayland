@@ -174,6 +174,8 @@ type Fakes = {
   getRegistry: ReturnType<typeof vi.fn>;
   apiListModels: ReturnType<typeof vi.fn>;
   cliListModels: ReturnType<typeof vi.fn>;
+  legacyWrite: ReturnType<typeof vi.fn>;
+  legacyRemove: ReturnType<typeof vi.fn>;
 };
 
 function makeFakes(over: Partial<{ apiModels: unknown; testResult: unknown }> = {}): Fakes {
@@ -185,6 +187,11 @@ function makeFakes(over: Partial<{ apiModels: unknown; testResult: unknown }> = 
   const getRegistry = vi.fn().mockResolvedValue({});
   const apiListModels = vi.fn().mockResolvedValue(over.apiModels ?? [{ id: 'gpt-4o', providerId: 'openai' }]);
   const cliListModels = vi.fn().mockResolvedValue([{ id: 'gpt-5-codex', providerId: 'openai' }]);
+  // The legacy `model.config` bridge is mocked so the tests can assert the
+  // chat-start mirror fires on connect / rekey / disconnect without standing
+  // up a real `ProcessConfig`. Default both methods to no-op resolves.
+  const legacyWrite = vi.fn().mockResolvedValue(undefined);
+  const legacyRemove = vi.fn().mockResolvedValue(undefined);
 
   const deps: ModelRegistryDeps = {
     repo: repo as unknown as ModelRegistryDeps['repo'],
@@ -199,9 +206,24 @@ function makeFakes(over: Partial<{ apiModels: unknown; testResult: unknown }> = 
       underlyingProviderId: agentKey === 'codex' ? 'openai' : agentKey === 'claude' ? 'anthropic' : 'google-gemini',
       listModels: cliListModels,
     }),
+    legacyBridge: {
+      writeProvider: legacyWrite,
+      removeProvider: legacyRemove,
+    },
   };
 
-  return { repo, deps, scan, readValue, test, getRegistry, apiListModels, cliListModels };
+  return {
+    repo,
+    deps,
+    scan,
+    readValue,
+    test,
+    getRegistry,
+    apiListModels,
+    cliListModels,
+    legacyWrite,
+    legacyRemove,
+  };
 }
 
 // ─── Tests ────────────────────────────────────────────────────────────────────
@@ -674,6 +696,98 @@ describe('modelRegistry IPC — rekey', () => {
     // The new key proved out — the rekey succeeds and the new key is stored.
     expect(result).toEqual({ ok: true });
     expect(repo.getRegistryProvider('openai')?.state).toBe('connected');
+  });
+});
+
+describe('modelRegistry IPC — legacy `model.config` bridge (Packet 3A)', () => {
+  it('mirrors a successful connect to the legacy bridge with the catalog ids', async () => {
+    // A user who connects a provider only through the new Models page must
+    // still find that provider in the home-screen picker's chat-start flow —
+    // which reads `model.config`. The bridge is the transitional scaffold;
+    // a successful connect calls it with the catalog ids straight off the
+    // repository so the picker resolves any model id.
+    const { deps, legacyWrite } = makeFakes();
+    const h = createModelRegistryHandlers(deps);
+
+    const result = await h.connect({ providerId: 'openai', creds: { key: 'sk-test' } });
+
+    expect(result).toEqual({ ok: true });
+    expect(legacyWrite).toHaveBeenCalledWith('openai', { key: 'sk-test' }, ['gpt-4o']);
+  });
+
+  it('does not call the bridge when the connect fails', async () => {
+    const { deps, legacyWrite } = makeFakes({ testResult: { ok: false, error: 'unauthorized' } });
+    const h = createModelRegistryHandlers(deps);
+
+    await h.connect({ providerId: 'openai', creds: { key: 'sk-bad' } });
+
+    expect(legacyWrite).not.toHaveBeenCalled();
+  });
+
+  it('removes the legacy mirror on disconnect', async () => {
+    const { deps, repo, legacyRemove } = makeFakes();
+    // Seed a connected provider directly so the test focuses on disconnect.
+    repo.upsertRegistryProvider({
+      providerId: 'openai',
+      connectedVia: 'api-key',
+      state: 'connected',
+      creds: { key: 'sk-test' },
+    });
+    const h = createModelRegistryHandlers(deps);
+
+    const result = await h.disconnect({ providerId: 'openai' });
+
+    expect(result).toEqual({ ok: true });
+    expect(legacyRemove).toHaveBeenCalledWith('openai');
+  });
+
+  it('a successful rekey re-mirrors with the new key', async () => {
+    const { deps, repo, legacyWrite } = makeFakes();
+    repo.upsertRegistryProvider({
+      providerId: 'openai',
+      connectedVia: 'api-key',
+      state: 'connected',
+      creds: { key: 'sk-old' },
+    });
+    const h = createModelRegistryHandlers(deps);
+
+    const result = await h.rekey({ providerId: 'openai', creds: { key: 'sk-new' } });
+
+    expect(result).toEqual({ ok: true });
+    expect(legacyWrite).toHaveBeenLastCalledWith('openai', { key: 'sk-new' }, ['gpt-4o']);
+  });
+
+  it('the bridge throwing does not break the connect — registry stays connected', async () => {
+    // The bridge is best-effort scaffolding; a failure must not be allowed to
+    // invalidate the registry's connect (which already succeeded).
+    const { deps, repo, legacyWrite } = makeFakes();
+    legacyWrite.mockRejectedValue(new Error('disk full'));
+    const h = createModelRegistryHandlers(deps);
+
+    const result = await h.connect({ providerId: 'openai', creds: { key: 'sk-test' } });
+
+    expect(result).toEqual({ ok: true });
+    expect(repo.getRegistryProvider('openai')?.state).toBe('connected');
+  });
+
+  it('a refresh that successfully rebuilds the catalog re-mirrors to the bridge', async () => {
+    const { deps, repo, legacyWrite, apiListModels } = makeFakes();
+    repo.upsertRegistryProvider({
+      providerId: 'openai',
+      connectedVia: 'api-key',
+      state: 'connected',
+      creds: { key: 'sk-test' },
+    });
+    apiListModels.mockResolvedValue([
+      { id: 'gpt-4o', providerId: 'openai' },
+      { id: 'gpt-5', providerId: 'openai' },
+    ]);
+    const h = createModelRegistryHandlers(deps);
+
+    const result = await h.refresh({ providerId: 'openai' });
+
+    expect(result).toEqual({ ok: true });
+    expect(legacyWrite).toHaveBeenLastCalledWith('openai', { key: 'sk-test' }, ['gpt-4o', 'gpt-5']);
   });
 });
 

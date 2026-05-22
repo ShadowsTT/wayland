@@ -52,8 +52,11 @@ vi.mock('react-i18next', () => ({
   }),
 }));
 
+// `vi.hoisted` lifts the mock above the `vi.mock` hoist so the mock factory
+// can reference `mockNavigate` (which the tests assert against).
+const { mockNavigate } = vi.hoisted(() => ({ mockNavigate: vi.fn() }));
 vi.mock('react-router-dom', () => ({
-  useNavigate: () => vi.fn(),
+  useNavigate: () => mockNavigate,
 }));
 
 vi.mock('lucide-react', () => ({
@@ -158,6 +161,7 @@ const baseProps = {
 
 beforeEach(() => {
   mockCuratedForAgent.mockReset();
+  mockNavigate.mockReset();
   baseProps.setCurrentModel.mockClear();
 });
 
@@ -246,6 +250,27 @@ describe('GuidModelSelector home picker', () => {
     render(<GuidModelSelector {...baseProps} agentKey='claude' />);
 
     expect(await screen.findByText('settings.modelsPage.homePicker.empty')).toBeInTheDocument();
+  });
+
+  it('navigates to the new /settings/models route when a curated model has no matching provider', async () => {
+    // The chat-start bridge (Packet 3A) mirrors registry connects into the
+    // legacy `model.config` so this case should not normally hit. But if it
+    // does — e.g. the bridge is mid-write or `getModelConfig` has not yet
+    // refreshed — the picker must route the user to the NEW Models page
+    // (not the legacy `/settings/model` route the picker used to use).
+    mockCuratedForAgent.mockResolvedValue([
+      curated({ id: 'unknown-model', providerId: 'mistral', displayName: 'Unknown', family: 'X' }),
+    ]);
+    const fireEventClick = (await import('@testing-library/react')).fireEvent.click;
+    const setCurrentModel = vi.fn().mockResolvedValue(undefined);
+
+    render(<GuidModelSelector {...baseProps} agentKey='wcore' modelList={[]} setCurrentModel={setCurrentModel} />);
+
+    const row = await screen.findByText('Unknown');
+    fireEventClick(row);
+
+    await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith('/settings/models'));
+    expect(setCurrentModel).not.toHaveBeenCalled();
   });
 
   it('resolves the right provider when two configured providers expose the same model id', async () => {

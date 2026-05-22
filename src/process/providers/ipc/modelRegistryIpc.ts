@@ -59,6 +59,8 @@ import { KeyDiscovery } from '../detection/KeyDiscovery';
 import { ModelsDevClient } from '../enrichment/ModelsDevClient';
 import type { ModelsDevRegistry } from '../enrichment/modelsDevSchema';
 import { ProviderRepository } from '../storage/ProviderRepository';
+import { createLegacyModelConfigBridge, type LegacyModelConfigBridge } from './legacyModelConfigBridge';
+import { ProcessConfig } from '@process/utils/initStorage';
 
 // ─── Provider classification ──────────────────────────────────────────────────
 
@@ -162,6 +164,13 @@ export type ModelRegistryDeps = {
     enumerable: boolean;
     underlyingProviderId: ProviderId;
   };
+  /**
+   * The legacy `model.config` write-through bridge — mirrored on
+   * connect / rekey / disconnect so the home-screen chat-start path
+   * (which still reads `model.config`) finds a provider connected only
+   * through the new Models page. Packet 3B deletes this entirely.
+   */
+  legacyBridge: LegacyModelConfigBridge;
 };
 
 /** The 10 `modelRegistry` handler functions, keyed by contract method name. */
@@ -354,6 +363,7 @@ export function createModelRegistryHandlers(deps: ModelRegistryDeps): ModelRegis
       // connected via auto-discovery then rekeyed with an explicit key (or
       // vice versa) does not keep a stale label.
       repo.updateRegistryProviderConnectedVia(providerId, connectedViaLabel(creds, providerId));
+      await mirrorToLegacy(providerId, resolved);
       return { ok: true };
     }
 
@@ -374,7 +384,31 @@ export function createModelRegistryHandlers(deps: ModelRegistryDeps): ModelRegis
       return { ok: false, error: 'unknown' };
     }
 
+    await mirrorToLegacy(providerId, resolved);
     return { ok: true };
+  }
+
+  /**
+   * Mirror a successful connect / rekey into the legacy `model.config` store
+   * via the injected `legacyBridge`. The model list passed to the bridge is
+   * read straight off the persisted catalog so the home picker can resolve
+   * any model the user selects, not just the curated subset. Bridge failures
+   * are swallowed: a successful registry connect must not be marked as failed
+   * just because the legacy mirror could not be written.
+   */
+  async function mirrorToLegacy(
+    providerId: ProviderId,
+    resolved: { key: string } | { fields: Record<string, string> }
+  ): Promise<void> {
+    try {
+      const catalog = repo.getRegistryCatalog(providerId);
+      const modelIds = catalog.map((m) => m.id);
+      await deps.legacyBridge.writeProvider(providerId, resolved, modelIds);
+    } catch (error) {
+      // The bridge is a best-effort transitional scaffold (Packet 3A).
+      // A failure here does not invalidate the registry's connect.
+      console.warn('[modelRegistryIpc] legacyBridge.writeProvider failed:', error);
+    }
   }
 
   return {
@@ -472,7 +506,13 @@ export function createModelRegistryHandlers(deps: ModelRegistryDeps): ModelRegis
         }
         // `not-found` — nothing to refresh.
         if (stored.status !== 'ok') return { ok: false };
-        const built = await buildAndPersistCatalog(providerId, toTestCreds(stored.creds));
+        const creds = toTestCreds(stored.creds);
+        const built = await buildAndPersistCatalog(providerId, creds);
+        if (built.ok) {
+          // The catalog changed — mirror the new model list to the legacy
+          // store so the home picker resolves any newly-added model id.
+          await mirrorToLegacy(providerId, creds);
+        }
         return { ok: built.ok };
       } catch {
         return { ok: false };
@@ -482,6 +522,16 @@ export function createModelRegistryHandlers(deps: ModelRegistryDeps): ModelRegis
     async disconnect({ providerId }): Promise<{ ok: boolean }> {
       try {
         repo.deleteRegistryProvider(providerId);
+        // The legacy bridge mirror must follow the registry's lifecycle — a
+        // disconnected provider should not linger in `model.config`. The
+        // bridge's `removeProvider` is a no-op for rows it does not own, so
+        // a legacy `ModelModalContent`-created row with the same `platform`
+        // is left alone.
+        try {
+          await deps.legacyBridge.removeProvider(providerId);
+        } catch (error) {
+          console.warn('[modelRegistryIpc] legacyBridge.removeProvider failed:', error);
+        }
         return { ok: true };
       } catch {
         return { ok: false };
@@ -586,6 +636,14 @@ async function buildProductionDeps(): Promise<ModelRegistryDeps> {
   const connectionTester = new ConnectionTester();
   const modelsDevClient = new ModelsDevClient();
 
+  const legacyBridge = createLegacyModelConfigBridge({
+    // `ProcessConfig.get`'s return type is `unknown`; the bridge re-validates.
+    get: (key): Promise<unknown> => ProcessConfig.get(key) as Promise<unknown>,
+    set: async (key, value): Promise<void> => {
+      await ProcessConfig.set(key, value);
+    },
+  });
+
   return {
     repo: _repo,
     keyDiscovery: {
@@ -600,6 +658,7 @@ async function buildProductionDeps(): Promise<ModelRegistryDeps> {
     },
     makeApiSource: (providerId, apiKey) => new ApiProviderSource(providerId, apiKey),
     makeCliSource: (agentKey) => new CliAgentSource(agentKey),
+    legacyBridge,
   };
 }
 

@@ -2380,6 +2380,7 @@ export type I18nKey =
   | 'settings.sider.groupWorkspace'
   | 'settings.sider.images'
   | 'settings.sider.mcp'
+  | 'settings.sider.models'
   | 'settings.sider.notifications'
   | 'settings.sider.providers'
   | 'settings.sider.skills'

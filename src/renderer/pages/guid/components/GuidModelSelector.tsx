@@ -165,7 +165,7 @@ const GuidModelSelector: React.FC<GuidModelSelectorProps> = ({
       if (!provider) {
         // The curated model isn't in a connected provider yet — route the
         // user to the Models page to connect it.
-        navigate('/settings/model');
+        navigate('/settings/models');
         return;
       }
       setCurrentModel({ ...provider, useModel: model.id }).catch((error) => {
@@ -237,7 +237,7 @@ const GuidModelSelector: React.FC<GuidModelSelectorProps> = ({
                     <Menu.Item
                       key='add-model'
                       className='text-12px text-t-secondary'
-                      onClick={() => navigate('/settings/model')}
+                      onClick={() => navigate('/settings/models')}
                     >
                       <Plus size={12} />
                       {t('settings.addModel')}
@@ -269,7 +269,7 @@ const GuidModelSelector: React.FC<GuidModelSelectorProps> = ({
                     <Menu.Item
                       key='add-model'
                       className='text-12px text-t-secondary'
-                      onClick={() => navigate('/settings/model')}
+                      onClick={() => navigate('/settings/models')}
                     >
                       <Plus size={12} />
                       {t('settings.addModel')}
