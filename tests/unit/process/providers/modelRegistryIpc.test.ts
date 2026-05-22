@@ -15,13 +15,17 @@
  * or database I/O.
  */
 
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { createModelRegistryHandlers } from '@process/providers/ipc/modelRegistryIpc';
 import type { ModelRegistryDeps } from '@process/providers/ipc/modelRegistryIpc';
 import type { CatalogModel, ProviderId } from '@process/providers/types';
+import { ProviderRepository } from '@process/providers/storage/ProviderRepository';
 import type { RegistryOverride, RegistryProvider } from '@process/providers/storage/ProviderRepository';
 import type { DiscoveredKey } from '@process/providers/detection/KeyDiscovery';
+import { BetterSqlite3Driver } from '@process/services/database/drivers/BetterSqlite3Driver';
+import { CURRENT_DB_VERSION, initSchema } from '@process/services/database/schema';
+import { runMigrations } from '@process/services/database/migrations';
 
 // ─── Fixtures ─────────────────────────────────────────────────────────────────
 
@@ -102,6 +106,10 @@ class FakeRepo {
 
   getRegistryCatalog(id: ProviderId): CatalogModel[] {
     return this.catalogs.get(id) ?? [];
+  }
+
+  countRegistryCatalog(id: ProviderId): number {
+    return (this.catalogs.get(id) ?? []).length;
   }
 
   setRegistryOverride(id: ProviderId, modelId: string, enabled: boolean): void {
@@ -247,6 +255,23 @@ describe('modelRegistry IPC — connect', () => {
     expect(test).not.toHaveBeenCalled();
     expect(repo.getRegistryProvider('aws-bedrock')?.state).toBe('connected');
     expect(repo.getRegistryCatalog('aws-bedrock').map((m) => m.id)).toEqual(['claude-3-5-sonnet']);
+  });
+
+  it('marks the provider in error state when the catalog persist throws', async () => {
+    const { deps, repo } = makeFakes();
+    // Simulate a failing DB write inside buildAndPersistCatalog.
+    repo.replaceRegistryCatalog = () => {
+      throw new Error('disk full');
+    };
+    const h = createModelRegistryHandlers(deps);
+
+    const result = await h.connect({ providerId: 'openai', creds: { key: 'sk-test' } });
+
+    // The connect must report failure, not a false {ok:true}.
+    expect(result).toEqual({ ok: false, error: 'unknown' });
+    // And the persisted provider must NOT be a false green — it is `'error'`.
+    expect(repo.getRegistryProvider('openai')?.state).toBe('error');
+    expect(repo.getRegistryProvider('openai')?.error).toBe('unknown');
   });
 });
 
@@ -551,5 +576,92 @@ describe('modelRegistry IPC — defensive behavior', () => {
     const h = createModelRegistryHandlers(deps);
 
     expect(await h.curatedForAgent({ agentKey: 'codex' })).toEqual([]);
+  });
+});
+
+// ─── Real-repository credential encryption round-trip ─────────────────────────
+
+// `better-sqlite3` is a native module — skip these when its ABI does not match
+// the test runner (the same guard the team-repository round-trip tests use).
+let nativeSqliteAvailable = true;
+try {
+  const probe = new BetterSqlite3Driver(':memory:');
+  probe.close();
+} catch (e) {
+  if (e instanceof Error && e.message.includes('NODE_MODULE_VERSION')) {
+    nativeSqliteAvailable = false;
+  }
+}
+
+const describeOrSkip = nativeSqliteAvailable ? describe : describe.skip;
+
+describeOrSkip('ProviderRepository — registry credential encryption round-trip', () => {
+  let driver: BetterSqlite3Driver;
+  let repo: ProviderRepository;
+
+  beforeEach(() => {
+    driver = new BetterSqlite3Driver(':memory:');
+    initSchema(driver);
+    runMigrations(driver, 0, CURRENT_DB_VERSION);
+    repo = new ProviderRepository(driver);
+  });
+
+  afterEach(() => {
+    driver.close();
+  });
+
+  it('encrypts creds at rest and decrypts them back to the original', () => {
+    const creds = { key: 'sk-super-secret-plaintext-value' };
+    repo.upsertRegistryProvider({
+      providerId: 'openai',
+      connectedVia: 'api-key',
+      state: 'connected',
+      creds,
+    });
+
+    // The decrypted creds must equal the original object.
+    expect(repo.getRegistryProviderCreds('openai')).toEqual(creds);
+
+    // The stored ciphertext column must NOT contain the plaintext.
+    const row = driver
+      .prepare(`SELECT creds_encrypted FROM model_registry_providers WHERE provider_id = ?`)
+      .get('openai') as { creds_encrypted: string };
+    expect(row.creds_encrypted).not.toContain('sk-super-secret-plaintext-value');
+    expect(row.creds_encrypted.length).toBeGreaterThan(0);
+  });
+
+  it('re-encrypts on updateRegistryProviderCreds and still round-trips', () => {
+    repo.upsertRegistryProvider({
+      providerId: 'anthropic',
+      connectedVia: 'api-key',
+      state: 'connected',
+      creds: { key: 'sk-ant-old' },
+    });
+
+    const rekeyed = { key: 'sk-ant-rotated-secret' };
+    repo.updateRegistryProviderCreds('anthropic', rekeyed);
+
+    expect(repo.getRegistryProviderCreds('anthropic')).toEqual(rekeyed);
+    const row = driver
+      .prepare(`SELECT creds_encrypted FROM model_registry_providers WHERE provider_id = ?`)
+      .get('anthropic') as { creds_encrypted: string };
+    expect(row.creds_encrypted).not.toContain('sk-ant-rotated-secret');
+  });
+
+  it('countRegistryCatalog returns the persisted model count without parsing blobs', () => {
+    repo.upsertRegistryProvider({
+      providerId: 'openai',
+      connectedVia: 'api-key',
+      state: 'connected',
+      creds: { key: 'k' },
+    });
+    repo.replaceRegistryCatalog('openai', [
+      catalogModel({ id: 'gpt-4o', providerId: 'openai' }),
+      catalogModel({ id: 'gpt-4o-mini', providerId: 'openai' }),
+      catalogModel({ id: 'o3', providerId: 'openai' }),
+    ]);
+
+    expect(repo.countRegistryCatalog('openai')).toBe(3);
+    expect(repo.countRegistryCatalog('anthropic')).toBe(0);
   });
 });

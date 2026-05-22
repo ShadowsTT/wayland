@@ -42,8 +42,11 @@ import { ModelDisplayNames } from './ModelDisplayNames';
  * `PROVIDER_ENDPOINTS` but genuinely do NOT exist as a models.dev provider key
  * (checked against the snapshot's 134 keys), so they correctly hit the flat
  * scan and their models stay unenriched.
+ *
+ * Exported so `modelRegistryIpc` derives its cloud-provider subset from this
+ * single source of truth rather than re-declaring the mapping.
  */
-const MODELS_DEV_PROVIDER_KEY: Partial<Record<ProviderId, string>> = {
+export const MODELS_DEV_PROVIDER_KEY: Partial<Record<ProviderId, string>> = {
   anthropic: 'anthropic',
   openai: 'openai',
   'google-gemini': 'google',

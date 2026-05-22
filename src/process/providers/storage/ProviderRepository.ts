@@ -389,6 +389,18 @@ export class ProviderRepository {
     tx();
   }
 
+  /**
+   * Count the persisted catalog models for a provider. A `COUNT(*)` so the
+   * `list()` view can show `modelCount` without SELECTing and `JSON.parse`-ing
+   * every stored `model_json` blob.
+   */
+  countRegistryCatalog(providerId: ProviderId): number {
+    const row = this.db
+      .prepare(`SELECT COUNT(*) AS n FROM model_registry_catalog WHERE provider_id = ?`)
+      .get(providerId) as { n: number } | undefined;
+    return row?.n ?? 0;
+  }
+
   /** The persisted `CatalogModel[]` for a provider — empty when none stored. */
   getRegistryCatalog(providerId: ProviderId): CatalogModel[] {
     const rows = this.db

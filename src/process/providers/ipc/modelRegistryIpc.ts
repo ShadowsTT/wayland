@@ -47,12 +47,12 @@ import type {
   IModelRegistryTestResult,
 } from '@/common/adapter/ipcBridge';
 import { getDatabase } from '@process/services/database';
-import type { CatalogModel, ConnectError, CuratedModel, ProviderConnState, ProviderId, RawModel } from '../types';
+import type { ConnectError, CuratedModel, ProviderConnState, ProviderId, RawModel } from '../types';
 import type { CatalogSource } from '../sources/CatalogSource';
 import { ApiProviderSource } from '../sources/ApiProviderSource';
 import { CliAgentSource, isEnumerableCliAgent } from '../sources/CliAgentSource';
 import type { CliAgentKey } from '../sources/CliAgentSource';
-import { CatalogAssembler } from '../catalog/CatalogAssembler';
+import { CatalogAssembler, MODELS_DEV_PROVIDER_KEY } from '../catalog/CatalogAssembler';
 import { Curator } from '../catalog/Curator';
 import { ConnectionTester } from '../detection/ConnectionTester';
 import { KeyDiscovery } from '../detection/KeyDiscovery';
@@ -71,13 +71,13 @@ const CLOUD_PROVIDERS: ReadonlySet<ProviderId> = new Set<ProviderId>(['aws-bedro
 
 /**
  * Maps a cloud `ProviderId` to its models.dev registry key. The registry IS the
- * catalog for these providers. Kept in sync with `CatalogAssembler`'s mapping.
+ * catalog for these providers. Derived from `CatalogAssembler`'s canonical
+ * `MODELS_DEV_PROVIDER_KEY` so the mapping cannot drift — this is just the
+ * cloud-provider subset of it.
  */
-const CLOUD_MODELS_DEV_KEY: Partial<Record<ProviderId, string>> = {
-  'aws-bedrock': 'amazon-bedrock',
-  vertex: 'google-vertex',
-  azure: 'azure',
-};
+const CLOUD_MODELS_DEV_KEY: Partial<Record<ProviderId, string>> = Object.fromEntries(
+  [...CLOUD_PROVIDERS].map((id) => [id, MODELS_DEV_PROVIDER_KEY[id]])
+) as Partial<Record<ProviderId, string>>;
 
 /** The CLI agent keys, mirrored from `CliAgentSource`. */
 const CLI_AGENT_KEYS: ReadonlySet<string> = new Set<CliAgentKey>(['claude', 'codex', 'gemini']);
@@ -125,6 +125,7 @@ export type ModelRegistryRepo = Pick<
   | 'deleteRegistryProvider'
   | 'replaceRegistryCatalog'
   | 'getRegistryCatalog'
+  | 'countRegistryCatalog'
   | 'setRegistryOverride'
   | 'listRegistryOverrides'
 >;
@@ -208,26 +209,33 @@ export function createModelRegistryHandlers(deps: ModelRegistryDeps): ModelRegis
    *    `CloudRegistrySource` synthesizes its `RawModel[]`.
    *  - Standard API-key provider → an `ApiProviderSource` over the live key.
    *
-   * Returns the assembled `CatalogModel[]` (also persisted). Never throws — a
-   * source or registry failure yields whatever the assembler could collect.
+   * Returns `{ ok }` — `ok:false` when ANY step failed, including the
+   * `replaceRegistryCatalog` DB write. Never throws: the whole body is wrapped
+   * so callers can branch on the result instead of guessing. `connectOrRekey`
+   * relies on this to keep the provider's persisted state honest — a failed
+   * catalog build flips the provider to `'error'` rather than a false green.
    */
   async function buildAndPersistCatalog(
     providerId: ProviderId,
     creds: { key: string } | { fields: Record<string, string> }
-  ): Promise<CatalogModel[]> {
-    const registry = await modelsDevClient.getRegistry().catch(() => ({}) as ModelsDevRegistry);
+  ): Promise<{ ok: boolean }> {
+    try {
+      const registry = await modelsDevClient.getRegistry().catch(() => ({}) as ModelsDevRegistry);
 
-    let sources: CatalogSource[];
-    if (CLOUD_PROVIDERS.has(providerId)) {
-      sources = [new CloudRegistrySource(providerId, registry)];
-    } else {
-      const apiKey = 'key' in creds ? creds.key : '';
-      sources = apiKey ? [deps.makeApiSource(providerId, apiKey)] : [];
+      let sources: CatalogSource[];
+      if (CLOUD_PROVIDERS.has(providerId)) {
+        sources = [new CloudRegistrySource(providerId, registry)];
+      } else {
+        const apiKey = 'key' in creds ? creds.key : '';
+        sources = apiKey ? [deps.makeApiSource(providerId, apiKey)] : [];
+      }
+
+      const catalog = await assembler.assemble(sources, registry);
+      repo.replaceRegistryCatalog(providerId, catalog);
+      return { ok: true };
+    } catch {
+      return { ok: false };
     }
-
-    const catalog = await assembler.assemble(sources, registry);
-    repo.replaceRegistryCatalog(providerId, catalog);
-    return catalog;
   }
 
   /** Apply the user's per-model overrides on top of the curated view. */
@@ -241,10 +249,14 @@ export function createModelRegistryHandlers(deps: ModelRegistryDeps): ModelRegis
     });
   }
 
-  /** A short human label for how a provider was connected. */
+  /**
+   * A short human label for how a provider was connected. `useDiscovered` is
+   * checked before the cloud branch: an auto-discovered key is the most
+   * specific signal regardless of provider kind, so it must win.
+   */
   function connectedViaLabel(creds: IModelRegistryCreds, providerId: ProviderId): string {
-    if (CLOUD_PROVIDERS.has(providerId)) return 'cloud-credentials';
     if ('useDiscovered' in creds) return 'auto-discovered';
+    if (CLOUD_PROVIDERS.has(providerId)) return 'cloud-credentials';
     if ('fields' in creds) return 'cloud-credentials';
     return 'api-key';
   }
@@ -286,7 +298,15 @@ export function createModelRegistryHandlers(deps: ModelRegistryDeps): ModelRegis
       });
     }
 
-    await buildAndPersistCatalog(providerId, resolved);
+    // The provider row is now `connected`. If the catalog build/persist fails
+    // the row would be a false green — flip it to `'error'` so `list()` shows
+    // it honestly (the UI renders that as "Action needed — Fix").
+    const built = await buildAndPersistCatalog(providerId, resolved);
+    if (!built.ok) {
+      repo.updateRegistryProviderState(providerId, 'error', 'unknown');
+      return { ok: false, error: 'unknown' };
+    }
+
     return { ok: true };
   }
 
@@ -336,7 +356,7 @@ export function createModelRegistryHandlers(deps: ModelRegistryDeps): ModelRegis
             providerId: p.providerId,
             connectedVia: p.connectedVia,
             state: p.state,
-            modelCount: repo.getRegistryCatalog(p.providerId).length,
+            modelCount: repo.countRegistryCatalog(p.providerId),
           };
           if (p.error) view.error = p.error;
           return view;
@@ -369,8 +389,7 @@ export function createModelRegistryHandlers(deps: ModelRegistryDeps): ModelRegis
       try {
         const stored = repo.getRegistryProviderCreds(providerId);
         if (!stored) return { ok: false };
-        await buildAndPersistCatalog(providerId, toTestCreds(stored));
-        return { ok: true };
+        return await buildAndPersistCatalog(providerId, toTestCreds(stored));
       } catch {
         return { ok: false };
       }
