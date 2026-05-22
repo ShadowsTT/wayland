@@ -37,6 +37,7 @@
  * persistence + catalog assembly for an OAuth-connected `google-gemini`.
  */
 
+import { app } from 'electron';
 import { ipcBridge } from '@/common';
 import type {
   IModelRegistryCatalogView,
@@ -64,6 +65,7 @@ import { ProviderRepository } from '../storage/ProviderRepository';
 import { runLegacyModelConfigMigration } from '../migration/legacyModelConfigMigration';
 import { mirrorConnectOrRekey, mirrorDisconnect } from '../legacyModelConfigBridge';
 import { ProcessConfig } from '@process/utils/initStorage';
+import { isEncryptionAvailable } from '@process/secrets/safeStorage';
 
 // ─── Provider classification ──────────────────────────────────────────────────
 
@@ -211,8 +213,18 @@ export function createModelRegistryHandlers(deps: ModelRegistryDeps): ModelRegis
   async function resolveCreds(
     providerId: ProviderId,
     creds: IModelRegistryCreds
-  ): Promise<{ key: string } | { fields: Record<string, string> } | { useGoogleAuth: true } | null> {
-    if ('key' in creds) return { key: creds.key };
+  ): Promise<{ key: string; baseUrl?: string } | { fields: Record<string, string> } | { useGoogleAuth: true } | null> {
+    if ('key' in creds) {
+      // Ship-gate Fix B2: thread an optional `baseUrl` through so the connect
+      // view for `openai-compatible` (and any other custom-endpoint provider)
+      // can set its endpoint at connect time. A non-string / empty value is
+      // dropped here so the persistence layer only ever sees real URLs.
+      const out: { key: string; baseUrl?: string } = { key: creds.key };
+      if (typeof creds.baseUrl === 'string' && creds.baseUrl.trim().length > 0) {
+        out.baseUrl = creds.baseUrl.trim();
+      }
+      return out;
+    }
     if ('fields' in creds) return { fields: creds.fields };
     if ('useGoogleAuth' in creds) {
       // Only valid for the Gemini provider — every other provider rejects this.
@@ -364,10 +376,17 @@ export function createModelRegistryHandlers(deps: ModelRegistryDeps): ModelRegis
       if (!result.ok) return { ok: false, error: result.error ?? 'unknown' };
     }
 
+    // Ship-gate Fix B2: persist an explicit `baseUrl` alongside the api key
+    // when the caller supplied one (e.g. `openai-compatible` Browse connect).
+    // The catalog build + chat-start dispatch both honor `creds.baseUrl`, so
+    // without persisting it here a user-set custom endpoint would be lost on
+    // the very next refresh.
     const credsRecord: Record<string, unknown> = isGoogleAuth
       ? { useGoogleAuth: true }
       : 'key' in resolved
-        ? { key: resolved.key }
+        ? resolved.baseUrl
+          ? { key: resolved.key, baseUrl: resolved.baseUrl }
+          : { key: resolved.key }
         : { fields: (resolved as { fields: Record<string, string> }).fields };
 
     if (isRekey) {
@@ -911,8 +930,26 @@ async function buildProductionDeps(): Promise<ModelRegistryDeps> {
  * overrides (Fix 4 / Fix 14). We wire the production repo's `transaction`,
  * `countRegistryCatalog`, and `setRegistryOverride` methods through to the
  * structural `MigrationRepo` slice.
+ *
+ * Wave-4 ship-gate Fix A1: this function MUST only be called after
+ * `app.whenReady()` resolves AND `safeStorage.isEncryptionAvailable()` is
+ * true. The migration writes encrypted creds through `safeStorage.encryptString`,
+ * which throws when `app` is not yet ready or when the OS keychain backend is
+ * absent. A pre-`whenReady` call would fail every row, the migration would
+ * (correctly) NOT mark itself complete, and every subsequent boot would retry
+ * and fail identically — stranding upgrading users with an empty registry.
+ * This function returns early (without setting the completion flag) when
+ * `safeStorage` is unavailable so the next boot can retry once the backend is
+ * ready.
  */
 async function runStartupMigration(repo: ProviderRepository): Promise<void> {
+  if (!isEncryptionAvailable()) {
+    console.warn(
+      '[modelRegistry] Skipping legacy-config migration — safeStorage is not yet available (' +
+        'app not ready or OS keychain unavailable). Will retry on next boot.'
+    );
+    return;
+  }
   await runLegacyModelConfigMigration({
     store: {
       get: (key) => ProcessConfig.get(key as never) as Promise<unknown>,
@@ -937,21 +974,20 @@ async function runStartupMigration(repo: ProviderRepository): Promise<void> {
  * Register the `modelRegistry` IPC handlers on the bridge. Registered alongside
  * the legacy `providersIpc` in the main-process IPC setup; the two namespaces
  * use distinct channel strings and never collide.
+ *
+ * Wave-4 ship-gate Fixes A1 + B1:
+ *  - Handler registration is SYNCHRONOUS once `buildProductionDeps()` resolves
+ *    (it only opens the DB — it does NOT touch `safeStorage`). The renderer's
+ *    home picker may call `curatedForAgent` before the migration runs and
+ *    still gets a real (possibly empty) response, never a missing-channel
+ *    error.
+ *  - The one-time legacy-config migration is deferred to `app.whenReady()`
+ *    because it calls `safeStorage.encryptString`, which requires Electron's
+ *    `app` to be ready AND a working OS keychain backend. A pre-`whenReady`
+ *    migration would fail every row, leaving the upgrade stuck across boots.
  */
 export async function initModelRegistryIpc(): Promise<void> {
   const deps = await buildProductionDeps();
-  // Run the one-time legacy-config migration BEFORE registering the IPC
-  // handlers so the very first `modelRegistry.list()` call returns migrated
-  // providers (not an empty list followed by a later populated one).
-  if (_repo) {
-    try {
-      await runStartupMigration(_repo);
-    } catch (error) {
-      // The migration is itself defensive — this catch is the belt-and-braces
-      // outer guard so a thrown migration cannot abort IPC registration.
-      console.warn('[modelRegistry] Legacy-config migration failed:', error);
-    }
-  }
   const h = createModelRegistryHandlers(deps);
 
   ipcBridge.modelRegistry.detectKeys.provider(() => h.detectKeys());
@@ -986,9 +1022,55 @@ export async function initModelRegistryIpc(): Promise<void> {
   });
   ipcBridge.modelRegistry.curatedForAgent.provider((payload) => h.curatedForAgent(payload));
   ipcBridge.modelRegistry.resolveForChatStart.provider((payload) => h.resolveForChatStart(payload));
+
+  // Wave-4 ship-gate Fix A1 — defer the one-time legacy-config migration to
+  // `app.whenReady()`. `safeStorage.encryptString` (which the migration uses
+  // via the repo's `upsertRegistryProvider`) throws when `app` is not ready,
+  // so running the migration synchronously here strands every legacy row
+  // across boots. `app.whenReady()` resolves immediately when `app.isReady()`
+  // is already true, so this is also correct on subsequent inits.
+  scheduleStartupMigration();
+}
+
+/** True after the deferred migration has executed (or been scheduled to run only once). */
+let _migrationScheduled = false;
+
+/**
+ * Schedule the one-time legacy-config migration to run once `app.whenReady()`
+ * resolves. Wave-4 ship-gate Fix A1. Idempotent — multiple calls schedule only
+ * one run. Errors inside the migration are logged but never propagate.
+ */
+function scheduleStartupMigration(): void {
+  if (_migrationScheduled) return;
+  _migrationScheduled = true;
+  app
+    .whenReady()
+    .then(async () => {
+      if (!_repo) return;
+      try {
+        await runStartupMigration(_repo);
+      } catch (error) {
+        // The migration is itself defensive — this catch is the belt-and-braces
+        // outer guard so a thrown migration cannot crash the main process.
+        console.warn('[modelRegistry] Legacy-config migration failed:', error);
+      }
+    })
+    .catch((error) => {
+      console.warn('[modelRegistry] app.whenReady() rejected before migration could run:', error);
+    });
 }
 
 /** The model-registry repository instance, available after `initModelRegistryIpc`. */
 export function getModelRegistryRepository(): ProviderRepository | null {
   return _repo;
+}
+
+/**
+ * Test-only: invoke the migration directly, bypassing the `app.whenReady()`
+ * gate. The production path is `scheduleStartupMigration()`. Exposed so unit
+ * tests can assert the defer-when-safeStorage-unavailable behavior without
+ * spinning up Electron's `app` lifecycle.
+ */
+export async function _runStartupMigrationForTests(repo: ProviderRepository): Promise<void> {
+  await runStartupMigration(repo);
 }

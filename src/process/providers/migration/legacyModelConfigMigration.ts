@@ -57,8 +57,18 @@ import type { CatalogModel, ConnectError, ProviderConnState, ProviderId } from '
 
 /** Tag stamped on a `model.config` row by the deleted 3A bridge mirror. */
 const BRIDGE_TAG_KEY = '__waylandModelRegistryBridge';
-/** v1 = original (deleted) bridge mirror. v2 = the slimmed-down resurrection. */
+/**
+ * Recognized bridge tag values.
+ *  - `v1` — original (deleted) 3A bridge mirror.
+ *  - `v2` — the slimmed-down resurrection's original flat tag (legacy).
+ *  - `v2:<providerId>` — the per-provider tag added by ship-gate Fix C4 so
+ *    sibling `openai-compatible` providers don't collide. Detected by a
+ *    `v2:` prefix here; the providerId suffix is opaque to the migration.
+ */
 const BRIDGE_TAG_VALUES = new Set(['v1', 'v2']);
+function isBridgeTagValue(tag: string): boolean {
+  return BRIDGE_TAG_VALUES.has(tag) || tag.startsWith('v2:');
+}
 
 /** Idempotency marker stored in `ProcessConfig` after a successful run. */
 export const MIGRATION_FLAG_KEY = 'migration.legacyModelConfigToRegistry';
@@ -66,7 +76,14 @@ export const MIGRATION_FLAG_KEY = 'migration.legacyModelConfigToRegistry';
 /**
  * One-shot notification flag — set when the migration skipped one or more cloud
  * rows as "incomplete" so the renderer can prompt the user on first boot of
- * the new Models page. Read + cleared by the renderer.
+ * the new Models page.
+ *
+ * Wave-4 ship-gate Fix C2: the flag is no longer written by the migration. No
+ * renderer surface consumes it today — wiring a one-shot Models-page banner +
+ * the IPC plumbing to read+clear it would touch the IPC contract, preload
+ * bridge, types, and the page. Out of scope for the ship-gate. The constant
+ * is retained as a marker so a future Models-page redesign can opt into the
+ * notification without rediscovering the key name.
  */
 export const MIGRATION_INCOMPLETE_CLOUD_FLAG_KEY = 'migration.legacyModelConfigIncompleteCloud';
 
@@ -191,7 +208,7 @@ function mapPlatformToProvider(provider: IProvider): ProviderId | null {
 
 function isBridgeTagged(provider: IProvider): boolean {
   const tag = (provider as unknown as Record<string, unknown>)[BRIDGE_TAG_KEY];
-  return typeof tag === 'string' && BRIDGE_TAG_VALUES.has(tag);
+  return typeof tag === 'string' && isBridgeTagValue(tag);
 }
 
 // ─── Cloud creds ──────────────────────────────────────────────────────────────
@@ -252,12 +269,21 @@ function extractCloudFields(
 
   const required = CLOUD_REQUIRED_FIELDS[providerId];
   if (!required) return null;
-  const fields: Record<string, string> = {};
+  // Read each required field from the LEGACY `IProvider` row, not from the
+  // freshly-declared empty output map. (Wave-4 ship-gate Fix C1 — the prior
+  // implementation read from `fields[name]` after `const fields = {}`, which
+  // always returned `null` for this branch. The branch is unreachable in
+  // production because the cloud providers we handle today are caught by the
+  // explicit `aws-bedrock` / `vertex` / `azure` branches above, but the latent
+  // bug would silently strand any future cloud provider that landed here.)
+  const source = provider as unknown as Record<string, unknown>;
+  const out: Record<string, string> = {};
   for (const name of required) {
-    const value = fields[name];
+    const value = source[name];
     if (typeof value !== 'string' || value.trim().length === 0) return null;
+    out[name] = value;
   }
-  return { fields };
+  return { fields: out };
 }
 
 // ─── Catalog assembly (unenriched) ────────────────────────────────────────────
@@ -455,10 +481,7 @@ export async function runLegacyModelConfigMigration(args: {
           break;
       }
     } catch (error) {
-      log(
-        'warn',
-        `[legacyModelConfigMigration] Failed to migrate group '${group.providerId}': ${describe(error)}`
-      );
+      log('warn', `[legacyModelConfigMigration] Failed to migrate group '${group.providerId}': ${describe(error)}`);
       result.failedRecoverable++;
     }
   }
@@ -475,9 +498,12 @@ export async function runLegacyModelConfigMigration(args: {
   }
 
   // ── Notification flag (Fix 7) ──────────────────────────────────────────────
-  if (result.skippedIncompleteCloud > 0) {
-    await safeSetIncompleteCloudFlag(store, log);
-  }
+  // Wave-4 ship-gate Fix C2: the flag was previously written but no renderer
+  // consumed it, so the user was never notified about cloud rows the migration
+  // skipped. Rather than wire a one-shot banner across the IPC contract for a
+  // medium-priority post-ship affordance, the write is removed. The
+  // `skippedIncompleteCloud` counter remains in the result for the migration's
+  // own log + future diagnostics.
 
   log(
     'info',
@@ -694,17 +720,6 @@ async function safeSetFlag(store: LegacyConfigStore, log: (level: 'info' | 'warn
     await store.set(MIGRATION_FLAG_KEY, true);
   } catch (error) {
     log('warn', `[legacyModelConfigMigration] Failed to set migration flag: ${describe(error)}`);
-  }
-}
-
-async function safeSetIncompleteCloudFlag(
-  store: LegacyConfigStore,
-  log: (level: 'info' | 'warn', m: string) => void
-): Promise<void> {
-  try {
-    await store.set(MIGRATION_INCOMPLETE_CLOUD_FLAG_KEY, true);
-  } catch (error) {
-    log('warn', `[legacyModelConfigMigration] Failed to set incomplete-cloud flag: ${describe(error)}`);
   }
 }
 

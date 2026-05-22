@@ -1183,3 +1183,82 @@ describeOrSkip('ProviderRepository — registry credential encryption round-trip
     expect(repo.countRegistryCatalog('anthropic')).toBe(0);
   });
 });
+
+// ─── Ship-gate Fix A1: migration defers when safeStorage unavailable ───────────
+
+describe('runStartupMigration — safeStorage gating (Fix A1)', () => {
+  it('returns early (without touching the repo) when safeStorage is unavailable', async () => {
+    // The mockSafeStorage hoist defaults to `isEncryptionAvailable: true`. Flip
+    // it false to simulate a pre-`app.whenReady()` boot OR a host whose OS
+    // keychain backend is absent (the two cases the gate guards against).
+    mockSafeStorage.isEncryptionAvailable.mockReturnValueOnce(false);
+
+    // A repo whose every method throws — proves the migration never reached
+    // the repo because the safeStorage gate returned early.
+    const repoStub = new Proxy({} as ProviderRepository, {
+      get: () => () => {
+        throw new Error('repo must not be touched when safeStorage is unavailable');
+      },
+    });
+
+    const mod = await import('@process/providers/ipc/modelRegistryIpc');
+    await expect(mod._runStartupMigrationForTests(repoStub)).resolves.toBeUndefined();
+  });
+});
+
+// ─── Ship-gate Fix B2: connect persists baseUrl in creds ──────────────────────
+
+describe('connect — baseUrl persistence (Fix B2)', () => {
+  it('persists creds.baseUrl when an openai-compatible provider supplies one', async () => {
+    const repo = new FakeRepo();
+    const deps: ModelRegistryDeps = {
+      repo,
+      keyDiscovery: { scan: async () => [], readValue: () => null },
+      connectionTester: { test: async () => ({ ok: true }) },
+      modelsDevClient: { getRegistry: async () => ({}) },
+      makeApiSource: (providerId) => ({
+        kind: 'api' as const,
+        providerId,
+        listModels: async () => [{ id: 'mod-1', providerId }],
+      }),
+      makeCliSource: () => {
+        throw new Error('not used');
+      },
+    };
+    const h = createModelRegistryHandlers(deps);
+
+    const result = await h.connect({
+      providerId: 'openai-compatible',
+      creds: { key: 'sk-test', baseUrl: 'https://my-endpoint.example/v1' },
+    });
+
+    expect(result).toEqual({ ok: true });
+    const stored = repo.providers.get('openai-compatible');
+    expect(stored?.creds).toEqual({ key: 'sk-test', baseUrl: 'https://my-endpoint.example/v1' });
+  });
+
+  it('does NOT persist creds.baseUrl when the caller does not supply one', async () => {
+    const repo = new FakeRepo();
+    const deps: ModelRegistryDeps = {
+      repo,
+      keyDiscovery: { scan: async () => [], readValue: () => null },
+      connectionTester: { test: async () => ({ ok: true }) },
+      modelsDevClient: { getRegistry: async () => ({}) },
+      makeApiSource: (providerId) => ({
+        kind: 'api' as const,
+        providerId,
+        listModels: async () => [{ id: 'mod-1', providerId }],
+      }),
+      makeCliSource: () => {
+        throw new Error('not used');
+      },
+    };
+    const h = createModelRegistryHandlers(deps);
+
+    await h.connect({ providerId: 'openai-compatible', creds: { key: 'sk-test' } });
+
+    const stored = repo.providers.get('openai-compatible');
+    expect(stored?.creds).toEqual({ key: 'sk-test' });
+    expect((stored?.creds as Record<string, unknown>)?.baseUrl).toBeUndefined();
+  });
+});

@@ -318,4 +318,58 @@ describe('BrowseModal', () => {
     // The grid is back.
     await waitFor(() => expect(tiles().length).toBe(31));
   });
+
+  // ---- Ship-gate Fix B2 ----------------------------------------------------
+
+  it('renders a Base URL input only for openai-compatible and submits it as creds.baseUrl', async () => {
+    const onClose = vi.fn();
+    renderModal(onClose);
+    await screen.findByText('settings.modelsPage.browse.group.frontier');
+
+    // Pick openai-compatible — the baseUrl input must appear.
+    fireEvent.click(document.querySelector('[data-provider="openai-compatible"]') as HTMLElement);
+
+    const keyInput = await screen.findByPlaceholderText('settings.modelsPage.browse.keyPlaceholder');
+    const baseUrlInput = await screen.findByLabelText('settings.modelsPage.browse.baseUrlLabel');
+
+    fireEvent.change(keyInput, { target: { value: 'sk-anything' } });
+    fireEvent.change(baseUrlInput, { target: { value: 'https://my-endpoint.example/v1' } });
+    fireEvent.click(screen.getByText('settings.modelsPage.browse.connect'));
+
+    await waitFor(() =>
+      expect(mockConnect).toHaveBeenCalledWith({
+        providerId: 'openai-compatible',
+        creds: { key: 'sk-anything', baseUrl: 'https://my-endpoint.example/v1' },
+      })
+    );
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
+  });
+
+  it('omits creds.baseUrl when the openai-compatible baseUrl input is left blank', async () => {
+    renderModal();
+    await screen.findByText('settings.modelsPage.browse.group.frontier');
+
+    fireEvent.click(document.querySelector('[data-provider="openai-compatible"]') as HTMLElement);
+
+    const keyInput = await screen.findByPlaceholderText('settings.modelsPage.browse.keyPlaceholder');
+    fireEvent.change(keyInput, { target: { value: 'sk-anything' } });
+    fireEvent.click(screen.getByText('settings.modelsPage.browse.connect'));
+
+    await waitFor(() =>
+      expect(mockConnect).toHaveBeenCalledWith({
+        providerId: 'openai-compatible',
+        creds: { key: 'sk-anything' },
+      })
+    );
+  });
+
+  it('does NOT render the Base URL input for non-openai-compatible single-key providers', async () => {
+    renderModal();
+    await screen.findByText('settings.modelsPage.browse.group.frontier');
+
+    fireEvent.click(document.querySelector('[data-provider="openai"]') as HTMLElement);
+
+    await screen.findByPlaceholderText('settings.modelsPage.browse.keyPlaceholder');
+    expect(screen.queryByLabelText('settings.modelsPage.browse.baseUrlLabel')).not.toBeInTheDocument();
+  });
 });

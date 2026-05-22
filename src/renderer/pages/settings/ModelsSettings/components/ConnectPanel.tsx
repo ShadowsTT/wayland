@@ -1,10 +1,11 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Button, Input } from '@arco-design/web-react';
 import { AlertTriangle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { IModelRegistryConnectResult, IModelRegistryDetectedKey } from '@/common/adapter/ipcBridge';
 import type { ConnectError, ProviderId } from '@process/providers/types';
 import { providerMeta, recognizeKey } from '../providerCatalog';
+import { getPendingDeepLinkSeed } from '../index';
 import DetectedStrip from './DetectedStrip';
 import GoogleButton from './GoogleButton';
 import styles from '../ModelsSettings.module.css';
@@ -25,6 +26,13 @@ type Props = {
    * directly to the Bedrock credential form, not the grid).
    */
   onBrowse: (providerId?: ProviderId) => void;
+  /**
+   * Ship-gate Fix C3 — a deep-link nonce bumped by `ModelsSettings` when a
+   * new `pendingDeepLinkSeed` arrives. Re-runs the seed-consume effect so a
+   * deep-link delivered AFTER the panel's first mount still pre-fills the
+   * key. Optional — `0` is the default and won't trigger the effect.
+   */
+  deepLinkSeedNonce?: number;
 };
 
 /**
@@ -54,13 +62,35 @@ const ERROR_KEY: Record<PanelErrorCode, string> = {
  * panel state — unrecognized format, unauthorized, offline, no-credit,
  * no-models — never a silent wrong guess and never a false green.
  */
-const ConnectPanel: React.FC<Props> = ({ detectedKeys, onConnectKey, onUseDetected, onIgnoreDetected, onBrowse }) => {
+const ConnectPanel: React.FC<Props> = ({
+  detectedKeys,
+  onConnectKey,
+  onUseDetected,
+  onIgnoreDetected,
+  onBrowse,
+  deepLinkSeedNonce = 0,
+}) => {
   const { t } = useTranslation();
   const [keyValue, setKeyValue] = useState('');
   const [connecting, setConnecting] = useState(false);
   const [usingDetected, setUsingDetected] = useState<string | null>(null);
   const [errorKey, setErrorKey] = useState<string | null>(null);
   const [errorProvider, setErrorProvider] = useState<string | null>(null);
+  // Ship-gate Fix C3 — show a subtle "from deep link" hint on the input when
+  // the key was pre-filled by a `wayland://add-provider?apiKey=…` URL.
+  const [seededFromDeepLink, setSeededFromDeepLink] = useState(false);
+
+  // Ship-gate Fix C3 — ModelsSettings stashes a non-cloud deep-link payload in
+  // a module-level seed (`getPendingDeepLinkSeed`). Consume it on mount AND
+  // each time `deepLinkSeedNonce` bumps so a deep-link delivered after the
+  // panel's first mount still pre-fills the input.
+  useEffect(() => {
+    const seed = getPendingDeepLinkSeed();
+    if (seed?.apiKey) {
+      setKeyValue(seed.apiKey);
+      setSeededFromDeepLink(true);
+    }
+  }, [deepLinkSeedNonce]);
 
   const recognition = useMemo(() => recognizeKey(keyValue), [keyValue]);
 
@@ -101,6 +131,8 @@ const ConnectPanel: React.FC<Props> = ({ detectedKeys, onConnectKey, onUseDetect
     setKeyValue(value);
     setErrorKey(null);
     setErrorProvider(null);
+    // Once the user edits the field the deep-link badge no longer makes sense.
+    setSeededFromDeepLink(false);
   }, []);
 
   const showError = useCallback((code: PanelErrorCode, providerName?: string) => {
@@ -200,7 +232,17 @@ const ConnectPanel: React.FC<Props> = ({ detectedKeys, onConnectKey, onUseDetect
           {t('settings.modelsPage.connect.connect')}
         </Button>
       </div>
-      <div className={styles.keyHint}>{hint}</div>
+      <div className={styles.keyHint}>
+        {seededFromDeepLink && (
+          <>
+            <span data-testid='deep-link-seed-badge'>
+              {t('settings.modelsPage.connect.fromDeepLink', { defaultValue: 'From deep link' })}
+            </span>
+            <span aria-hidden='true'> · </span>
+          </>
+        )}
+        {hint}
+      </div>
 
       {errorText && (
         <div className={styles.connectError} role='alert'>

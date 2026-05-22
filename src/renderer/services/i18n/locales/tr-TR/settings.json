@@ -1022,7 +1022,8 @@
       "errorAmbiguous": "Bu anahtarın hangi sağlayıcıya ait olduğu belirlenemedi. Gözat'ı açın ve sağlayıcınızı seçin.",
       "errorNoModels": "{{provider}} bağlandı ancak hiç model döndürmedi. Yönet'ten yenilemeyi deneyin.",
       "errorUnknown": "{{provider}} adresine bağlanılamadı. Lütfen tekrar deneyin.",
-      "undecryptableHint": "Your saved key for this provider is unreadable. Please re-enter it."
+      "undecryptableHint": "Your saved key for this provider is unreadable. Please re-enter it.",
+      "fromDeepLink": "Derin bağlantıdan"
     },
     "detected": {
       "found": "Bu makinede bir {{provider}} API anahtarı bulundu. Kullanılsın mı?",
@@ -1126,7 +1127,9 @@
       "errorOffline": "{{provider}} erişilemedi — çevrimdışı görünüyorsunuz. Bağlantınızı kontrol edip tekrar deneyin.",
       "errorUnrecognized": "O anahtar {{provider}} için tanınmadı. Anahtarı kontrol edip tekrar deneyin.",
       "errorNoModels": "{{provider}} bağlandı ancak hiç model döndürmedi. Yönet ekranından yenilemeyi deneyin.",
-      "errorUnknown": "{{provider}} bağlanılamadı. Lütfen tekrar deneyin."
+      "errorUnknown": "{{provider}} bağlanılamadı. Lütfen tekrar deneyin.",
+      "baseUrlLabel": "Temel URL (isteğe bağlı)",
+      "baseUrlPlaceholder": "https://your-endpoint.example/v1"
     },
     "cloud": {
       "subtitle": {

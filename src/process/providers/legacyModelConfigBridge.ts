@@ -45,14 +45,23 @@ import type { ProviderId } from './types';
 import type { ProviderRepository } from './storage/ProviderRepository';
 
 const BRIDGE_TAG_KEY = '__waylandModelRegistryBridge';
-const BRIDGE_TAG_VALUE = 'v2';
+/**
+ * Per-provider tag value: `v2:<providerId>`. Wave-4 ship-gate Fix C4 — the
+ * original `'v2'` constant caused the dedup to key on legacy `platform`, which
+ * collapsed every `openai-compatible` provider into one row (only the
+ * last-written remained visible to legacy selectors). Including the
+ * `providerId` in the tag lets multiple bridge rows that share a legacy
+ * platform coexist with stable identity, and the migration's
+ * `BRIDGE_TAG_VALUES` accepts any `v2*` value.
+ */
+function bridgeTagValue(providerId: ProviderId): string {
+  return `v2:${providerId}`;
+}
+/** Legacy v2 tag, accepted on read for backward compatibility. */
+const LEGACY_V2_TAG_VALUE = 'v2';
 
 /** Providers that must NOT be mirrored — their creds don't fit `IProvider`. */
-const EXCLUDED_PROVIDERS: ReadonlySet<ProviderId> = new Set<ProviderId>([
-  'aws-bedrock',
-  'vertex',
-  'azure',
-]);
+const EXCLUDED_PROVIDERS: ReadonlySet<ProviderId> = new Set<ProviderId>(['aws-bedrock', 'vertex', 'azure']);
 
 /** Map a `ProviderId` to the legacy `platform` string `IProvider` expects. */
 function platformFor(providerId: ProviderId): string {
@@ -78,11 +87,26 @@ function displayNameFor(providerId: ProviderId): string {
 }
 
 /** A `IProvider` row produced by this bridge. */
-type BridgeRow = IProvider & { [BRIDGE_TAG_KEY]: typeof BRIDGE_TAG_VALUE };
+type BridgeRow = IProvider & { [BRIDGE_TAG_KEY]: string };
 
-/** True when an arbitrary `IProvider`-shaped row was written by this v2 bridge. */
-function isV2BridgeRow(row: IProvider): boolean {
-  return (row as unknown as Record<string, unknown>)[BRIDGE_TAG_KEY] === BRIDGE_TAG_VALUE;
+/**
+ * True when `row` is a v2 bridge row owned by the given `providerId`. Used to
+ * find the existing tagged row to replace on rekey. Backward compat: a row
+ * carrying the original `'v2'` (no providerId) tag is matched only by its
+ * legacy platform — that branch trips at most once per provider since the
+ * next mirror replaces it with the providerId-stamped tag value.
+ */
+function isV2BridgeRowForProvider(row: IProvider, providerId: ProviderId, platform: string): boolean {
+  const tag = (row as unknown as Record<string, unknown>)[BRIDGE_TAG_KEY];
+  if (typeof tag !== 'string') return false;
+  if (tag === bridgeTagValue(providerId)) return true;
+  // Legacy untagged-providerId rows: only safe to match by platform IF this
+  // platform has at most one mirror row — which is true for the providers
+  // whose platform-string is unique (anthropic, openai, gemini). For
+  // `openai-compatible` the migration upgrades the tag, so this branch only
+  // fires once per provider on the first rekey after upgrade.
+  if (tag === LEGACY_V2_TAG_VALUE && row.platform === platform) return true;
+  return false;
 }
 
 // ─── Promise mutex ────────────────────────────────────────────────────────────
@@ -142,13 +166,19 @@ export function mirrorConnectOrRekey(repo: ProviderRepository, providerId: Provi
       apiKey,
       model: modelIds,
       ...(modelProtocols ? { modelProtocols } : {}),
-      [BRIDGE_TAG_KEY]: BRIDGE_TAG_VALUE,
+      // Ship-gate Fix C4: include the providerId in the tag so multiple
+      // providers that share a legacy `platform` (every `openai-compatible`
+      // family member) coexist as distinct bridge rows. The previous flat
+      // `'v2'` tag matched on platform alone and silently replaced a sibling.
+      [BRIDGE_TAG_KEY]: bridgeTagValue(providerId),
     };
 
     const raw = await ProcessConfig.get('model.config');
     const current: IProvider[] = Array.isArray(raw) ? (raw as IProvider[]) : [];
-    // Drop any prior v2 row for this provider; leave non-bridge rows alone.
-    const filtered = current.filter((p) => !(isV2BridgeRow(p) && p.platform === row.platform));
+    // Drop any prior bridge row owned by THIS providerId; leave sibling
+    // bridge rows (different providerId, same platform) and non-bridge rows
+    // alone.
+    const filtered = current.filter((p) => !isV2BridgeRowForProvider(p, providerId, row.platform));
     filtered.push(row);
     await ProcessConfig.set('model.config', filtered);
   }).catch((error) => {
@@ -166,7 +196,9 @@ export function mirrorDisconnect(providerId: ProviderId): Promise<void> {
     const platform = platformFor(providerId);
     const raw = await ProcessConfig.get('model.config');
     const current: IProvider[] = Array.isArray(raw) ? (raw as IProvider[]) : [];
-    const filtered = current.filter((p) => !(isV2BridgeRow(p) && p.platform === platform));
+    // Ship-gate Fix C4: only drop the bridge row owned by THIS providerId so
+    // disconnecting one `openai-compatible` provider doesn't drop its siblings.
+    const filtered = current.filter((p) => !isV2BridgeRowForProvider(p, providerId, platform));
     if (filtered.length !== current.length) {
       await ProcessConfig.set('model.config', filtered);
     }

@@ -1024,7 +1024,8 @@
       "errorAmbiguous": "どのプロバイダーのキーか特定できませんでした。「参照」を開いてプロバイダーを選択してください。",
       "errorNoModels": "{{provider}} に接続しましたが、モデルが返されませんでした。「管理」から更新してみてください。",
       "errorUnknown": "{{provider}} に接続できませんでした。再試行してください。",
-      "undecryptableHint": "Your saved key for this provider is unreadable. Please re-enter it."
+      "undecryptableHint": "Your saved key for this provider is unreadable. Please re-enter it.",
+      "fromDeepLink": "ディープリンクから"
     },
     "detected": {
       "found": "このマシンで {{provider}} API キーが見つかりました。使用しますか？",
@@ -1128,7 +1129,9 @@
       "errorOffline": "{{provider}} に接続できません。オフラインのようです。接続を確認して再試行してください。",
       "errorUnrecognized": "そのキーは {{provider}} で認識されませんでした。キーを確認して再試行してください。",
       "errorNoModels": "{{provider}} に接続しましたが、モデルが返されませんでした。「管理」から更新してみてください。",
-      "errorUnknown": "{{provider}} に接続できませんでした。再試行してください。"
+      "errorUnknown": "{{provider}} に接続できませんでした。再試行してください。",
+      "baseUrlLabel": "ベース URL（任意）",
+      "baseUrlPlaceholder": "https://your-endpoint.example/v1"
     },
     "cloud": {
       "subtitle": {

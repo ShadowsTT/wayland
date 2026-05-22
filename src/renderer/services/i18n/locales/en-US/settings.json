@@ -1686,7 +1686,8 @@
       "errorAmbiguous": "Couldn't tell which provider this key is for. Open Browse and pick the provider.",
       "errorNoModels": "{{provider}} connected but returned no models. Try refreshing it from Manage.",
       "errorUnknown": "Couldn't connect to {{provider}}. Please try again.",
-      "undecryptableHint": "Your saved key for this provider is unreadable. Please re-enter it."
+      "undecryptableHint": "Your saved key for this provider is unreadable. Please re-enter it.",
+      "fromDeepLink": "From deep link"
     },
     "detected": {
       "found": "Found a {{provider}} API key on this machine. Use it?",
@@ -1784,6 +1785,8 @@
       "keySubtitle": "Paste an API key for {{provider}} to connect.",
       "keyLabel": "API key",
       "keyPlaceholder": "Paste your API key…",
+      "baseUrlLabel": "Base URL (optional)",
+      "baseUrlPlaceholder": "https://your-endpoint.example/v1",
       "connect": "Connect & test",
       "errorUnauthorized": "That {{provider}} key was rejected — unauthorized. Check the key and try again.",
       "errorNoCredit": "Connected, but that {{provider}} key has no usable credit. Add billing to run models.",

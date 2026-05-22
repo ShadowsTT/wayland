@@ -1023,7 +1023,8 @@
       "errorAmbiguous": "无法判断此密钥属于哪个提供商。请打开“浏览”并选择你的提供商。",
       "errorNoModels": "{{provider}} 已连接但未返回任何模型。请在“管理”中尝试刷新。",
       "errorUnknown": "无法连接到 {{provider}}，请重试。",
-      "undecryptableHint": "Your saved key for this provider is unreadable. Please re-enter it."
+      "undecryptableHint": "Your saved key for this provider is unreadable. Please re-enter it.",
+      "fromDeepLink": "来自深链"
     },
     "detected": {
       "found": "在本机上发现一个 {{provider}} API 密钥。使用它吗？",
@@ -1127,7 +1128,9 @@
       "errorOffline": "无法连接 {{provider}}——你似乎处于离线状态。请检查网络连接后重试。",
       "errorUnrecognized": "该密钥未被 {{provider}} 识别。请检查密钥后重试。",
       "errorNoModels": "{{provider}} 已连接，但未返回任何模型。请在“管理”中尝试刷新。",
-      "errorUnknown": "无法连接到 {{provider}}。请重试。"
+      "errorUnknown": "无法连接到 {{provider}}。请重试。",
+      "baseUrlLabel": "基础 URL（可选）",
+      "baseUrlPlaceholder": "https://your-endpoint.example/v1"
     },
     "cloud": {
       "subtitle": {

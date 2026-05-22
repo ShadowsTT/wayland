@@ -1024,7 +1024,8 @@
       "errorAmbiguous": "Не удалось определить, какому провайдеру принадлежит этот ключ. Откройте «Обзор» и выберите провайдера.",
       "errorNoModels": "{{provider}} подключён, но не вернул моделей. Попробуйте обновить его в «Управлении».",
       "errorUnknown": "Не удалось подключиться к {{provider}}. Повторите попытку.",
-      "undecryptableHint": "Your saved key for this provider is unreadable. Please re-enter it."
+      "undecryptableHint": "Your saved key for this provider is unreadable. Please re-enter it.",
+      "fromDeepLink": "Из глубокой ссылки"
     },
     "detected": {
       "found": "На этом компьютере найден API-ключ {{provider}}. Использовать его?",
@@ -1128,7 +1129,9 @@
       "errorOffline": "Не удалось связаться с {{provider}} — похоже, вы не в сети. Проверьте подключение и повторите попытку.",
       "errorUnrecognized": "Этот ключ не распознан для {{provider}}. Проверьте ключ и повторите попытку.",
       "errorNoModels": "{{provider}} подключён, но не вернул моделей. Попробуйте обновить его на странице управления.",
-      "errorUnknown": "Не удалось подключиться к {{provider}}. Повторите попытку."
+      "errorUnknown": "Не удалось подключиться к {{provider}}. Повторите попытку.",
+      "baseUrlLabel": "Базовый URL (необязательно)",
+      "baseUrlPlaceholder": "https://your-endpoint.example/v1"
     },
     "cloud": {
       "subtitle": {

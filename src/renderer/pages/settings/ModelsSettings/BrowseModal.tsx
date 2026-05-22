@@ -64,6 +64,12 @@ const BrowseModal: React.FC<Props> = ({ visible, onClose, initialProvider }) => 
 
   // Single-key view state.
   const [keyValue, setKeyValue] = useState('');
+  // Ship-gate Fix B2: `openai-compatible` accepts an optional custom `baseUrl`
+  // alongside the api key. The backend (modelRegistryIpc) already passes
+  // `creds.baseUrl` through to `ApiProviderSource` for refresh + chat-start,
+  // but the connect view previously collected only the key — so a user picking
+  // OpenAI-compatible from Browse had no way to set their endpoint.
+  const [baseUrlValue, setBaseUrlValue] = useState('');
   const [connecting, setConnecting] = useState(false);
   const [errorKey, setErrorKey] = useState<string | null>(null);
 
@@ -83,6 +89,7 @@ const BrowseModal: React.FC<Props> = ({ visible, onClose, initialProvider }) => 
       }
       setQuery('');
       setKeyValue('');
+      setBaseUrlValue('');
       setConnecting(false);
       setErrorKey(null);
     }
@@ -106,6 +113,7 @@ const BrowseModal: React.FC<Props> = ({ visible, onClose, initialProvider }) => 
       setView({ kind: 'cloud', provider: provider.id });
     } else {
       setKeyValue('');
+      setBaseUrlValue('');
       setErrorKey(null);
       setView({ kind: 'key', provider });
     }
@@ -114,6 +122,7 @@ const BrowseModal: React.FC<Props> = ({ visible, onClose, initialProvider }) => 
   const backToGrid = useCallback(() => {
     setView({ kind: 'grid' });
     setKeyValue('');
+    setBaseUrlValue('');
     setErrorKey(null);
   }, []);
 
@@ -122,10 +131,16 @@ const BrowseModal: React.FC<Props> = ({ visible, onClose, initialProvider }) => 
     if (view.kind !== 'key') return;
     const key = keyValue.trim();
     if (!key) return;
+    // Ship-gate Fix B2: `openai-compatible` accepts an optional `baseUrl`. A
+    // non-empty value is submitted as `creds.baseUrl`; an empty value falls
+    // back to the canonical default at chat-start time (no harm in sending
+    // `''` either, but omitting keeps the wire shape tidy).
+    const baseUrl = view.provider.id === 'openai-compatible' ? baseUrlValue.trim() : '';
     setConnecting(true);
     setErrorKey(null);
     try {
-      const res = await connect(view.provider.id, { key });
+      const creds = baseUrl ? { key, baseUrl } : { key };
+      const res = await connect(view.provider.id, creds);
       if (res.ok) {
         onClose();
       } else {
@@ -136,7 +151,7 @@ const BrowseModal: React.FC<Props> = ({ visible, onClose, initialProvider }) => 
     } finally {
       setConnecting(false);
     }
-  }, [view, keyValue, connect, onClose]);
+  }, [view, keyValue, baseUrlValue, connect, onClose]);
 
   // ---- Cloud connect (passed to CloudCredentialForm) ---------------------
   const handleCloudConnect = useCallback(
@@ -265,6 +280,29 @@ const BrowseModal: React.FC<Props> = ({ visible, onClose, initialProvider }) => 
             aria-label={t('settings.modelsPage.browse.keyLabel')}
             disabled={connecting}
           />
+          {/* Ship-gate Fix B2: `openai-compatible` connect collects an optional
+              `baseUrl` alongside the api key so the user can point at a custom
+              endpoint (the backend already routes `creds.baseUrl` through to
+              both refresh + chat-start). Empty value falls back to the
+              provider's canonical default. */}
+          {view.provider.id === 'openai-compatible' && (
+            <>
+              <div className={styles.keyLabel} style={{ marginTop: 12 }}>
+                {t('settings.modelsPage.browse.baseUrlLabel')}
+              </div>
+              <Input
+                value={baseUrlValue}
+                onChange={(v) => {
+                  setBaseUrlValue(v);
+                  setErrorKey(null);
+                }}
+                onPressEnter={() => void handleKeyConnect()}
+                placeholder={t('settings.modelsPage.browse.baseUrlPlaceholder')}
+                aria-label={t('settings.modelsPage.browse.baseUrlLabel')}
+                disabled={connecting}
+              />
+            </>
+          )}
           {errorKey && (
             <div className={styles.keyError} role='alert'>
               <AlertTriangle size={14} aria-hidden='true' />

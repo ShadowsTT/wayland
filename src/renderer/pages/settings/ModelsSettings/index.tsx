@@ -52,7 +52,9 @@ const ModelsSettingsInner: React.FC = () => {
   const [ignoredKeys, setIgnoredKeys] = useState<Set<string>>(new Set());
   // Wave 3 Fix 12 — bump to re-trigger ConnectPanel's seed-consume effect
   // when a deep link delivers an api-key pre-fill after first mount.
-  const [, setPanelSeedNonce] = useState(0);
+  // Ship-gate Fix C3 — the panel reads this as a prop now so the effect
+  // actually re-fires on a later deep-link.
+  const [panelSeedNonce, setPanelSeedNonce] = useState(0);
 
   // View-switch seam: when a provider is selected for Manage, this holds its id
   // and the page swaps to `ManageProvider` (prototype `#screen-manage`).
@@ -222,6 +224,7 @@ const ModelsSettingsInner: React.FC = () => {
         onUseDetected={useDetected}
         onIgnoreDetected={ignoreDetected}
         onBrowse={handleBrowse}
+        deepLinkSeedNonce={panelSeedNonce}
       />
 
       {error && (

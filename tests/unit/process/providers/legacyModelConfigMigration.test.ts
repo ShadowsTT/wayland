@@ -654,4 +654,47 @@ describe('runLegacyModelConfigMigration — bridge v2 tag', () => {
     expect(result.skippedBridge).toBe(1);
     expect(result.migrated).toBe(0);
   });
+
+  it('skips a row tagged with the per-provider v2:<providerId> bridge value (Fix C4)', async () => {
+    const row = {
+      ...legacyRow({ platform: 'openai-compatible', apiKey: 'sk', model: ['m-1'] }),
+      __waylandModelRegistryBridge: 'v2:openrouter',
+    } as IProvider;
+    const store = makeStore([row]);
+    const repo = makeRepo();
+
+    const result = await runLegacyModelConfigMigration({ store, repo });
+
+    expect(result.skippedBridge).toBe(1);
+    expect(result.migrated).toBe(0);
+  });
+});
+
+describe('runLegacyModelConfigMigration — incomplete-cloud flag (Fix C2)', () => {
+  it('does NOT set the incomplete-cloud flag in the store (the flag was unused)', async () => {
+    // A Vertex row carries no usable creds in the legacy shape, so the
+    // migration skips it as incomplete-cloud. Prior to Fix C2 the migration
+    // wrote `migration.legacyModelConfigIncompleteCloud=true` — that flag has
+    // been removed since no renderer consumed it.
+    const row = legacyRow({ platform: 'gemini-vertex-ai', apiKey: '' });
+    const writes: Array<[string, unknown]> = [];
+    const store: LegacyConfigStore = {
+      async get(key) {
+        if (key === 'model.config') return [row];
+        if (key === MIGRATION_FLAG_KEY) return undefined;
+        return undefined;
+      },
+      async set(key, value) {
+        writes.push([key, value]);
+      },
+    };
+    const repo = makeRepo();
+
+    const result = await runLegacyModelConfigMigration({ store, repo });
+
+    expect(result.skippedIncompleteCloud).toBe(1);
+    // Only the completion flag write is expected — no incomplete-cloud key.
+    const incompleteCloudWrites = writes.filter(([k]) => k === 'migration.legacyModelConfigIncompleteCloud');
+    expect(incompleteCloudWrites).toEqual([]);
+  });
 });

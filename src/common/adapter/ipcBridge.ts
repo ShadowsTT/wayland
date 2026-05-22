@@ -1428,7 +1428,7 @@ export type IModelRegistryCatalogView = {
  * token store (Wave 3 Fix 6).
  */
 export type IModelRegistryCreds =
-  | { key: string }
+  | { key: string; baseUrl?: string }
   | { fields: Record<string, string> }
   | { useDiscovered: true }
   | { useGoogleAuth: true };

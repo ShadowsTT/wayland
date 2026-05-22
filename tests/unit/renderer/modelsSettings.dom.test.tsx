@@ -86,6 +86,13 @@ vi.mock('../../../src/renderer/pages/settings/components/SettingsPageShell', () 
     React.createElement('div', { 'data-testid': 'settings-shell' }, children),
 }));
 
+// Deep-link hook — controllable per test so we can exercise the seed flow.
+const mockConsumePendingDeepLink = vi.fn();
+vi.mock('../../../src/renderer/hooks/system/useDeepLink', () => ({
+  consumePendingDeepLink: () => mockConsumePendingDeepLink(),
+  useDeepLink: () => undefined,
+}));
+
 // Import after the mocks are registered.
 import ModelsSettings from '../../../src/renderer/pages/settings/ModelsSettings';
 import { recognizeKey } from '../../../src/renderer/pages/settings/ModelsSettings/providerCatalog';
@@ -123,6 +130,8 @@ beforeEach(() => {
   mockConnect.mockReset().mockResolvedValue({ ok: true });
   mockDisconnect.mockReset().mockResolvedValue({ ok: true });
   mockGoogleLogin.mockReset().mockResolvedValue({ success: true, data: { account: '' } });
+  // Default: no pending deep-link. Tests opt in by overriding per case.
+  mockConsumePendingDeepLink.mockReset().mockReturnValue(null);
 });
 
 afterEach(() => {
@@ -422,5 +431,46 @@ describe('recognizeKey', () => {
     for (const provider of rendererProviders) {
       expect(sourceProviders.has(provider)).toBe(true);
     }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Ship-gate Fix C3 — deep-link seed consumption
+// ---------------------------------------------------------------------------
+
+describe('ModelsSettings — deep-link seed (Fix C3)', () => {
+  it('pre-fills the ConnectPanel key input from a non-cloud deep-link payload', async () => {
+    mockList.mockResolvedValue([]);
+    mockDetectKeys.mockResolvedValue([]);
+    // A non-cloud deep-link delivering an apiKey for the recognized OpenAI
+    // provider — the page seeds the panel, which pre-fills its key input.
+    mockConsumePendingDeepLink.mockReturnValue({
+      apiKey: 'sk-proj-deep-link-test-key',
+      platform: 'openai',
+    });
+
+    render(<ModelsSettings />);
+
+    const input = (await screen.findByPlaceholderText(
+      'settings.modelsPage.connect.keyPlaceholder'
+    )) as HTMLInputElement;
+    await waitFor(() => expect(input.value).toBe('sk-proj-deep-link-test-key'));
+
+    // The "From deep link" hint badge renders next to the recognition hint.
+    expect(screen.getByTestId('deep-link-seed-badge')).toBeInTheDocument();
+  });
+
+  it('does not pre-fill anything when no deep-link is pending', async () => {
+    mockList.mockResolvedValue([]);
+    mockDetectKeys.mockResolvedValue([]);
+    // `mockConsumePendingDeepLink` defaults to `null` per `beforeEach`.
+
+    render(<ModelsSettings />);
+
+    const input = (await screen.findByPlaceholderText(
+      'settings.modelsPage.connect.keyPlaceholder'
+    )) as HTMLInputElement;
+    expect(input.value).toBe('');
+    expect(screen.queryByTestId('deep-link-seed-badge')).not.toBeInTheDocument();
   });
 });
