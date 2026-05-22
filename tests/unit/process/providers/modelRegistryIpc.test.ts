@@ -17,11 +17,34 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+// The real-DB round-trip exercises `ProviderRepository`, which encrypts
+// model-registry creds through Electron `safeStorage`. Electron's runtime and
+// OS keychain are not available under Vitest, so stub `safeStorage` with an
+// in-memory codec that mirrors its prefix/base64 contract.
+const { mockSafeStorage } = vi.hoisted(() => ({
+  mockSafeStorage: {
+    isEncryptionAvailable: vi.fn(() => true),
+    encryptString: vi.fn((plaintext: string) => Buffer.from(`enc(${plaintext})`)),
+    decryptString: vi.fn((cipher: Buffer) => {
+      const raw = cipher.toString('utf8');
+      const match = raw.match(/^enc\((.*)\)$/s);
+      if (!match) throw new Error('decrypt failed');
+      return match[1];
+    }),
+  },
+}));
+
+vi.mock('electron', () => ({ safeStorage: mockSafeStorage }));
+
 import { createModelRegistryHandlers } from '@process/providers/ipc/modelRegistryIpc';
 import type { ModelRegistryDeps } from '@process/providers/ipc/modelRegistryIpc';
 import type { CatalogModel, ProviderId } from '@process/providers/types';
 import { ProviderRepository } from '@process/providers/storage/ProviderRepository';
-import type { RegistryOverride, RegistryProvider } from '@process/providers/storage/ProviderRepository';
+import type {
+  RegistryCredsResult,
+  RegistryOverride,
+  RegistryProvider,
+} from '@process/providers/storage/ProviderRepository';
 import type { DiscoveredKey } from '@process/providers/detection/KeyDiscovery';
 import { BetterSqlite3Driver } from '@process/services/database/drivers/BetterSqlite3Driver';
 import { CURRENT_DB_VERSION, initSchema } from '@process/services/database/schema';
@@ -90,8 +113,9 @@ class FakeRepo {
     if (row) row.creds = creds;
   }
 
-  getRegistryProviderCreds(id: ProviderId): Record<string, unknown> | null {
-    return this.providers.get(id)?.creds ?? null;
+  getRegistryProviderCreds(id: ProviderId): RegistryCredsResult {
+    const creds = this.providers.get(id)?.creds;
+    return creds ? { status: 'ok', creds } : { status: 'not-found' };
   }
 
   deleteRegistryProvider(id: ProviderId): void {
@@ -196,7 +220,7 @@ describe('modelRegistry IPC — connect', () => {
     expect(result).toEqual({ ok: true });
     expect(test).toHaveBeenCalledWith('openai', { key: 'sk-test' });
     expect(repo.getRegistryProvider('openai')?.state).toBe('connected');
-    expect(repo.getRegistryProviderCreds('openai')).toEqual({ key: 'sk-test' });
+    expect(repo.getRegistryProviderCreds('openai')).toEqual({ status: 'ok', creds: { key: 'sk-test' } });
     expect(repo.getRegistryCatalog('openai').map((m) => m.id)).toEqual(['gpt-4o']);
   });
 
@@ -453,7 +477,7 @@ describe('modelRegistry IPC — rekey', () => {
 
     expect(result).toEqual({ ok: true });
     expect(test).toHaveBeenCalledWith('openai', { key: 'sk-new' });
-    expect(repo.getRegistryProviderCreds('openai')).toEqual({ key: 'sk-new' });
+    expect(repo.getRegistryProviderCreds('openai')).toEqual({ status: 'ok', creds: { key: 'sk-new' } });
     expect(repo.getRegistryProvider('openai')?.state).toBe('connected');
   });
 
@@ -470,7 +494,7 @@ describe('modelRegistry IPC — rekey', () => {
     const result = await h.rekey({ providerId: 'openai', creds: { key: 'sk-bad' } });
 
     expect(result).toEqual({ ok: false, error: 'unauthorized' });
-    expect(repo.getRegistryProviderCreds('openai')).toEqual({ key: 'sk-old' });
+    expect(repo.getRegistryProviderCreds('openai')).toEqual({ status: 'ok', creds: { key: 'sk-old' } });
   });
 });
 
@@ -620,14 +644,15 @@ describeOrSkip('ProviderRepository — registry credential encryption round-trip
     });
 
     // The decrypted creds must equal the original object.
-    expect(repo.getRegistryProviderCreds('openai')).toEqual(creds);
+    expect(repo.getRegistryProviderCreds('openai')).toEqual({ status: 'ok', creds });
 
-    // The stored ciphertext column must NOT contain the plaintext.
+    // The stored ciphertext column must NOT contain the plaintext, and must
+    // carry the safeStorage `enc:v1:` prefix.
     const row = driver
       .prepare(`SELECT creds_encrypted FROM model_registry_providers WHERE provider_id = ?`)
       .get('openai') as { creds_encrypted: string };
     expect(row.creds_encrypted).not.toContain('sk-super-secret-plaintext-value');
-    expect(row.creds_encrypted.length).toBeGreaterThan(0);
+    expect(row.creds_encrypted.startsWith('enc:v1:')).toBe(true);
   });
 
   it('re-encrypts on updateRegistryProviderCreds and still round-trips', () => {
@@ -641,11 +666,63 @@ describeOrSkip('ProviderRepository — registry credential encryption round-trip
     const rekeyed = { key: 'sk-ant-rotated-secret' };
     repo.updateRegistryProviderCreds('anthropic', rekeyed);
 
-    expect(repo.getRegistryProviderCreds('anthropic')).toEqual(rekeyed);
+    expect(repo.getRegistryProviderCreds('anthropic')).toEqual({ status: 'ok', creds: rekeyed });
     const row = driver
       .prepare(`SELECT creds_encrypted FROM model_registry_providers WHERE provider_id = ?`)
       .get('anthropic') as { creds_encrypted: string };
     expect(row.creds_encrypted).not.toContain('sk-ant-rotated-secret');
+  });
+
+  it('returns status "not-found" for a provider that was never connected', () => {
+    expect(repo.getRegistryProviderCreds('openai')).toEqual({ status: 'not-found' });
+  });
+
+  it('returns status "undecryptable" when the stored ciphertext is corrupt', () => {
+    repo.upsertRegistryProvider({
+      providerId: 'openai',
+      connectedVia: 'api-key',
+      state: 'connected',
+      creds: { key: 'sk-original' },
+    });
+
+    // Simulate creds that became unreadable (OS keychain rotation, corruption).
+    driver
+      .prepare(`UPDATE model_registry_providers SET creds_encrypted = ? WHERE provider_id = ?`)
+      .run('enc:v1:not-valid-ciphertext', 'openai');
+
+    // The provider row still exists — the result must distinguish this from
+    // "not connected" so a follow-up can surface a re-key path.
+    expect(repo.getRegistryProvider('openai')).not.toBeNull();
+    expect(repo.getRegistryProviderCreds('openai')).toEqual({ status: 'undecryptable' });
+  });
+
+  it('deleteRegistryProvider cascades to catalog and overrides via the FK', () => {
+    repo.upsertRegistryProvider({
+      providerId: 'openai',
+      connectedVia: 'api-key',
+      state: 'connected',
+      creds: { key: 'k' },
+    });
+    repo.replaceRegistryCatalog('openai', [
+      catalogModel({ id: 'gpt-4o', providerId: 'openai' }),
+      catalogModel({ id: 'gpt-4o-mini', providerId: 'openai' }),
+    ]);
+    repo.setRegistryOverride('openai', 'gpt-4o', false);
+
+    repo.deleteRegistryProvider('openai');
+
+    // The single provider delete must leave no orphaned child rows.
+    expect(repo.getRegistryProvider('openai')).toBeNull();
+    expect(repo.getRegistryCatalog('openai')).toEqual([]);
+    expect(repo.listRegistryOverrides('openai')).toEqual([]);
+    const catalogCount = driver
+      .prepare(`SELECT COUNT(*) AS n FROM model_registry_catalog WHERE provider_id = ?`)
+      .get('openai') as { n: number };
+    const overrideCount = driver
+      .prepare(`SELECT COUNT(*) AS n FROM model_registry_overrides WHERE provider_id = ?`)
+      .get('openai') as { n: number };
+    expect(catalogCount.n).toBe(0);
+    expect(overrideCount.n).toBe(0);
   });
 
   it('countRegistryCatalog returns the persisted model count without parsing blobs', () => {

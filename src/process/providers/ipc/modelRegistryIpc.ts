@@ -20,8 +20,8 @@
  *    per provider; the curated view is derived on read by the pure `Curator`.
  *  - **overrides** — `model_registry_overrides`, per-model enable/disable flags
  *    the user set explicitly via `toggleModel`.
- *  - **creds**     — serialized to JSON and AES-256-GCM encrypted by the
- *    repository; the plaintext never leaves the main process.
+ *  - **creds**     — serialized to JSON and encrypted by the repository via
+ *    OS-keychain `safeStorage`; the plaintext never leaves the main process.
  *
  * ## Handler safety
  *
@@ -330,7 +330,10 @@ export function createModelRegistryHandlers(deps: ModelRegistryDeps): ModelRegis
     async testConnection({ providerId }): Promise<IModelRegistryTestResult> {
       try {
         const stored = repo.getRegistryProviderCreds(providerId);
-        if (!stored) return { ok: false, error: 'unrecognized' };
+        // `not-found` (no row) and `undecryptable` (corrupt / unreadable
+        // ciphertext) both mean "cannot proceed" — a follow-up wave will give
+        // `undecryptable` its own "re-key" UI state.
+        if (stored.status !== 'ok') return { ok: false, error: 'unrecognized' };
 
         if (CLOUD_PROVIDERS.has(providerId)) {
           // Cloud providers cannot be HTTP-probed — a stored credential is the
@@ -339,7 +342,7 @@ export function createModelRegistryHandlers(deps: ModelRegistryDeps): ModelRegis
           return { ok: true };
         }
 
-        const creds = toTestCreds(stored);
+        const creds = toTestCreds(stored.creds);
         const result = await connectionTester.test(providerId, creds);
         const state: ProviderConnState = result.ok ? 'connected' : 'error';
         repo.updateRegistryProviderState(providerId, state, result.ok ? undefined : result.error);
@@ -388,8 +391,10 @@ export function createModelRegistryHandlers(deps: ModelRegistryDeps): ModelRegis
     async refresh({ providerId }): Promise<{ ok: boolean }> {
       try {
         const stored = repo.getRegistryProviderCreds(providerId);
-        if (!stored) return { ok: false };
-        return await buildAndPersistCatalog(providerId, toTestCreds(stored));
+        // `not-found` and `undecryptable` both block a refresh — see the note
+        // in `testConnection` above.
+        if (stored.status !== 'ok') return { ok: false };
+        return await buildAndPersistCatalog(providerId, toTestCreds(stored.creds));
       } catch {
         return { ok: false };
       }

@@ -1,5 +1,6 @@
 import crypto from 'node:crypto';
 import type { ISqliteDriver } from '@process/services/database/drivers/ISqliteDriver';
+import { decryptString, encryptString } from '@process/secrets/safeStorage';
 import type {
   ProviderId,
   ProviderModel,
@@ -10,8 +11,19 @@ import type {
   ConnectError,
 } from '../types';
 
-// ─── Encryption helpers ───────────────────────────────────────────────────────
+// ─── Legacy encryption helpers ────────────────────────────────────────────────
 
+/**
+ * AES-256-GCM with a key derived from an app-bundled constant. The key is
+ * identical on every install and ships in the binary, so anyone with the
+ * SQLite file can decrypt the ciphertext — it is NOT secure.
+ *
+ * Retained only for the legacy `provider_catalogs.api_key_encrypted` column,
+ * still consumed by `ModelRefreshScheduler` and `providersIpc`. The model
+ * registry (`model_registry_providers.creds_encrypted`) uses OS-keychain
+ * `safeStorage` instead — see `encryptRegistryCreds` / `decryptRegistryCreds`.
+ * Do NOT use these for new code.
+ */
 const ALGORITHM = 'aes-256-gcm';
 const KEY_MATERIAL = 'wayland-provider-key-v1'; // deterministic per-app salt
 
@@ -77,6 +89,63 @@ export type RegistryProvider = {
 
 /** A per-provider per-model enable/disable override the user set explicitly. */
 export type RegistryOverride = { modelId: string; enabled: boolean };
+
+/**
+ * The result of reading a provider's stored credentials. Discriminates the
+ * three outcomes a caller must tell apart:
+ *
+ *  - `'ok'`           — creds decrypted; `creds` holds the plaintext record.
+ *  - `'not-found'`    — no provider row exists (the provider is not connected).
+ *  - `'undecryptable'`— a provider row exists but its `creds_encrypted` column
+ *                       could not be decrypted (corrupt ciphertext, an OS
+ *                       keychain key rotation, `safeStorage` unavailable on the
+ *                       host, or a non-object payload). The provider looks
+ *                       connected but every operation that needs the key will
+ *                       fail — the caller should surface a "re-enter your
+ *                       credentials" path rather than a generic error.
+ *
+ * Follow-up (Wave 2/3): `'undecryptable'` should drive a distinct UI state
+ * (e.g. "Action needed — re-key") instead of being collapsed into "not
+ * connected". For now callers treat it the same as `'not-found'` — both mean
+ * "cannot proceed" — but the shape is available so that handling can be added
+ * without another repository change.
+ */
+export type RegistryCredsResult =
+  | { status: 'ok'; creds: Record<string, unknown> }
+  | { status: 'not-found' }
+  | { status: 'undecryptable' };
+
+// ─── Model-registry credential encryption ─────────────────────────────────────
+
+/**
+ * Encrypt a credentials record for the `model_registry_providers.creds_encrypted`
+ * column using OS-keychain-backed `safeStorage` (macOS Keychain / Windows DPAPI
+ * / Linux libsecret). The encryption key is owned by the OS and unique per user
+ * — unlike the legacy `encryptKey` path it is not recoverable from the SQLite
+ * file alone. Throws when `safeStorage` is unavailable on the host (the wrapper
+ * refuses to fall back to plaintext).
+ */
+function encryptRegistryCreds(creds: Record<string, unknown>): string {
+  return encryptString(JSON.stringify(creds));
+}
+
+/**
+ * Decrypt a `creds_encrypted` value produced by {@link encryptRegistryCreds}.
+ * Returns the parsed record on success, or `null` when the payload cannot be
+ * decrypted or is not a plain object — the caller maps `null` onto the
+ * `'undecryptable'` result.
+ */
+function decryptRegistryCreds(ciphertext: string): Record<string, unknown> | null {
+  try {
+    const parsed: unknown = JSON.parse(decryptString(ciphertext));
+    if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
+      return parsed as Record<string, unknown>;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
 
 // ─── Repository ───────────────────────────────────────────────────────────────
 
@@ -326,7 +395,7 @@ export class ProviderRepository {
         params.connectedVia,
         params.state,
         params.error ?? null,
-        encryptKey(JSON.stringify(params.creds)),
+        encryptRegistryCreds(params.creds),
         now,
         now
       );
@@ -343,31 +412,31 @@ export class ProviderRepository {
   updateRegistryProviderCreds(providerId: ProviderId, creds: Record<string, unknown>): void {
     this.db
       .prepare(`UPDATE model_registry_providers SET creds_encrypted = ?, updated_at = ? WHERE provider_id = ?`)
-      .run(encryptKey(JSON.stringify(creds)), Date.now(), providerId);
+      .run(encryptRegistryCreds(creds), Date.now(), providerId);
   }
 
   /**
-   * Decrypt and return a provider's stored credentials, or `null` when the
-   * provider is not connected or the stored payload is unreadable.
+   * Decrypt and return a provider's stored credentials.
+   *
+   * The result discriminates "not connected" (`'not-found'`) from "connected
+   * but the stored ciphertext is unreadable" (`'undecryptable'`) — a row whose
+   * creds cannot be decrypted would otherwise look connected while silently
+   * failing every operation. See {@link RegistryCredsResult}.
    */
-  getRegistryProviderCreds(providerId: ProviderId): Record<string, unknown> | null {
+  getRegistryProviderCreds(providerId: ProviderId): RegistryCredsResult {
     const provider = this.getRegistryProvider(providerId);
-    if (!provider) return null;
-    try {
-      const parsed: unknown = JSON.parse(decryptKey(provider.credsEncrypted));
-      if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
-        return parsed as Record<string, unknown>;
-      }
-      return null;
-    } catch {
-      return null;
-    }
+    if (!provider) return { status: 'not-found' };
+    const creds = decryptRegistryCreds(provider.credsEncrypted);
+    return creds ? { status: 'ok', creds } : { status: 'undecryptable' };
   }
 
-  /** Remove a provider plus its catalog and overrides (FK `ON DELETE CASCADE`). */
+  /**
+   * Remove a connected provider. The `model_registry_catalog` and
+   * `model_registry_overrides` child rows are removed automatically by the
+   * `ON DELETE CASCADE` foreign keys (migration v39), so a single statement
+   * leaves no orphans — no manual child deletes and no transaction needed.
+   */
   deleteRegistryProvider(providerId: ProviderId): void {
-    this.db.prepare(`DELETE FROM model_registry_overrides WHERE provider_id = ?`).run(providerId);
-    this.db.prepare(`DELETE FROM model_registry_catalog WHERE provider_id = ?`).run(providerId);
     this.db.prepare(`DELETE FROM model_registry_providers WHERE provider_id = ?`).run(providerId);
   }
 
