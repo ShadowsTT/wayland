@@ -985,6 +985,14 @@ const initStorage = async () => {
     const existingAgents = (await configFile.get('assistants').catch((): undefined => undefined)) || [];
     const builtinAssistants = getBuiltinAssistants();
 
+    // 5.2.0 — Prune stale built-in records whose preset has been dropped from
+    // ASSISTANT_PRESETS. The 'builtin-' prefix uniquely identifies preset-
+    // sourced rows; any 'builtin-<id>' in storage whose <id> no longer
+    // matches a current preset is a residue from an older build (e.g. the
+    // social-job-publisher kill in 2026-05-22) and would otherwise keep
+    // showing up in the Assistants list across reboots.
+    const currentBuiltinIds = new Set(builtinAssistants.map((b) => b.id));
+
     // 5.2.1 Check whether migration is needed: fix legacy behavior where all assistants defaulted to enabled
     // Check if migration needed: fix old version where all assistants were enabled by default
     const ASSISTANT_ENABLED_MIGRATION_KEY = 'migration.assistantEnabledFixed';
@@ -1005,8 +1013,21 @@ const initStorage = async () => {
 
     // Update or add builtin assistant config
     // Update or add built-in assistant configurations
-    const updatedAgents = [...existingAgents];
+    let updatedAgents = [...existingAgents];
     let hasChanges = false;
+
+    // Drop any builtin-prefixed entries whose preset no longer exists in
+    // ASSISTANT_PRESETS. Don't touch user-created custom assistants —
+    // those have either a 'custom-' or 'ext-' prefix.
+    const beforePrune = updatedAgents.length;
+    updatedAgents = updatedAgents.filter((a: AcpBackendConfig) => {
+      if (typeof a.id !== 'string') return true;
+      if (!a.id.startsWith('builtin-')) return true;
+      return currentBuiltinIds.has(a.id);
+    });
+    if (updatedAgents.length !== beforePrune) {
+      hasChanges = true;
+    }
 
     for (const builtin of builtinAssistants) {
       const index = updatedAgents.findIndex((a: AcpBackendConfig) => a.id === builtin.id);
