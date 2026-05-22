@@ -53,12 +53,15 @@ type TestResult = { ok: boolean; error?: ConnectError };
  * inference probe and falls back to the degraded `/v1/models` auth check.
  *
  * Chosen as the smallest broadly-available chat model per provider as of
- * 2026-05-22; if a provider retires one, the probe degrades to `no-models`
- * (a clear, fixable signal) rather than failing silently.
+ * 2026-05-22. If a provider retires one, the inference probe gets a
+ * "model not found" response — a VALID key that simply picked a stale model.
+ * The tester treats that case specially: it falls back to the provider's
+ * `/v1/models` auth check rather than false-negating a working key (see
+ * `probeInference`). A genuinely bad key still fails with `unauthorized`.
  */
 const TEST_MODEL: Partial<Record<ProviderId, string>> = {
   openai: 'gpt-4o-mini',
-  anthropic: 'claude-3-5-haiku-20241022',
+  anthropic: 'claude-haiku-4-5-20251001',
   'google-gemini': 'gemini-1.5-flash',
   groq: 'llama-3.1-8b-instant',
   openrouter: 'openai/gpt-4o-mini',
@@ -126,13 +129,26 @@ export class ConnectionTester {
       return { ok: false, error: 'offline' };
     }
 
-    return this.classifyResponse(res);
-  }
-
-  /** Classify a chat-completion response into a `TestResult`. */
-  private async classifyResponse(res: Response): Promise<TestResult> {
     const body = await readBody(res);
 
+    // A "model not found" failure means our hardcoded probe model went stale —
+    // it does NOT mean the credential is bad. Falling back to the provider's
+    // `/v1/models` auth check rescues a valid key from a false negative; a
+    // 200 there proves the key authenticates. A genuinely bad key still gets
+    // an `unauthorized` from that fallback. (Auth `query` providers like Gemini
+    // carry the key in the URL, so the fallback works for them too.)
+    if (isModelNotFound(res.status, body)) {
+      const modelsEndpoint = PROVIDER_ENDPOINTS[providerId];
+      if (modelsEndpoint) {
+        return this.probeModelsEndpoint(providerId, apiKey, modelsEndpoint);
+      }
+    }
+
+    return this.classifyResponse(res, body);
+  }
+
+  /** Classify a chat-completion response (with its already-read body). */
+  private classifyResponse(res: Response, body: string): TestResult {
     if (!res.ok) {
       return { ok: false, error: classifyStatus(res.status, body) };
     }
@@ -309,6 +325,38 @@ async function readBody(res: Response): Promise<string> {
   } catch {
     return '';
   }
+}
+
+/**
+ * True when an inference failure reads as "the requested model does not exist"
+ * rather than "the credential is invalid".
+ *
+ * This is the stale-probe-model case: our hardcoded `TEST_MODEL` entry was
+ * retired by the provider. The status alone is ambiguous (a 404 can also be a
+ * wrong endpoint), so a 404 only counts when the body confirms it is about the
+ * model — and a body that says so counts regardless of status, since providers
+ * disagree on whether model-not-found is a 400 or a 404. Auth failures (401 /
+ * 403) are never treated as model-not-found.
+ */
+function isModelNotFound(status: number, body: string): boolean {
+  if (status === 401 || status === 403) return false;
+  const text = body.toLowerCase();
+  const saysModelMissing =
+    (text.includes('model') &&
+      (text.includes('not found') ||
+        text.includes('not_found') ||
+        text.includes('does not exist') ||
+        text.includes('not exist') ||
+        text.includes('unknown model') ||
+        text.includes('invalid model') ||
+        text.includes('no such model') ||
+        text.includes('not_found_error') ||
+        text.includes('model_not_found'))) ||
+    text.includes('model_not_found');
+  if (saysModelMissing) return true;
+  // A bare 404 with no readable body — most likely a missing model, since the
+  // base host/path is shared by the working `/v1/models` probe.
+  return status === 404 && text.trim().length === 0;
 }
 
 /** Classify a non-200 status (and its body) into a `ConnectError`. */

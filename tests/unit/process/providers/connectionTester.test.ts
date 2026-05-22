@@ -143,6 +143,53 @@ describe('ConnectionTester', () => {
     expect(headers.Authorization).toBeUndefined();
   });
 
+  it('falls back to /v1/models when the inference probe model is stale (404 model-not-found)', async () => {
+    // A retired TEST_MODEL → 404 not_found on /v1/messages, but a valid key →
+    // 200 on /v1/models. The tester must rescue the key, not false-negative it.
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        response({ type: 'error', error: { type: 'not_found_error', message: 'model: claude-stale' } }, 404)
+      )
+      .mockResolvedValueOnce(response({ data: [{ id: 'claude-opus-4-7' }] }, 200));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await tester.test('anthropic', { key: 'sk-ant-valid' });
+    expect(result).toEqual({ ok: true });
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    const [messagesUrl] = fetchMock.mock.calls[0] as [string];
+    const [modelsUrl] = fetchMock.mock.calls[1] as [string];
+    expect(messagesUrl).toContain('/v1/messages');
+    expect(modelsUrl).toContain('/v1/models');
+  });
+
+  it('still reports unauthorized when a stale-model fallback hits a bad key', async () => {
+    // A stale model AND a bad key: the 404 triggers the fallback, the fallback's
+    // 401 must surface as `unauthorized` — the fallback never masks a bad key.
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        response({ type: 'error', error: { type: 'not_found_error', message: 'model: claude-stale' } }, 404)
+      )
+      .mockResolvedValueOnce(response({ error: 'invalid x-api-key' }, 401));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await tester.test('anthropic', { key: 'sk-ant-bad' });
+    expect(result).toEqual({ ok: false, error: 'unauthorized' });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('does NOT fall back for a 404 that is an auth failure, not a missing model', async () => {
+    // A 401/403 is never a stale-model case — it must not trigger the fallback.
+    const fetchMock = vi.fn().mockResolvedValue(response({ error: 'invalid x-api-key' }, 401));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await tester.test('anthropic', { key: 'sk-ant-bad' });
+    expect(result).toEqual({ ok: false, error: 'unauthorized' });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
   it('uses the Gemini query-param auth scheme for google-gemini', async () => {
     const fetchMock = vi.fn().mockResolvedValue(response({ candidates: [{ content: { parts: [{ text: 'hi' }] } }] }));
     vi.stubGlobal('fetch', fetchMock);
