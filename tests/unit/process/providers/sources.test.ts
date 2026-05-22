@@ -236,7 +236,7 @@ describe('ApiProviderSource', () => {
     await expect(source.listModels()).rejects.toMatchObject({ code: 'unknown' });
   });
 
-  it('stops paginating after a safety cap even if has_more never clears', async () => {
+  it('throws code unknown when pagination hits the safety cap with a cursor still pending', async () => {
     // A misbehaving provider that always claims more pages.
     const fetchMock = vi
       .fn()
@@ -245,11 +245,97 @@ describe('ApiProviderSource', () => {
       );
     vi.stubGlobal('fetch', fetchMock);
 
-    const models = await new ApiProviderSource('anthropic', 'sk-ant').listModels();
-
-    // The loop must terminate — it does not hang or fetch unbounded pages.
+    // A stuck cursor is a provider fault — it must surface, not return a partial list.
+    await expect(new ApiProviderSource('anthropic', 'sk-ant').listModels()).rejects.toMatchObject({
+      code: 'unknown',
+    });
+    // The loop still terminates — it does not hang or fetch unbounded pages.
     expect(fetchMock.mock.calls.length).toBeLessThanOrEqual(100);
-    expect(models.length).toBeGreaterThan(0);
+  });
+
+  it('sends Anthropic auth via x-api-key + anthropic-version and no Authorization header', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ data: [], has_more: false }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await new ApiProviderSource('anthropic', 'sk-ant-secret').listModels();
+
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe('https://api.anthropic.com/v1/models');
+    const headers = init.headers as Record<string, string>;
+    expect(headers['x-api-key']).toBe('sk-ant-secret');
+    expect(headers['anthropic-version']).toBe('2023-06-01');
+    expect(headers.Authorization).toBeUndefined();
+  });
+
+  it('sends Gemini auth as a key query param and no Authorization header', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ models: [] }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await new ApiProviderSource('google-gemini', 'g-secret').listModels();
+
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toContain('key=g-secret');
+    const headers = init.headers as Record<string, string>;
+    expect(headers.Authorization).toBeUndefined();
+  });
+
+  it('aborts the request when the fetch timeout elapses and maps it to offline', async () => {
+    vi.useFakeTimers();
+    try {
+      // A fetch that never resolves on its own — only an abort can settle it.
+      const fetchMock = vi.fn(
+        (_url: string, init: RequestInit) =>
+          new Promise<Response>((_resolve, reject) => {
+            const signal = init.signal;
+            signal?.addEventListener('abort', () => {
+              reject(new DOMException('aborted', 'AbortError'));
+            });
+          })
+      );
+      vi.stubGlobal('fetch', fetchMock);
+
+      const pending = new ApiProviderSource('openai', 'sk-test').listModels();
+      // Surface the rejection so an unhandled-rejection warning is not emitted.
+      const assertion = expect(pending).rejects.toMatchObject({ code: 'offline' });
+
+      // Advance past the 15s fetch-timeout constant — the setTimeout fires and aborts.
+      await vi.advanceTimersByTimeAsync(15_000);
+      await assertion;
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('throws code unknown for a 200 response with a non-JSON body', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(textResponse('<html>error</html>', 200));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(new ApiProviderSource('openai', 'sk-test').listModels()).rejects.toMatchObject({
+      code: 'unknown',
+    });
+  });
+
+  it('throws code no-credit for a 200 response carrying an insufficient-quota error body', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      jsonResponse({
+        error: { type: 'insufficient_quota', message: 'You exceeded your current quota' },
+      })
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(new ApiProviderSource('openai', 'sk-test').listModels()).rejects.toMatchObject({
+      code: 'no-credit',
+    });
+  });
+
+  it('throws code unknown for a 200 response carrying a non-billing error body', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ error: { message: 'internal failure' } }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(new ApiProviderSource('openai', 'sk-test').listModels()).rejects.toMatchObject({
+      code: 'unknown',
+    });
   });
 });
 

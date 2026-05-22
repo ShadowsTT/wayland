@@ -52,6 +52,36 @@ type ParsedPage = { models: RawModel[]; nextCursor: NextCursor | null };
 /** How to ask for the page after the current one. */
 type NextCursor = { param: 'after_id' | 'pageToken'; value: string };
 
+/**
+ * How a provider authenticates a `/v1/models` request. Most providers are
+ * OpenAI-compatible (`Authorization: Bearer`); Anthropic and Google Gemini are
+ * not — they slipped past the original implementation, which always sent Bearer.
+ */
+type AuthStrategy =
+  /** OpenAI and every OpenAI-compatible provider. */
+  | { kind: 'bearer' }
+  /** Anthropic: `x-api-key` + `anthropic-version` headers, no `Authorization`. */
+  | { kind: 'anthropic' }
+  /** Google Gemini: API key as a `key` query parameter, no auth header. */
+  | { kind: 'query'; param: string };
+
+/** The `anthropic-version` string Anthropic requires — matches modelBridge.ts. */
+const ANTHROPIC_VERSION = '2023-06-01';
+
+/**
+ * Per-provider auth strategy, conceptually parallel to `PROVIDER_ENDPOINTS`.
+ * Any provider absent from this map uses the `bearer` default.
+ */
+const PROVIDER_AUTH: Partial<Record<ProviderId, AuthStrategy>> = {
+  anthropic: { kind: 'anthropic' },
+  'google-gemini': { kind: 'query', param: 'key' },
+};
+
+/** Resolve a provider's auth strategy, defaulting to OpenAI-style Bearer. */
+function authStrategyFor(providerId: ProviderId): AuthStrategy {
+  return PROVIDER_AUTH[providerId] ?? { kind: 'bearer' };
+}
+
 export class ApiProviderSource implements CatalogSource {
   readonly kind = 'api' as const;
   readonly providerId: ProviderId;
@@ -65,8 +95,9 @@ export class ApiProviderSource implements CatalogSource {
 
   /**
    * Fetch and normalize every model the provider exposes, following pagination
-   * until exhausted. A 200 with no models yields `[]`; any non-200 or network
-   * failure throws a `ProviderSourceError`.
+   * until exhausted. A 200 with no models yields `[]`; any non-200, network
+   * failure, error-shaped 200 body, or runaway pagination throws a
+   * `ProviderSourceError`.
    */
   async listModels(): Promise<RawModel[]> {
     const endpoint = PROVIDER_ENDPOINTS[this.providerId];
@@ -74,26 +105,36 @@ export class ApiProviderSource implements CatalogSource {
       throw new ProviderSourceError('unknown', `No models endpoint registered for provider "${this.providerId}"`);
     }
 
+    const auth = authStrategyFor(this.providerId);
+    // Gemini-style providers authenticate via a query parameter on every
+    // request, so it must be baked into the base URL before pagination.
+    const baseUrl = auth.kind === 'query' ? appendQuery(endpoint, auth.param, this.apiKey) : endpoint;
+
     const models: RawModel[] = [];
     let cursor: NextCursor | null = null;
 
     for (let page = 0; page < MAX_PAGES; page++) {
-      const url = cursor ? appendQuery(endpoint, cursor.param, cursor.value) : endpoint;
+      const url = cursor ? appendQuery(baseUrl, cursor.param, cursor.value) : baseUrl;
       // Pagination is inherently sequential: each page's cursor comes from the
       // previous response, so the awaits cannot be parallelized.
       // oxlint-disable-next-line no-await-in-loop
-      const body = await this.fetchPage(url);
+      const body = await this.fetchPage(url, auth);
       const parsed = this.parsePage(body);
       models.push(...parsed.models);
-      if (!parsed.nextCursor) break;
       cursor = parsed.nextCursor;
+      if (!cursor) return models;
     }
 
-    return models;
+    // The loop exited via the MAX_PAGES cap while a cursor was still pending —
+    // a stuck or oversized cursor, which is a provider fault, not a partial list.
+    throw new ProviderSourceError(
+      'unknown',
+      `Provider "${this.providerId}" exceeded the ${MAX_PAGES}-page pagination limit`
+    );
   }
 
   /** Fetch one page, mapping every failure mode onto a `ProviderSourceError`. */
-  private async fetchPage(url: string): Promise<unknown> {
+  private async fetchPage(url: string, auth: AuthStrategy): Promise<unknown> {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
 
@@ -102,7 +143,7 @@ export class ApiProviderSource implements CatalogSource {
       res = await fetch(url, {
         method: 'GET',
         signal: controller.signal,
-        headers: this.requestHeaders(),
+        headers: this.requestHeaders(auth),
       });
     } catch (err) {
       // A network/DNS failure or an abort (timeout) — the provider is unreachable.
@@ -123,16 +164,28 @@ export class ApiProviderSource implements CatalogSource {
     }
   }
 
-  /** Auth + identification headers for a `/v1/models` request. */
-  private requestHeaders(): Record<string, string> {
+  /**
+   * Auth + identification headers for a `/v1/models` request. The auth headers
+   * vary by provider: OpenAI-compatible providers use `Authorization: Bearer`,
+   * Anthropic uses `x-api-key` + `anthropic-version`, and Gemini-style providers
+   * carry no auth header at all (their key rides on the URL).
+   */
+  private requestHeaders(auth: AuthStrategy): Record<string, string> {
     const headers: Record<string, string> = {
-      Authorization: `Bearer ${this.apiKey}`,
       Accept: 'application/json',
       'User-Agent': 'Wayland/1.0',
     };
-    // Anthropic requires an explicit API-version header on every request.
-    if (this.providerId === 'anthropic') {
-      headers['anthropic-version'] = '2023-06-01';
+    switch (auth.kind) {
+      case 'bearer':
+        headers.Authorization = `Bearer ${this.apiKey}`;
+        break;
+      case 'anthropic':
+        headers['x-api-key'] = this.apiKey;
+        headers['anthropic-version'] = ANTHROPIC_VERSION;
+        break;
+      case 'query':
+        // Key travels as a URL query parameter — no auth header.
+        break;
     }
     return headers;
   }
@@ -173,6 +226,14 @@ export class ApiProviderSource implements CatalogSource {
           ? ({ param: 'after_id', value: lastId } as const)
           : null;
       return { models, nextCursor };
+    }
+
+    // A 200 carrying an `error`-shaped body (e.g. an insufficient-quota error)
+    // is a failure dressed as success — surface it instead of "no models".
+    if (isRecord(body['error']) || typeof body['error'] === 'string') {
+      const text = describeErrorBody(body['error']);
+      const code = mentionsBilling(text) ? 'no-credit' : 'unknown';
+      throw new ProviderSourceError(code, `Provider returned an error body: ${text}`);
     }
 
     // A 200 with no recognizable model field — honestly empty, not an error.
@@ -224,6 +285,16 @@ function mentionsBilling(body: string): boolean {
     text.includes('payment') ||
     text.includes('credit')
   );
+}
+
+/** Flatten an `error` field (string, or `{ message?, type? }`) into searchable text. */
+function describeErrorBody(error: unknown): string {
+  if (typeof error === 'string') return error;
+  if (isRecord(error)) {
+    const parts = [error['message'], error['type'], error['code']].filter((p) => typeof p === 'string');
+    if (parts.length > 0) return parts.join(' ');
+  }
+  return 'provider error';
 }
 
 /** Append (or override) a single query parameter on a URL. */
