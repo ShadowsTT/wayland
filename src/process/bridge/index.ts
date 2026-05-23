@@ -16,7 +16,6 @@ import { initBedrockBridge } from './bedrockBridge';
 import { initChannelBridge } from './channelBridge';
 import { initConversationBridge } from './conversationBridge';
 import { initCronBridge } from './cronBridge';
-import { initKickoffBridge } from './kickoffBridge';
 import { initDatabaseBridge } from './databaseBridge';
 import { initDialogBridge } from './dialogBridge';
 import { initDocumentBridge } from './documentBridge';
@@ -24,6 +23,7 @@ import { initFileWatchBridge } from './fileWatchBridge';
 import { initFsBridge } from './fsBridge';
 import { initGeminiBridge } from './geminiBridge';
 import { initGeminiConversationBridge } from './geminiConversationBridge';
+import { initKickoffBridge } from './kickoffBridge';
 import { initMcpBridge } from './mcpBridge';
 import { initModelBridge } from './modelBridge';
 import { initPreviewHistoryBridge } from './previewHistoryBridge';
@@ -140,7 +140,6 @@ export {
   initChannelBridge,
   initConversationBridge,
   initCronBridge,
-  initKickoffBridge,
   initDatabaseBridge,
   initDialogBridge,
   initDocumentBridge,
@@ -148,6 +147,7 @@ export {
   initFsBridge,
   initGeminiBridge,
   initGeminiConversationBridge,
+  initKickoffBridge,
   initMcpBridge,
   initModelBridge,
   initNotificationBridge,

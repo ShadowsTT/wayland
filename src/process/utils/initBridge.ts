@@ -47,7 +47,13 @@ initAllBridges({
 // so scheduled tasks don't pay the lazy-load latency on first fire.
 // Backends with no in-process SDK (ACP CLIs, wcore, remote, etc.) are
 // no-ops in the pre-warmer — see prewarmProviders.ts.
-void cronService
+//
+// v0.4.7.1 (G-M-2) — also publish the cron readiness promise via
+// `setCronReadyPromise` so the kickoff bridge can await it before
+// running Level-1 ritual detection. Without this, a first-launch
+// Standing-Company user could open the first new-chat before any
+// ritual cron was loaded and miss the Level-1 card.
+const cronReadyPromise = cronService
   .init()
   .then(async () => {
     try {
@@ -66,6 +72,18 @@ void cronService
   .catch((error) => {
     console.error('[initBridge] Failed to initialize CronService:', error);
   });
+
+void cronReadyPromise.then(() => {
+  // No-op: published via setCronReadyPromise below; this `then` only keeps
+  // the chain alive so rejection surfaces in the .catch above.
+});
+
+// Publish the cron-ready promise so the kickoff bridge can await it
+// before reading the cron store. Imported indirectly to avoid a
+// circular module dep at initBridge load time.
+void import('@process/services/cron/cronReadiness').then(({ setCronReadyPromise }) => {
+  setCronReadyPromise(cronReadyPromise);
+});
 
 // Start in-process Wayland Core MCP server for team-guide tools (aion_create_team)
 void initTeamGuideService(teamSessionService).catch((error) => {

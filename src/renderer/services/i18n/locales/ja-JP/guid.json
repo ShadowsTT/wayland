@@ -21,7 +21,7 @@
   "newChat": {
     "kickoff": {
       "accept": "はい、始めましょう",
-      "redirect": "他の候補",
+      "redirect": "他のこと",
       "dismissAria": "提案を閉じる"
     }
   }

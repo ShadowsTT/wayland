@@ -1705,7 +1705,9 @@ export const storage = {
 // v0.4.7 — Kickoff suggestion engine. Yes-bias card surfaced on new-chat
 // empty-state. Engine walks the 5-level cascade in the main process; the
 // renderer just consumes the result through this namespace.
+// v0.4.7.1 (C-L-1) — channel names use the dominant `.` separator
+// (e.g. `extensions.list`) instead of the early `:` form.
 export const kickoff = {
-  suggest: buildProvider<KickoffResult, { assistantId: string }>('kickoff:suggest'),
-  telemetry: buildProvider<void, KickoffTelemetryEvent>('kickoff:telemetry'),
+  suggest: buildProvider<KickoffResult, { assistantId: string }>('kickoff.suggest'),
+  telemetry: buildProvider<void, KickoffTelemetryEvent>('kickoff.telemetry'),
 };

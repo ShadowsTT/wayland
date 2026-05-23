@@ -5,6 +5,16 @@
  */
 
 /**
+ * prompts vs kickoffs (v0.4.7.1 B-L-1):
+ *   - `prompts` powers the agent-selector chip strip (one-line suggestions
+ *     shown beneath the assistant card on the picker).
+ *   - `kickoffs` powers the SuggestionEngine card on the new-chat empty
+ *     state (one full multi-line card with text + prefill + scenario).
+ *   - Both fields coexist intentionally during v0.4.7.x. Schedule a
+ *     decision on the canonical surface for v0.4.8 (prompts removal vs
+ *     kickoff promotion). DO NOT collapse one to the other in a hotfix —
+ *     the renderer wires for both independently.
+ *
  * Vendored-bundle overlay (live-smoke fix #1, 2026-05-19).
  *
  * The on-disk waylandteams bundle (loaded via the dev symlink at
@@ -192,12 +202,18 @@ export async function applyVendoredOverlay(
         overlayEntry.rituals;
       touched = true;
     }
-    if (
-      overlayEntry.kickoffs !== undefined &&
-      (assistant as { kickoffs?: unknown }).kickoffs === undefined
-    ) {
-      (assistant as { kickoffs?: VendoredKickoffEntry[] }).kickoffs = overlayEntry.kickoffs;
-      touched = true;
+    // v0.4.7.1 (G-M-4) — treat empty array as "missing" too. A partial
+    // bundle bump where someone added the field at scaffolding time but
+    // never wrote entries would silently disable the engine for that
+    // assistant. Empty + undefined collapse to the same overlay path.
+    if (overlayEntry.kickoffs !== undefined) {
+      const liveKickoffs = (assistant as { kickoffs?: unknown }).kickoffs;
+      const liveIsMissing =
+        liveKickoffs === undefined || (Array.isArray(liveKickoffs) && liveKickoffs.length === 0);
+      if (liveIsMissing) {
+        (assistant as { kickoffs?: VendoredKickoffEntry[] }).kickoffs = overlayEntry.kickoffs;
+        touched = true;
+      }
     }
     if (touched) patched += 1;
   }

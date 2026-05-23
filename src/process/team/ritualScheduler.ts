@@ -163,6 +163,13 @@ export class CronRitualScheduler implements RitualScheduler {
             modelId: leader.model,
             mode: 'bypassPermissions',
             workspace: team.workspace || undefined,
+            // v0.4.7.1 (ENGINE-2) — distinguishes ritual crons from
+            // user-NL-scheduled crons (which also use createdBy:'agent'
+            // via MessageMiddleware). SignalCollector + uninstallRituals
+            // filter on this tag so we don't (a) sweep user crons on team
+            // demote, or (b) false-positive Level 1 of the kickoff cascade
+            // when a user-scheduled cron on a Standing leader conv fires.
+            configOptions: { kind: 'ritual' },
           },
           bypassUniqueGuard: true,
         });
@@ -186,10 +193,18 @@ export class CronRitualScheduler implements RitualScheduler {
       );
       return;
     }
-    // Only ritual rows on a leader conversation are agent-created today.
-    // The agent-created filter protects against any future UI path that
-    // attaches user-created crons to the same conversation id.
-    const ritualJobs = jobs.filter((j) => j.metadata.createdBy === 'agent');
+    // v0.4.7.1 (ENGINE-2) — filter on the explicit `kind: 'ritual'` tag
+    // set in installRituals (via agentConfig.configOptions), NOT on
+    // createdBy === 'agent'. MessageMiddleware also uses createdBy:'agent'
+    // for user-NL-scheduled crons on chat conversations, including
+    // potentially on the leader conversation if the user asked the agent
+    // "schedule X." Sweeping those on team demote would silently delete
+    // the user's work.
+    const ritualJobs = jobs.filter(
+      (j) =>
+        j.metadata.createdBy === 'agent' &&
+        j.metadata.agentConfig?.configOptions?.kind === 'ritual'
+    );
     for (const job of ritualJobs) {
       try {
         await this.cronService.removeJob(job.id);

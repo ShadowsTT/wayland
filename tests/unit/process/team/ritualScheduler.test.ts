@@ -149,6 +149,14 @@ describe('CronRitualScheduler.installRituals', () => {
         createdBy: 'agent',
         createdAt: 0,
         updatedAt: 0,
+        // v0.4.7.1 (ENGINE-2) — the stale prior ritual carries the ritual
+        // tag set by installRituals. Without it the uninstall filter
+        // would (correctly) skip it as if it were a user-NL-scheduled cron.
+        agentConfig: {
+          backend: 'claude',
+          name: 'leader',
+          configOptions: { kind: 'ritual' },
+        },
       },
       state: { runCount: 0, retryCount: 0, maxRetries: 3 },
     };
@@ -234,7 +242,11 @@ describe('CronRitualScheduler.installRituals', () => {
 });
 
 describe('CronRitualScheduler.uninstallRituals', () => {
-  it('removes every agent-created cron on the leader conversation', async () => {
+  it('removes only ritual-tagged crons on the leader conversation, leaves user crons + agent-NL-scheduled crons untouched', async () => {
+    // v0.4.7.1 (ENGINE-2) — uninstall now requires the explicit
+    // `configOptions.kind === 'ritual'` tag, not just createdBy:'agent'.
+    // MessageMiddleware tags user-NL-scheduled crons with createdBy:'agent'
+    // too; sweeping them on demote would silently delete user work.
     const ritual: CronJob = {
       id: 'ritual-1',
       name: 'r1',
@@ -247,12 +259,25 @@ describe('CronRitualScheduler.uninstallRituals', () => {
         createdBy: 'agent',
         createdAt: 0,
         updatedAt: 0,
+        agentConfig: {
+          backend: 'claude',
+          name: 'leader',
+          configOptions: { kind: 'ritual' },
+        },
       },
       state: { runCount: 0, retryCount: 0, maxRetries: 3 },
     };
     const userCron: CronJob = { ...ritual, id: 'user-1', metadata: { ...ritual.metadata, createdBy: 'user' } };
+    const agentNlCron: CronJob = {
+      ...ritual,
+      id: 'agent-nl-1',
+      metadata: {
+        ...ritual.metadata,
+        agentConfig: { backend: 'claude', name: 'leader' /* no configOptions.kind */ },
+      },
+    };
     const cronService = makeCronService({
-      listJobsByConversation: vi.fn().mockResolvedValue([ritual, userCron]),
+      listJobsByConversation: vi.fn().mockResolvedValue([ritual, userCron, agentNlCron]),
     });
     const scheduler = new CronRitualScheduler(cronService, vi.fn());
 

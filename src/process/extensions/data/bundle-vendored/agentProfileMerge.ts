@@ -47,6 +47,16 @@ type VendoredAgentProfile = {
   kind: 'specialist';
   /** Provenance tag so downstream code can identify these vs hand-curated. */
   _source: 'vendored-agent-profile';
+  /**
+   * v0.4.7.1 (DATA-2) — sentinel telling the Kickoff SuggestionEngine to
+   * return `notRendered: 'kickoffs-excluded'` instead of `no-kickoffs-defined`.
+   * Agent-profile assistants are intentionally NOT in the kickoff library
+   * (they're persona overlays, not full assistants). Without this opt-out,
+   * v2 analytics would log a `not_rendered` event for every cold-start on
+   * an agent-profile, inflating the generic-miss bucket with intentional
+   * absences.
+   */
+  _kickoffsExcluded: true;
 };
 
 let cached: VendoredAgentProfile[] | null = null;
@@ -187,6 +197,7 @@ function buildOverlay(): VendoredAgentProfile[] {
       isPreset: true,
       kind: 'specialist',
       _source: 'vendored-agent-profile',
+      _kickoffsExcluded: true,
     });
   }
 

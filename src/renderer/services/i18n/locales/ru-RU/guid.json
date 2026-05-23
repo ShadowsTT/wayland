@@ -21,7 +21,7 @@
   "newChat": {
     "kickoff": {
       "accept": "Да, начнём",
-      "redirect": "Другое",
+      "redirect": "Что-то другое",
       "dismissAria": "Скрыть предложение"
     }
   }

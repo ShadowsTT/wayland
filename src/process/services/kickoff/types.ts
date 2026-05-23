@@ -10,7 +10,7 @@
  * so the IPC contract crosses cleanly without a serde shim.
  */
 
-export type KickoffTimeBucket = 'morning' | 'afternoon' | 'evening';
+export type KickoffTimeBucket = 'late-night' | 'morning' | 'afternoon' | 'evening';
 export type KickoffScenario = 'cold-start' | 'continuation-friendly' | 'post-fire-ritual';
 
 export type KickoffEntry = {
@@ -30,10 +30,21 @@ export type KickoffCascadeReason =
   | 'cold-start-library'
   | 'beginner-touch-fallback';
 
+/**
+ * v0.4.7.1 — extended set so post-ship telemetry can distinguish real cascade
+ * misses from infrastructure issues (engine errors, init races, opt-out
+ * sentinels). Adds 'engine-error' (IPC-2), 'registry-not-ready' (INIT-1),
+ * 'kickoffs-excluded' (DATA-2 — agent-profile assistants opt out), and
+ * 'ipc-error' (D-M-5, renderer-side IPC failure path).
+ */
 export type NotRenderedReason =
   | 'no-kickoffs-defined'
   | 'unknown-assistant'
   | 'all-levels-missed'
+  | 'engine-error'
+  | 'registry-not-ready'
+  | 'kickoffs-excluded'
+  | 'ipc-error'
   | 'error';
 
 export type KickoffAlternate = {
@@ -51,15 +62,30 @@ export type KickoffSuggestion = {
   alternates: KickoffAlternate[];
 };
 
-export type KickoffNotRendered = { notRendered: NotRenderedReason };
+/**
+ * v0.4.7.1 — `errorName` carries the sanitized `err.name` when notRendered
+ * is `'engine-error'` so v2 analytics can group by error class without
+ * leaking the message (which may carry PII or local paths).
+ */
+export type KickoffNotRendered = {
+  notRendered: NotRenderedReason;
+  errorName?: string;
+};
 
 export type KickoffResult = KickoffSuggestion | KickoffNotRendered;
 
+/**
+ * v0.4.7.1 (D-M-3) — `reason` discriminator on dismiss lets v2 analytics
+ * separate "user clicked ×" from "user just started typing past the card."
+ * Both are dismissals but they mean very different things for cold-start
+ * library quality measurement.
+ */
 export type KickoffTelemetryEvent = {
   event: 'accepted' | 'redirected' | 'dismissed' | 'not_rendered';
   kickoffId?: string;
   cascadeLevel?: KickoffCascadeLevel;
   notRenderedReason?: NotRenderedReason;
+  dismissReason?: 'interaction' | 'typing';
 };
 
 /**
@@ -89,5 +115,7 @@ export type KickoffSignals = {
 };
 
 export const RITUAL_RECENT_WINDOW_MS = 4 * 60 * 60 * 1000;
+/** v0.4.7.1 (A-M-2) — upper bound on "recent thread" eligibility for Level 2. */
+export const THREAD_RECENT_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
 export const THREAD_MIN_MESSAGES = 3;
 export const THREAD_MIN_DURATION_MS = 2 * 60 * 1000;

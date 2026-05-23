@@ -34,6 +34,16 @@ export class ExtensionRegistry {
 
   private extensions: LoadedExtension[] = [];
   private initialized = false;
+  /**
+   * v0.4.7.1 (INIT-1) — cached `initialize()` promise so callers can `await`
+   * registry readiness without racing the side-effecting `initBridge` import
+   * that registers IPC handlers at module-load (cold-cache window for
+   * deep-link / first-render flows). Set by the first call to
+   * `initialize()`; resolved once the initialize() body returns (with or
+   * without `this.initialized` being set). `whenInitialized()` is the
+   * canonical "wait until ready" hook.
+   */
+  private initializePromise: Promise<void> | undefined;
 
   /** Track enabled/disabled state for each extension (persisted to disk) */
   private extensionStates = new Map<string, ExtensionState>();
@@ -65,6 +75,41 @@ export class ExtensionRegistry {
    */
   async initialize(): Promise<void> {
     if (this.initialized) return;
+    // v0.4.7.1 (INIT-1) — fold concurrent callers onto the same in-flight
+    // promise so a second `initialize()` (or `whenInitialized()`) doesn't
+    // start a second registry build. The promise is set BEFORE awaiting
+    // so it's observable to the very next microtask.
+    if (this.initializePromise) {
+      await this.initializePromise;
+      return;
+    }
+    this.initializePromise = this._initialize();
+    try {
+      await this.initializePromise;
+    } finally {
+      // Keep the promise resolved (don't clear it) so `whenInitialized()`
+      // keeps returning a resolved promise on every subsequent call.
+    }
+  }
+
+  /**
+   * v0.4.7.1 (INIT-1) — `await registry.whenInitialized()` resolves once
+   * the registry has finished its first `initialize()` pass. Used by
+   * `kickoffBridge.suggest` to gate IPC handling on cold-cache readiness
+   * so deep-link / first-render flows don't return `unknown-assistant`
+   * for a real, known assistant.
+   *
+   * If `initialize()` has never been called, this returns a
+   * never-resolved promise — callers should pair the await with a timeout
+   * (`Promise.race`) and treat the timeout as `registry-not-ready`.
+   */
+  whenInitialized(): Promise<void> {
+    if (this.initialized) return Promise.resolve();
+    return this.initializePromise ?? new Promise<void>(() => undefined);
+  }
+
+  /** Internal: the original initialize body. Wrapped by the public initialize() above. */
+  private async _initialize(): Promise<void> {
     console.log('[Extensions] Initializing extension registry...');
     const startTime = Date.now();
     try {
@@ -432,6 +477,12 @@ export class ExtensionRegistry {
   static resetInstance(): void {
     ExtensionRegistry.instance = undefined;
     ExtensionRegistry.initializingPromise = undefined;
+  }
+
+  /** v0.4.7.1 (INIT-1) — test helper: clear cached initialize promise so a fresh init runs. */
+  __resetInitializePromiseForTests(): void {
+    this.initializePromise = undefined;
+    this.initialized = false;
   }
 
   /**

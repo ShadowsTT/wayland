@@ -730,6 +730,32 @@ export class WaylandUIDatabase {
     return result;
   }
 
+  /**
+   * v0.4.7.1 (ENGINE-3) — list conversations whose `extra.presetAssistantId`
+   * equals the given id, newest-first (by updated_at), capped at `limit`.
+   * Uses `json_extract` against the `extra` blob column, mirroring the
+   * pattern already proven in `getConversationsByCronJobId` above. Used by
+   * the Kickoff SignalCollector to find recent per-assistant threads
+   * without paginating the whole conversation table.
+   */
+  getConversationsByPresetAssistantId(presetAssistantId: string, limit = 20): TChatConversation[] {
+    const safeLimit = Math.max(1, Math.min(1000, Math.floor(limit)));
+    const rows = this.db
+      .prepare(
+        `SELECT * FROM conversations WHERE json_extract(extra, '$.presetAssistantId') = ? ORDER BY updated_at DESC LIMIT ?`
+      )
+      .all(presetAssistantId, safeLimit) as IConversationRow[];
+    const result: TChatConversation[] = [];
+    for (const row of rows) {
+      try {
+        result.push(rowToConversation(row));
+      } catch (e) {
+        console.warn('[Database] Skipping conversation row with unknown type:', row.type, row.id);
+      }
+    }
+    return result;
+  }
+
   updateConversation(conversationId: string, updates: Partial<TChatConversation>): IQueryResult<boolean> {
     try {
       const existing = this.getConversation(conversationId);

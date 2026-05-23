@@ -10,8 +10,26 @@ import { SqliteTeamRepository } from '@process/team/repository/SqliteTeamReposit
 import { SignalCollector } from './SignalCollector';
 import { SuggestionEngine } from './SuggestionEngine';
 
-const conversationRepo = new SqliteConversationRepository();
-const teamRepo = new SqliteTeamRepository();
+/**
+ * v0.4.7.1 (C-M-1) — lazy getter. The previous module-load instantiation
+ * coupled `kickoffBridge` boot to repo constructor readiness, which
+ * meant any failure inside `SqliteConversationRepository`/`SqliteTeamRepository`
+ * during module evaluation crashed the bridge surface as a side effect.
+ * Now we defer construction to first call via `getKickoffEngine()` inside
+ * the bridge provider closure.
+ */
+let cached: SuggestionEngine | undefined;
 
-const signalCollector = new SignalCollector(conversationRepo, cronService, teamRepo);
-export const kickoffEngine = new SuggestionEngine(signalCollector);
+export function getKickoffEngine(): SuggestionEngine {
+  if (cached) return cached;
+  const conversationRepo = new SqliteConversationRepository();
+  const teamRepo = new SqliteTeamRepository();
+  const signalCollector = new SignalCollector(conversationRepo, cronService, teamRepo);
+  cached = new SuggestionEngine(signalCollector);
+  return cached;
+}
+
+/** Test-only: drop the cached engine so the next call constructs fresh. */
+export function __resetKickoffEngineForTests(): void {
+  cached = undefined;
+}

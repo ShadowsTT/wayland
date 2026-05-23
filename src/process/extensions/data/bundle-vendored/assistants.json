@@ -134,6 +134,13 @@
         "timeBucket": "evening"
       },
       {
+        "id": "pickup-where-we-left",
+        "text": "Want me to pick up the draft we left mid-edit?\nName the piece. I will pull the last version, the open objection, and the next two paragraphs.\n",
+        "prefill": "Pick up the draft we left mid-edit. The piece: [name or topic].\n",
+        "scenario": "continuation-friendly",
+        "timeBucket": "morning"
+      },
+      {
         "id": "show-me-what-you-do",
         "text": "First time? I'll show you 3 short pieces of copy I can ship in under 10 minutes.\nPick one and we'll start.\n",
         "prefill": "Show me 3 starter tasks you can ship in under 10 minutes. Plain-language description for each and what I'd need to provide.\n",
@@ -172,8 +179,8 @@
       },
       {
         "id": "monday-pipeline-honesty-check",
-        "text": "Want me to triage your pipeline for fake deals?\nPaste the deal names + last-touch dates. I'll flag continuations dressed as advancements with a walk-away list.\n",
-        "prefill": "Open deals (name + last meaningful touch + what they actually said):\n- [Deal 1], [date], \"[their words]\"\n- [Deal 2], [date], \"[their words]\"\n- [Deal 3], [date], \"[their words]\"\nTriage: which are real advancements, which are continuations, which should I walk away from this week?\n",
+        "text": "Want me to triage your pipeline for fake deals?\nPaste the deal names with last-touch dates and the exact words from the buyer. I will flag continuations dressed as advancements and return a walk-away list.\n",
+        "prefill": "Triage my open deals for fake advancements. Paste deal names + last meaningful touch + the buyer's exact words: [paste list].\n",
         "scenario": "cold-start",
         "timeBucket": "morning"
       },
@@ -200,8 +207,8 @@
       },
       {
         "id": "weekly-advancement-log",
-        "text": "Want me to log this week's advancements vs continuations?\nPaste your call notes. I'll separate the real next-steps from the polite-thinking-about-it pile.\n",
-        "prefill": "Calls this week (buyer + what they agreed to):\n- [Buyer 1]: [what they said at the end]\n- [Buyer 2]: [what they said at the end]\n- [Buyer 3]: [what they said at the end]\nSeparate advancements (concrete next step) from continuations (vague follow-up), and tell me which deals are actually moving.\n",
+        "text": "Want me to log this week's advancements vs continuations?\nPaste call notes per buyer with what they agreed to at the end. I will separate concrete next-steps from polite follow-ups and tell you which deals are actually moving.\n",
+        "prefill": "Log this week's advancements vs continuations. Paste call notes per buyer (what they said at the end): [paste list].\n",
         "scenario": "continuation-friendly",
         "timeBucket": "evening"
       },
@@ -272,8 +279,8 @@
       },
       {
         "id": "friday-pricing-experiment-log",
-        "text": "Want me to log this week's pricing signals?\nPaste any buyer reactions to price. I'll extract three willingness-to-pay signals and one tier adjustment to test next week.\n",
-        "prefill": "Buyer reactions to price this week:\n- [Buyer 1]: [their reaction]\n- [Buyer 2]: [their reaction]\n- [Buyer 3]: [their reaction]\nExtract three willingness-to-pay signals from these reactions and recommend one tier or bonus adjustment to test next week.\n",
+        "text": "Want me to log this week's pricing signals?\nPaste each buyer reaction to price. I will extract three willingness-to-pay signals and recommend one tier or bonus adjustment to test next week.\n",
+        "prefill": "Log this week's pricing reactions. Paste buyer reactions to price one per line: [paste list].\n",
         "scenario": "continuation-friendly",
         "timeBucket": "evening"
       },
@@ -348,6 +355,13 @@
         "prefill": "Mapping our 5 priority touchpoints. Offer: [what we sell]. Dominant attribute we want every surface to signal: [the one word].\n",
         "scenario": "cold-start",
         "timeBucket": "evening"
+      },
+      {
+        "id": "resume-positioning-pass",
+        "text": "Want me to resume the positioning pass from last session?\nTell me what shifted since we drafted. I will return the next sentence to test.\n",
+        "prefill": "Resume the positioning pass we started. What shifted since the last session: [shift, or \"nothing\"].\n",
+        "scenario": "continuation-friendly",
+        "timeBucket": "morning"
       },
       {
         "id": "show-me-what-you-do",
@@ -525,8 +539,8 @@
     "kickoffs": [
       {
         "id": "transformation-statement",
-        "text": "Want me to draft the learner transformation statement for [course]?\nGive me the course topic + the buyer. I'll return one sentence in the \"able to [action] under [conditions] within [timeframe]\" template.\n",
-        "prefill": "Draft the learner transformation statement for [course / book]. Buyer: [who pays]. Topic area: [topic]. Return one sentence: \"By the end, a [learner] will be able to [observable action] under [conditions] within [timeframe].\" Plus two alternates to pick from.\n",
+        "text": "Want me to draft the learner transformation statement?\nName the course or book + who pays. I will return one sentence in the \"able to <action> under <conditions> within <timeframe>\" template, plus two alternates.\n",
+        "prefill": "Draft the learner transformation statement. Course or book + buyer (who pays): [name + buyer].\n",
         "scenario": "cold-start",
         "timeBucket": "morning"
       },
@@ -841,7 +855,7 @@
       },
       {
         "id": "weekly-stuck-list",
-        "text": "Want me to retro this week's stuck list before the weekend?\nDrop what you carried Monday and what's still carried Friday. I'll name what's truly stuck vs. Quietly decided.\n",
+        "text": "Want me to retro this week's stuck list before the weekend?\nDrop what you carried Monday and what's still carried Friday. I'll name what's truly stuck vs. quietly decided.\n",
         "prefill": "Retro this week's stuck list. What I carried Monday: [list]. What's still carried Friday: [list].\n",
         "scenario": "continuation-friendly",
         "timeBucket": "evening"
@@ -1142,6 +1156,13 @@
         "timeBucket": "evening"
       },
       {
+        "id": "resume-save-call-list",
+        "text": "Want me to resume yesterday's save-call list?\nGive me the names that moved. I will reprioritize and surface the next account to call.\n",
+        "prefill": "Resume yesterday's save-call list. Names that moved (closed, escalated, churned, or no change): [list].\n",
+        "scenario": "continuation-friendly",
+        "timeBucket": "morning"
+      },
+      {
         "id": "show-me-what-you-do",
         "text": "First time? I'll show you 3 customer-save moves I can ship in under 10 minutes.\nPick one and we'll start.\n",
         "prefill": "Show me 3 starter tasks you can ship in under 10 minutes. Plain-language description for each and what I'd need to provide.\n",
@@ -1338,7 +1359,7 @@
       },
       {
         "id": "defend-senior-premium",
-        "text": "Want me to defend or cut the senior premium on this seat?\nTell me what work the seat owns. I'll grade execution-of-pattern vs. Judgment-under-ambiguity and call the band.\n",
+        "text": "Want me to defend or cut the senior premium on this seat?\nTell me what work the seat owns. I'll grade execution-of-pattern vs. judgment-under-ambiguity and call the band.\n",
         "prefill": "Defend or cut the senior premium. Work the seat owns: [scope in one line].\n",
         "scenario": "cold-start",
         "timeBucket": "afternoon"
@@ -1638,8 +1659,8 @@
       },
       {
         "id": "switch-story-from-closed-wons",
-        "text": "Want me to mine your closed-wons for the buying story?\nName 3 recent closed-won deals, the research specialist will pull what's pushing them, pulling them, making them hesitate, and keeping them in old habits from each.\n",
-        "prefill": "3 recent closed-won deals (name + what they were doing before):\n- [Deal A]: [before]\n- [Deal B]: [before]\n- [Deal C]: [before]\nExtract the buying story for each, what's pushing them, pulling them, making them hesitate, and keeping them in old habits, and surface the pattern sales and pricing can pull from.\n",
+        "text": "Want me to mine your closed-wons for the buying story?\nName 3 recent closed-won deals and what they were doing before. The research specialist will pull what's pushing them, pulling them, making them hesitate, and keeping them in old habits, then surface the pattern sales and pricing can pull from.\n",
+        "prefill": "Mine 3 recent closed-wons for the buying story. Deals + what they were doing before: [paste 3 lines].\n",
         "scenario": "continuation-friendly",
         "timeBucket": "evening"
       },
@@ -2389,6 +2410,13 @@
         "timeBucket": "evening"
       },
       {
+        "id": "continue-this-weeks-pipeline",
+        "text": "Want me to continue this week's content pipeline?\nTell me what shipped since we planned. I will rebalance the slots that opened.\n",
+        "prefill": "Continue this week's content pipeline. What shipped since we planned: [list].\n",
+        "scenario": "continuation-friendly",
+        "timeBucket": "afternoon"
+      },
+      {
         "id": "show-me-what-you-do",
         "text": "First time? I'll show you 3 creator moves the team can ship in under 10 minutes.\nPick one and we'll start.\n",
         "prefill": "Show me 3 starter tasks the team can ship in under 10 minutes. Plain-language description for each and what I'd need to provide.\n",
@@ -2839,6 +2867,13 @@
         "timeBucket": "evening"
       },
       {
+        "id": "pickup-the-statement-thread",
+        "text": "Want me to pick up the statement thread from earlier?\nName what changed in the last hour. I will return the next tone variant ready to send.\n",
+        "prefill": "Pick up the statement thread. What changed in the last hour: [change, or \"no movement\"].\n",
+        "scenario": "continuation-friendly",
+        "timeBucket": "afternoon"
+      },
+      {
         "id": "show-me-what-you-do",
         "text": "First time? I'll show you 3 crisis-response moves the team can ship in under 10 minutes.\nPick one and we'll start.\n",
         "prefill": "Show me 3 starter tasks the team can ship in under 10 minutes. Plain-language description for each and what I'd need to provide.\n",
@@ -3261,6 +3296,27 @@
         "prefill": "Kick off the \"Plan a release\" ritual for [version]. The ops specialist leads on rollout/rollback; shaping on tech changes; review on quality gates; legal on compliance. Return: release plan, the quality gates that must pass, the compliance items checked. Append under `## Releases` in team-memory.\n",
         "scenario": "cold-start",
         "timeBucket": "evening"
+      },
+      {
+        "id": "resume-feature-build",
+        "text": "Want me to resume the feature build we left in shaping?\nName the feature. I will pull the spec, the open question, and the next checkpoint.\n",
+        "prefill": "Resume the feature build. The feature: [name].\n",
+        "scenario": "continuation-friendly",
+        "timeBucket": "morning"
+      },
+      {
+        "id": "pickup-where-we-left",
+        "text": "Want me to pick up where we left yesterday?\nName the feature or branch. I will read team-memory, surface the last decision, and propose the next checkpoint.\n",
+        "prefill": "Pick up where we left yesterday. Feature or branch: [name]. Pull the last decision from companies/dev-shop/team-memory.md and propose the next checkpoint.\n",
+        "scenario": "cold-start",
+        "timeBucket": "morning"
+      },
+      {
+        "id": "resume-yesterday",
+        "text": "Want me to walk what shipped yesterday and the one open call?\nI will pull team-memory and surface the decision waiting on you.\n",
+        "prefill": "Walk me through what shipped yesterday and the one open call. Pull entries from companies/dev-shop/team-memory.md, surface the decision waiting on me first, then Shipped / Blocked / Next per teammate.\n",
+        "scenario": "cold-start",
+        "timeBucket": "morning"
       },
       {
         "id": "show-me-what-you-do",
