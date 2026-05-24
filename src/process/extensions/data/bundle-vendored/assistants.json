@@ -878,6 +878,74 @@
     ]
   },
   {
+    "id": "quiet-money",
+    "name": "Quiet Money",
+    "description": "Personal wealth coach - builds real durable wealth via the boring path. Anti-guru, anti-urgency, pro-math. Educational only; not financial advice.",
+    "avatar": "icons/quiet-money.svg",
+    "presetAgentType": "claude",
+    "contextFile": "assistants/roles/quiet-money.md",
+    "enabledSkills": [],
+    "prompts": [
+      "Run me through the 6-question intake and tell me where I stand.",
+      "Score my Boring Path - how far have I actually gotten?",
+      "Is this the quiet play or the loud play?"
+    ],
+    "category": "office",
+    "kind": "specialist",
+    "kickoffs": [
+      {
+        "id": "boring-path-scorecard",
+        "text": "Want me to score your Boring Path?\nTell me where you are on the 7 steps. I'll return your completion %, the one step to unlock next, and the math on what it's worth.\n",
+        "prefill": "Score my Boring Path. 7 steps:\n1. Tracking monthly burn within 5%: [yes / no / partial]\n2. Starter buffer (~2 weeks): [yes / no / $amount]\n3. High-rate debt gone (>8% APR): [yes / no / list debt]\n4. Full emergency fund (3-6 months): [yes / no / $amount]\n5. Tax-advantaged space captured: [yes / no / partial]\n6. Surplus in broad index, automated: [yes / no]\n7. Catastrophe insurance in place: [yes / no]\nReturn: Boring Path %, the one step to unlock next, one-line math on what that step is worth.\n",
+        "scenario": "cold-start",
+        "timeBucket": "morning"
+      },
+      {
+        "id": "quiet-test-this-decision",
+        "text": "Want me to run the Quiet Test on a decision you're weighing?\nName it. I'll run the 3 questions and tell you which path it's on.\n",
+        "prefill": "Run the Quiet Test on: [decision in one sentence].\nReturn: (1) quiet play or loud play, (2) serves Four Freedoms or just income number, (3) would I do this if no one would ever know. Score 2 of 3 loud = worth pausing. Tell me what to do with that.\n",
+        "scenario": "cold-start",
+        "timeBucket": "afternoon"
+      },
+      {
+        "id": "enough-number-defense",
+        "text": "Want me to check whether your Enough Number is drifting?\nGive me the number you set and current monthly spend. I'll tell you if the ratchet is moving.\n",
+        "prefill": "Check whether my Enough Number is drifting. Enough Number I set: [$annual]. Current monthly spend: [$amount]. Spend 12 months ago (estimate): [$amount].\nReturn: whether spend is growing faster than inflation, whether the Enough Number is still honest, and the one thing creeping it.\n",
+        "scenario": "cold-start",
+        "timeBucket": "evening"
+      },
+      {
+        "id": "windfall-12-month-rule",
+        "text": "Want me to apply the 12-month rule to money that just arrived?\nName the amount and source. I'll return the protocol: park, update, hire.\n",
+        "prefill": "Apply the 12-month rule to: [$amount] from [inheritance / business sale / equity vest / settlement / severance].\nReturn: where to park it (boring + liquid), what to update immediately (insurance, will, beneficiaries), what kind of professional to hire for a one-time engagement, and the one decision I should not make in the first 3 months.\n",
+        "scenario": "cold-start",
+        "timeBucket": "morning"
+      },
+      {
+        "id": "career-trajectory-check",
+        "text": "Want me to run the career trajectory check?\nTwo questions and I'll tell you whether your salary is your biggest financial lever right now.\n",
+        "prefill": "Run Layer C career trajectory check.\nInflation-adjusted income over last 5 years vs my industry: [faster / at / below].\nDo I know open-market rate for my skills right now: [yes / no / estimate: $].\nReturn: whether salary is my highest-leverage financial problem, and the one action that moves it.\n",
+        "scenario": "cold-start",
+        "timeBucket": "afternoon"
+      },
+      {
+        "id": "pickup-the-plan",
+        "text": "Want me to pick up where we left the plan?\nI'll surface what we've established and the one open question from last session.\n",
+        "prefill": "Pick up the Quiet Money plan. Summarize: Boring Path %, Enough Number, routing path (standard / triage / protected / windfall), open commitments. Surface the one thing from the last session that's still unresolved.\n",
+        "scenario": "continuation-friendly",
+        "timeBucket": "morning"
+      },
+      {
+        "id": "show-me-what-you-do",
+        "text": "First time? I'll show you 3 things I can do in under 10 minutes.\nPick one and we'll start.\n",
+        "prefill": "Show me 3 starter tasks you can run in under 10 minutes. Plain-language description for each and what I'd need to provide.\n",
+        "scenario": "cold-start",
+        "timeBucket": "morning",
+        "beginnerSafe": true
+      }
+    ]
+  },
+  {
     "id": "probe",
     "name": "Validator",
     "description": "Validator - quantitative validation, fake-door tests, MVP discipline via Eric Ries's build-measure-learn.",
