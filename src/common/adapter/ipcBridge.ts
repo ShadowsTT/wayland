@@ -1711,3 +1711,20 @@ export const kickoff = {
   suggest: buildProvider<KickoffResult, { assistantId: string }>('kickoff.suggest'),
   telemetry: buildProvider<void, KickoffTelemetryEvent>('kickoff.telemetry'),
 };
+
+// Telemetry-driven Launchpad predictive widget. The renderer fires
+// fire-and-forget events here (anchor clicks, GUID interactions, dashboard
+// activity); the main-process logger persists them via the usage_events
+// table (migration v40) for downstream frecency ranking.
+export const usage = {
+  recordEvent: buildProvider<
+    void,
+    {
+      eventType: string;
+      anchorId?: string;
+      assistantId?: string;
+      cliBackend?: string;
+      metadata?: Record<string, unknown>;
+    }
+  >('usage.recordEvent'),
+};

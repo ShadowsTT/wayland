@@ -15,6 +15,10 @@ import { TeamSessionService, SqliteTeamRepository } from '@process/team';
 import { initTeamGuideService } from '@process/team/mcp/guide/teamGuideSingleton';
 import { CronRitualScheduler, makeExtensionRegistryRitualsResolver } from '@process/team/ritualScheduler';
 import { prewarmProviderSdks } from '@process/utils/prewarmProviders';
+import { getDatabase } from '@process/services/database';
+import { SqliteUsageEventRepository } from '@process/services/usage/SqliteUsageEventRepository';
+import { UsageEventLogger } from '@process/services/usage/UsageEventLogger';
+import { initUsageBridge } from '@process/bridge/usageBridge';
 
 logger.config({ print: true });
 
@@ -89,3 +93,20 @@ void import('@process/services/cron/cronReadiness').then(({ setCronReadyPromise 
 void initTeamGuideService(teamSessionService).catch((error) => {
   console.error('[initBridge] Failed to initialize TeamGuideMcpServer:', error);
 });
+
+// Usage telemetry bridge. Wires the renderer-facing IPC provider for
+// `usage.recordEvent` to a SQLite-backed event logger (writes to the
+// usage_events table from migration v40). `getDatabase()` is async, so we
+// fire-and-forget the init — the IPC provider registers as soon as the
+// driver resolves. Telemetry calls before that resolution log a warn via
+// the renderer hook and are dropped, which matches the "telemetry must
+// never break a flow" contract.
+void getDatabase()
+  .then((db) => {
+    const usageRepo = new SqliteUsageEventRepository(db.getDriver());
+    const usageLogger = new UsageEventLogger(usageRepo);
+    initUsageBridge(usageLogger);
+  })
+  .catch((error) => {
+    console.error('[initBridge] Failed to initialize usage telemetry bridge:', error);
+  });
