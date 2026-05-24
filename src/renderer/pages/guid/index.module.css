@@ -548,7 +548,8 @@
 }
 
 .agentItemSelected {
-  background-color: var(--fill-0);
+  background: var(--color-fill-3);
+  box-shadow: inset 0 0 0 1px var(--color-border-3);
   transition:
     opacity 0.5s cubic-bezier(0.2, 0.8, 0.3, 1),
     background-color 0.25s ease-out;
