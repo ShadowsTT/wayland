@@ -16,12 +16,9 @@ import { useConversationTabs } from '@/renderer/pages/conversation/hooks/Convers
 import { CUSTOM_AVATAR_IMAGE_MAP } from './constants';
 import AssistantSelectionArea from './components/AssistantSelectionArea';
 import Greeting from './components/newChatStarter/Greeting';
-import IntentPillBar from './components/newChatStarter/IntentPillBar';
-import IntentSuggestionPanel from './components/newChatStarter/IntentSuggestionPanel';
 import KickoffCard from './components/newChatStarter/KickoffCard';
 import QuickLaunchRow from './components/newChatStarter/QuickLaunchRow';
 import RecentsStrip from './components/newChatStarter/RecentsStrip';
-import type { IntentKey, IntentPrompt } from './intents';
 import type { QuickLaunchAnchor } from './quickLaunchAnchors';
 import { useUsageTelemetry } from '@/renderer/hooks/usage/useUsageTelemetry';
 import { useUserDisplayName } from '@/renderer/hooks/system/useUserDisplayName';
@@ -299,9 +296,8 @@ const GuidPage: React.FC = () => {
     ]
   );
 
-  // --- Phase 2 chat-redesign: new-chat starter (greeting + intent pills + recents) ---
+  // --- Launchpad new-chat starter (greeting + quick-launch row + recents) ---
   const { resolvedName: greetingDisplayName } = useUserDisplayName();
-  const [activeIntent, setActiveIntent] = useState<IntentKey | null>(null);
 
   // v0.4.7 — Kickoff card. Only meaningful when a preset assistant is selected
   // (per-assistant suggestions; useKickoff returns visible:false otherwise).
@@ -375,45 +371,6 @@ const GuidPage: React.FC = () => {
     recordTelemetry({ eventType: 'launchpad.view_all_clicked' });
     navigate('/assistants');
   }, [navigate, recordTelemetry]);
-
-  const handleSelectIntent = useCallback((intent: IntentKey | null) => {
-    setActiveIntent(intent);
-  }, []);
-
-  const handleCloseIntentPanel = useCallback(() => {
-    setActiveIntent(null);
-  }, []);
-
-  const handleSelectIntentPrompt = useCallback(
-    (prompt: IntentPrompt) => {
-      const preset = ASSISTANT_PRESETS.find((p) => p.id === prompt.targetAssistantId);
-      if (preset) {
-        agentSelection.selectPresetAssistant({ id: preset.id, presetAgentType: preset.presetAgentType });
-      } else {
-        // Extension-bundle assistants follow the same Rory rule, but their
-        // presetAgentType comes from the runtime extension cache. We don't
-        // resolve it synchronously here — selectPresetAssistant defaults to
-        // gemini when presetAgentType is absent, which matches Phase 1's
-        // documented fallback.
-        agentSelection.selectPresetAssistant({ id: prompt.targetAssistantId });
-      }
-      guidInput.setInput(prompt.promptText);
-      guidInput.handleTextareaFocus();
-      mention.setMentionOpen(false);
-      mention.setMentionQuery(null);
-      mention.setMentionSelectorOpen(false);
-      mention.setMentionActiveIndex(0);
-    },
-    [
-      agentSelection.selectPresetAssistant,
-      guidInput.setInput,
-      guidInput.handleTextareaFocus,
-      mention.setMentionOpen,
-      mention.setMentionQuery,
-      mention.setMentionSelectorOpen,
-      mention.setMentionActiveIndex,
-    ]
-  );
 
   const handleSelectRecent = useCallback(
     (conv: { id: string }) => {
