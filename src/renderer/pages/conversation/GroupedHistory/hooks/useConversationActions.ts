@@ -114,7 +114,7 @@ export const useConversationActions = ({
         content: t('conversation.history.deleteConfirm'),
         okText: t('conversation.history.confirmDelete'),
         cancelText: t('conversation.history.cancelDelete'),
-        okButtonProps: { status: 'warning' },
+        okButtonProps: { status: 'danger' },
         onOk: async () => {
           try {
             const success = await removeConversation(conversationId);
