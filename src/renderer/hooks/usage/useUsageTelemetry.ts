@@ -11,6 +11,8 @@ export type UsageTelemetryInput = {
   eventType:
     | 'launchpad.card_clicked'
     | 'launchpad.view_all_clicked'
+    | 'launchpad.intent_pill_clicked'
+    | 'launchpad.intent_prompt_clicked'
     | 'guid.assistant_selected'
     | 'guid.cli_selected'
     | 'guid.message_sent'

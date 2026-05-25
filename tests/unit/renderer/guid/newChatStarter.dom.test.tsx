@@ -67,9 +67,11 @@ vi.mock('@/renderer/pages/guid/hooks/useRecentConversations', () => ({
   useRecentConversations: () => ({ recents: [] }),
 }));
 
+import IntentPillBar from '@/renderer/pages/guid/components/newChatStarter/IntentPillBar';
 import QuickLaunchRow from '@/renderer/pages/guid/components/newChatStarter/QuickLaunchRow';
 import RecentsStrip from '@/renderer/pages/guid/components/newChatStarter/RecentsStrip';
 import { ASSISTANT_PRESETS } from '@/common/config/presets/assistantPresets';
+import type { IntentKey } from '@/renderer/pages/guid/intents';
 import {
   QUICK_LAUNCH_ANCHORS,
   type QuickLaunchAnchor,
@@ -110,10 +112,13 @@ const TestHarness: React.FC<{
     [onAssistantSelected, onInputSet]
   );
 
+  const [activeIntent, setActiveIntent] = useState<IntentKey | null>(null);
+
   return (
-    <div>
+    <div data-testid='new-chat-starter'>
       <input data-testid='harness-input' readOnly value={input} />
       <QuickLaunchRow onAnchorClick={handleAnchorClick} onViewAll={onViewAll ?? (() => {})} />
+      <IntentPillBar activeIntent={activeIntent} onSelect={setActiveIntent} />
       <RecentsStrip
         onSelect={onRecentResume}
         recents={[
@@ -213,5 +218,28 @@ describe('new-chat starter wiring', () => {
 
     fireEvent.click(screen.getAllByTestId('recents-card')[0]);
     expect(onRecentResume).toHaveBeenCalledWith(expect.objectContaining({ id: 'conv-resume' }));
+  });
+
+  it('renders intent pills below quick-launch cards on cold-start', () => {
+    const { container } = render(
+      <TestHarness onAssistantSelected={vi.fn()} onInputSet={vi.fn()} onRecentResume={vi.fn()} />
+    );
+    const starter = container.querySelector('[data-testid="new-chat-starter"]');
+    expect(starter).toBeTruthy();
+
+    const qlCard = starter!.querySelector('[data-quicklaunch-id]') as HTMLElement | null;
+    const pillBar = starter!.querySelector('[data-testid="intent-pill-bar"]') as HTMLElement | null;
+    expect(qlCard).toBeTruthy();
+    expect(pillBar).toBeTruthy();
+
+    // Document order: pill bar must appear after a quick-launch card.
+    expect(qlCard!.compareDocumentPosition(pillBar!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+
+    // All 5 intent labels are present.
+    expect(pillBar!.textContent).toMatch(/sell/i);
+    expect(pillBar!.textContent).toMatch(/write/i);
+    expect(pillBar!.textContent).toMatch(/research/i);
+    expect(pillBar!.textContent).toMatch(/build/i);
+    expect(pillBar!.textContent).toMatch(/run/i);
   });
 });
