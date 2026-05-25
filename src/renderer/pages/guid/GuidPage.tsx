@@ -14,6 +14,7 @@ import { isImageAvatar } from '@/renderer/utils/avatar';
 import { getLucideIcon } from '@/renderer/utils/lucideAvatar';
 import { useConversationTabs } from '@/renderer/pages/conversation/hooks/ConversationTabsContext';
 import { CUSTOM_AVATAR_IMAGE_MAP } from './constants';
+import AssistantIconTile, { categoryToPaletteKey, type PaletteKey } from './components/AssistantIconTile';
 import AssistantSelectionArea from './components/AssistantSelectionArea';
 import Greeting from './components/newChatStarter/Greeting';
 import KickoffCard from './components/newChatStarter/KickoffCard';
@@ -541,6 +542,29 @@ const GuidPage: React.FC = () => {
     agentSelection.selectedAgentInfo?.avatar,
     agentSelection.selectedAgentInfo?.customAgentId,
   ]);
+  // Tile palette for the preset hero icon. Built-in presets carry an
+  // AssistantCategory we can map directly. Extension assistants (ext-*)
+  // don't store a category on the customAgents record, so we hand-map a
+  // few well-known ext ids to keep the launchpad anchors colored. The
+  // Cowork built-in is force-pinned to the orange palette to match the
+  // QuickLaunchCard treatment.
+  const selectedAssistantPaletteKey = useMemo<PaletteKey | undefined>(() => {
+    if (!agentSelection.isPresetAgent) return undefined;
+    const selectedId = agentSelection.selectedAgentInfo?.customAgentId;
+    if (!selectedId) return undefined;
+    const bareId = selectedId.replace(/^builtin-/, '');
+    if (bareId === 'cowork') return 'cowork';
+    const EXT_PALETTE: Record<string, PaletteKey> = {
+      'ext-copy': 'write',
+      'ext-sales': 'sales',
+      'ext-product-launch': 'launch',
+      'ext-coin': 'finance',
+      'ext-quiet-money': 'finance',
+    };
+    if (EXT_PALETTE[bareId]) return EXT_PALETTE[bareId];
+    const preset = ASSISTANT_PRESETS.find((p) => p.id === bareId);
+    return categoryToPaletteKey(preset?.category);
+  }, [agentSelection.isPresetAgent, agentSelection.selectedAgentInfo?.customAgentId]);
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
   const [canExpandDescription, setCanExpandDescription] = useState(false);
 
@@ -783,26 +807,20 @@ const GuidPage: React.FC = () => {
                     aria-label={t('common.back')}
                   />
                   <p className={`${styles.heroTitle} text-2xl font-semibold mb-0 text-0`}>
-                    <span className={styles.heroTitleInlineIcon} aria-hidden='true'>
+                    <AssistantIconTile paletteKey={selectedAssistantPaletteKey} size='md'>
                       {selectedAssistantAvatar?.kind === 'lucide' ? (
                         (() => {
                           const Icon = selectedAssistantAvatar.Icon;
-                          return <Icon size={26} className='text-[var(--color-text-1)]' />;
+                          return <Icon size={22} />;
                         })()
                       ) : selectedAssistantAvatar?.kind === 'image' ? (
-                        <img
-                          src={selectedAssistantAvatar.value}
-                          alt=''
-                          width={28}
-                          height={28}
-                          style={{ objectFit: 'contain' }}
-                        />
+                        <img src={selectedAssistantAvatar.value} alt='' style={{ objectFit: 'contain' }} />
                       ) : selectedAssistantAvatar?.kind === 'emoji' ? (
                         <span className={styles.heroTitleEmoji}>{selectedAssistantAvatar.value}</span>
                       ) : (
-                        <Bot size={26} />
+                        <Bot size={22} />
                       )}
-                    </span>
+                    </AssistantIconTile>
                     <span>{heroTitle}</span>
                   </p>
                   <Button

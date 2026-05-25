@@ -47,7 +47,6 @@ const QuickLaunchRow: React.FC<QuickLaunchRowProps> = ({ onAnchorClick, onViewAl
             label={a.label}
             sub={a.sub}
             lucideIcon={a.lucideIcon}
-            isCowork={a.id === 'cowork'}
             onSelect={handleCardClick}
           />
         ))}

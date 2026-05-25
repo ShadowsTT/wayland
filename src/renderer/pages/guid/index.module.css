@@ -118,20 +118,6 @@
   gap: 3px;
 }
 
-.heroTitleInlineIcon {
-  width: 28px;
-  height: 28px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--color-text-0);
-  flex-shrink: 0;
-}
-
-.heroTitleInlineIcon img {
-  display: block;
-}
-
 .heroTitleEmoji {
   font-size: 26px;
   line-height: 1;

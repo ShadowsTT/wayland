@@ -11,8 +11,11 @@ import QuickLaunchCard from '@/renderer/pages/guid/components/newChatStarter/Qui
 
 describe('QuickLaunchCard', () => {
   const baseProps = {
-    id: 'write-copy' as const, label: 'Write copy', sub: 'Email, ad, page',
-    lucideIcon: 'pen-line', isCowork: false, onSelect: vi.fn(),
+    id: 'write-copy' as const,
+    label: 'Write copy',
+    sub: 'Email, ad, page',
+    lucideIcon: 'pen-line',
+    onSelect: vi.fn(),
   };
 
   it('renders the label and the sub-line', () => {
@@ -28,9 +31,23 @@ describe('QuickLaunchCard', () => {
     expect(onSelect).toHaveBeenCalledWith('write-copy');
   });
 
-  it('applies the cowork variant class when isCowork is true', () => {
-    const { container } = render(<QuickLaunchCard {...baseProps} id='cowork' label='Cowork' isCowork={true} />);
+  it('applies the cowork variant class for the cowork anchor', () => {
+    const { container } = render(<QuickLaunchCard {...baseProps} id='cowork' label='Cowork' />);
     expect(container.querySelector('button')?.className).toMatch(/cowork/);
+  });
+
+  it('paints the cowork tile with the orange palette', () => {
+    const { container } = render(<QuickLaunchCard {...baseProps} id='cowork' label='Cowork' />);
+    // The first <span> inside the button is the AssistantIconTile.
+    const tile = container.querySelector('button > span') as HTMLElement | null;
+    expect(tile).toBeTruthy();
+    expect(tile?.style.backgroundColor).toContain('249');
+  });
+
+  it('paints non-cowork tiles with the category palette (write → violet)', () => {
+    const { container } = render(<QuickLaunchCard {...baseProps} />);
+    const tile = container.querySelector('button > span') as HTMLElement | null;
+    expect(tile?.style.backgroundColor).toContain('139');
   });
 
   it('sets data-quicklaunch-id for E2E targeting', () => {
