@@ -48,7 +48,7 @@
   "googleLogout": "登出",
   "openai": "OpenAI",
   "proxyConfig": "代理",
-  "yoloMode": "YOLO (Auto Allow)",
+  "yoloMode": "自動駕駛（自動允許）",
   "claudeYoloMode": "Claude 自動允許",
   "claudeYoloModeDesc": "跳過 Claude Code 的所有權限確認（等同於 --dangerously-skip-permissions）。",
   "customCss": "Custom CSS",

@@ -29,28 +29,32 @@ export interface AgentModeOption {
  *
  * Note:
  * - Claude: supports session/set_mode via ACP
- *   - Modes: default, acceptEdits, plan, auto, bypassPermissions (YOLO), dontAsk
+ *   - Modes: default, acceptEdits, plan, auto, bypassPermissions (Autopilot), dontAsk
  * - Qwen: ACP session/set_mode returns success but does not enforce plan mode behavior.
  *   Plan mode disabled until upstream fix. See https://github.com/QwenLM/qwen-code/issues/1806
- * - OpenCode: plan/build modes via ACP session/set_mode (no yolo support)
- * - Gemini: supports default/autoEdit/yolo (auto-approve at manager layer, not via ACP)
+ * - OpenCode: plan/build modes via ACP session/set_mode (no autopilot support)
+ * - Gemini: supports default/autoEdit/autopilot (auto-approve at manager layer, not via ACP)
  * - Codex: default modes stay sandboxed; a dedicated unsafe full-auto mode disables the sandbox
  * - Goose: mode set at startup only, not during session
  * - Cursor: agent/plan/ask modes via ACP session/set_mode (verified via `agent acp` session/new response)
+ *
+ * Note: internal mode values stay as 'yolo' / 'bypassPermissions' because they
+ * are persisted in storage and wired into agent CLIs. Only the user-facing label
+ * was renamed to 'Autopilot' to drop the upstream-AionUI YOLO branding.
  */
 export const AGENT_MODES: Record<string, AgentModeOption[]> = {
   claude: [
     { value: 'default', label: 'Default' },
     { value: 'acceptEdits', label: 'Accept Edits', description: 'Auto-approve file edits, prompt for commands' },
     { value: 'plan', label: 'Plan' },
-    { value: 'bypassPermissions', label: 'YOLO' },
+    { value: 'bypassPermissions', label: 'Autopilot' },
     { value: 'dontAsk', label: "Don't Ask", description: 'Block all actions except pre-approved rules' },
   ],
   // Qwen: ACP session/set_mode returns success but does not enforce plan mode behavior.
   // Plan mode disabled until upstream fix. See https://github.com/QwenLM/qwen-code/issues/1806
   qwen: [
     { value: 'default', label: 'Default' },
-    { value: 'yolo', label: 'YOLO' },
+    { value: 'yolo', label: 'Autopilot' },
   ],
   opencode: [
     { value: 'build', label: 'Build' },
@@ -59,12 +63,12 @@ export const AGENT_MODES: Record<string, AgentModeOption[]> = {
   gemini: [
     { value: 'default', label: 'Default' },
     { value: 'autoEdit', label: 'Auto-Accept Edits' },
-    { value: 'yolo', label: 'YOLO' },
+    { value: 'yolo', label: 'Autopilot' },
   ],
   wcore: [
     { value: 'default', label: 'Default' },
     { value: 'auto_edit', label: 'Auto-Accept Edits' },
-    { value: 'yolo', label: 'YOLO' },
+    { value: 'yolo', label: 'Autopilot' },
   ],
   codex: [
     { value: 'default', label: 'Plan' },
@@ -79,7 +83,7 @@ export const AGENT_MODES: Record<string, AgentModeOption[]> = {
   ],
   snow: [
     { value: 'default', label: 'Agent', description: 'Full agent mode with tool access' },
-    { value: 'yolo', label: 'YOLO', description: 'Auto-approve all operations without prompting' },
+    { value: 'yolo', label: 'Autopilot', description: 'Auto-approve all operations without prompting' },
   ],
 };
 

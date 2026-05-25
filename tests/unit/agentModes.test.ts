@@ -82,7 +82,7 @@ describe('mergeWithCapabilities', () => {
     expect(result).toEqual([
       { value: 'default', label: 'Default' },
       { value: 'auto_edit', label: 'Auto-Accept Edits' },
-      { value: 'yolo', label: 'YOLO' },
+      { value: 'yolo', label: 'Autopilot' },
     ]);
   });
 
@@ -99,7 +99,7 @@ describe('mergeWithCapabilities', () => {
     const result = mergeWithCapabilities('wcore', ['default', 'yolo']);
     expect(result).toEqual([
       { value: 'default', label: 'Default' },
-      { value: 'yolo', label: 'YOLO' },
+      { value: 'yolo', label: 'Autopilot' },
     ]);
   });
 
