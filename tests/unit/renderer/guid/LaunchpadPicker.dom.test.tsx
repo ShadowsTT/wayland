@@ -11,6 +11,7 @@ import React from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import LaunchpadPicker from '@/renderer/pages/guid/components/newChatStarter/LaunchpadPicker';
+import { LAUNCHPAD_MAX_ENTRIES } from '@/renderer/hooks/launchpad/useLaunchpadBar';
 import type { AssistantListItem } from '@/renderer/pages/settings/AssistantSettings/types';
 
 const assistants: AssistantListItem[] = [
@@ -144,6 +145,43 @@ describe('LaunchpadPicker', () => {
 
     fireEvent.click(screen.getByTestId('launchpad-picker-close'));
     expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows the cap banner and locks unpinned cards when the bar is at the cap', () => {
+    const onPick = vi.fn();
+    const pinned = Array.from({ length: LAUNCHPAD_MAX_ENTRIES }, (_, i) => `placeholder-${i}`);
+    render(
+      <LaunchpadPicker
+        onClose={vi.fn()}
+        onPick={onPick}
+        pinnedIds={pinned}
+        assistants={assistants}
+        localeKey='en-US'
+      />
+    );
+
+    expect(screen.getByTestId('launchpad-picker-cap-banner')).toBeInTheDocument();
+    // None of the catalogue ids match the placeholder pinned ids, so every
+    // visible card should be cap-locked (not pinned) and disabled.
+    const forge = screen.getByTestId('launchpad-picker-card-ext-forge');
+    expect(forge.getAttribute('data-cap-locked')).toBe('true');
+    expect(forge).toBeDisabled();
+
+    fireEvent.click(forge);
+    expect(onPick).not.toHaveBeenCalled();
+  });
+
+  it('does not show the cap banner when the bar has room', () => {
+    render(
+      <LaunchpadPicker
+        onClose={vi.fn()}
+        onPick={vi.fn()}
+        pinnedIds={['ext-copy']}
+        assistants={assistants}
+        localeKey='en-US'
+      />
+    );
+    expect(screen.queryByTestId('launchpad-picker-cap-banner')).toBeNull();
   });
 
   it('Esc key fires onClose', () => {

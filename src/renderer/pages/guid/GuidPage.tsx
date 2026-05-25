@@ -395,9 +395,19 @@ const GuidPage: React.FC = () => {
         ? anchor.assistantId.slice('builtin-'.length)
         : anchor.assistantId;
       const preset = ASSISTANT_PRESETS.find((p) => p.id === bareId);
+      // Sean's rule: the user's active backend pill wins. Only fall back to
+      // the preset's recommended backend when the user is currently in
+      // preset mode (selectedAgentKey starts with `custom:` / `remote:`) and
+      // has no plain backend pill selected.
+      const isUserOnBackendPill =
+        !agentSelection.selectedAgentKey.startsWith('custom:') &&
+        !agentSelection.selectedAgentKey.startsWith('remote:');
+      const effectiveBackend = isUserOnBackendPill
+        ? agentSelection.selectedAgent
+        : preset?.presetAgentType;
       agentSelection.selectPresetAssistant({
         id: anchor.assistantId,
-        presetAgentType: preset?.presetAgentType,
+        presetAgentType: effectiveBackend,
       });
       // Bug 7 — Always overwrite, even when the user already typed or a prior
       // anchor's prefill is still in the textarea. The React state setter is
@@ -423,8 +433,10 @@ const GuidPage: React.FC = () => {
     [
       agentSelection.selectPresetAssistant,
       agentSelection.selectedAgent,
+      agentSelection.selectedAgentKey,
       guidInput.setInput,
       guidInput.handleTextareaFocus,
+      guidInput.textareaRef,
       mention.setMentionOpen,
       mention.setMentionQuery,
       mention.setMentionSelectorOpen,
@@ -456,15 +468,26 @@ const GuidPage: React.FC = () => {
     (prompt: IntentPrompt) => {
       setHasInteractedWithAgentSelection(true);
       const preset = ASSISTANT_PRESETS.find((p) => p.id === prompt.targetAssistantId);
+      // Sean's rule: the user's active backend pill wins. Only fall back to
+      // the preset's recommended backend when the user is currently in
+      // preset mode (selectedAgentKey starts with `custom:` / `remote:`).
+      const isUserOnBackendPill =
+        !agentSelection.selectedAgentKey.startsWith('custom:') &&
+        !agentSelection.selectedAgentKey.startsWith('remote:');
+      const userBackend = isUserOnBackendPill ? agentSelection.selectedAgent : undefined;
       if (preset) {
-        agentSelection.selectPresetAssistant({ id: preset.id, presetAgentType: preset.presetAgentType });
+        agentSelection.selectPresetAssistant({
+          id: preset.id,
+          presetAgentType: userBackend ?? preset.presetAgentType,
+        });
       } else {
-        // Extension-bundle assistants follow the same Rory rule, but their
-        // presetAgentType comes from the runtime extension cache. We don't
-        // resolve it synchronously here — selectPresetAssistant defaults to
-        // gemini when presetAgentType is absent, which matches Phase 1's
-        // documented fallback.
-        agentSelection.selectPresetAssistant({ id: prompt.targetAssistantId });
+        // Extension-bundle assistants follow the same Rory rule. When no user
+        // backend pill is active, presetAgentType is left undefined and
+        // selectPresetAssistant defaults to gemini (Phase 1 fallback).
+        agentSelection.selectPresetAssistant({
+          id: prompt.targetAssistantId,
+          presetAgentType: userBackend,
+        });
       }
       guidInput.setInput(prompt.promptText);
       guidInput.handleTextareaFocus();
@@ -481,6 +504,8 @@ const GuidPage: React.FC = () => {
     [
       activeIntent,
       agentSelection.selectPresetAssistant,
+      agentSelection.selectedAgent,
+      agentSelection.selectedAgentKey,
       guidInput.setInput,
       guidInput.handleTextareaFocus,
       mention.setMentionOpen,

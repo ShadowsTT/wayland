@@ -19,6 +19,15 @@ import type { LaunchpadBarOrder } from '@/common/types/launchpad';
  */
 export const DEFAULT_BAR_ORDER: LaunchpadBarOrder = QUICK_LAUNCH_ANCHORS.map((a) => a.assistantId);
 
+/**
+ * Hard cap on bar entries. The bar replaces the launchpad cold-start row
+ * on /guid; without a cap the picker would let users stack 50+ cards and
+ * obliterate the page. 10 is the product ceiling — picker disables further
+ * adds once the cap is hit (LaunchpadPicker renders a banner + dims the
+ * unpinned cards).
+ */
+export const LAUNCHPAD_MAX_ENTRIES = 10;
+
 const STORAGE_KEY = 'launchpad.barOrder' as const;
 
 export type UseLaunchpadBarReturn = {
@@ -107,6 +116,14 @@ export function useLaunchpadBar(): UseLaunchpadBarReturn {
     (assistantId: string) => {
       setBarOrderState((prev) => {
         if (prev.includes(assistantId)) return prev;
+        if (prev.length >= LAUNCHPAD_MAX_ENTRIES) {
+          console.warn(
+            '[useLaunchpadBar] bar at cap (%d); refusing to add %s',
+            LAUNCHPAD_MAX_ENTRIES,
+            assistantId
+          );
+          return prev;
+        }
         const next = [...prev, assistantId];
         userMutatedRef.current = true;
         void ConfigStorage.set(STORAGE_KEY, next).catch((err) => {

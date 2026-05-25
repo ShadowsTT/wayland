@@ -8,6 +8,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Bot, Search, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import AssistantIconTile from '@/renderer/pages/guid/components/AssistantIconTile';
+import { LAUNCHPAD_MAX_ENTRIES } from '@/renderer/hooks/launchpad/useLaunchpadBar';
 import { QUICK_LAUNCH_ANCHORS } from '@/renderer/pages/guid/quickLaunchAnchors';
 import type { AssistantListItem } from '@/renderer/pages/settings/AssistantSettings/types';
 import { resolveBarEntry, type LaunchpadBarEntry } from './launchpadCatalog';
@@ -65,6 +66,7 @@ const LaunchpadPicker: React.FC<LaunchpadPickerProps> = ({
   }, [onClose]);
 
   const pinnedSet = useMemo(() => new Set(pinnedIds), [pinnedIds]);
+  const atCap = pinnedIds.length >= LAUNCHPAD_MAX_ENTRIES;
 
   // Build the catalog of pickable entries. Union of:
   //   - Default anchors (so 'Cowork' shows even if the catalogue is still loading)
@@ -111,6 +113,7 @@ const LaunchpadPicker: React.FC<LaunchpadPickerProps> = ({
 
   const handlePick = (entry: LaunchpadBarEntry) => {
     if (pinnedSet.has(entry.id)) return;
+    if (atCap) return;
     onPick(entry.assistantId);
     setFlashId(entry.id);
     window.setTimeout(() => {
@@ -143,6 +146,15 @@ const LaunchpadPicker: React.FC<LaunchpadPickerProps> = ({
         </button>
       </div>
 
+      {atCap ? (
+        <div className={styles.capBanner} data-testid='launchpad-picker-cap-banner' role='status'>
+          {t('guid.launchpad.picker.capBanner', {
+            defaultValue: 'Maximum {{max}} shortcuts. Remove one from the bar to add another.',
+            max: LAUNCHPAD_MAX_ENTRIES,
+          })}
+        </div>
+      ) : null}
+
       <div className={styles.searchRow}>
         <span className={styles.searchIcon} aria-hidden='true'>
           <Search size={14} />
@@ -169,34 +181,45 @@ const LaunchpadPicker: React.FC<LaunchpadPickerProps> = ({
           filtered.map((entry) => {
             const pinned = pinnedSet.has(entry.id);
             const Icon = entry.Icon ?? Bot;
+            // At cap, every unpinned card is also disabled + dimmed so the
+            // user can see "I can't add more right now" at a glance. Pinned
+            // cards keep their existing affordance (so the pinned tag is
+            // still visible against the dashed border).
+            const capLocked = !pinned && atCap;
             const className = [
               styles.pick,
               pinned ? styles.pinned : '',
+              capLocked ? styles.capLocked : '',
               flashId === entry.id ? styles.pickFlash : '',
             ]
               .filter(Boolean)
               .join(' ');
+            const ariaLabel = pinned
+              ? t('guid.launchpad.picker.pinnedAria', {
+                  defaultValue: '{{label}} (already in bar)',
+                  label: entry.label,
+                })
+              : capLocked
+                ? t('guid.launchpad.picker.capLockedAria', {
+                    defaultValue: '{{label}} (bar full — remove one to add)',
+                    label: entry.label,
+                  })
+                : t('guid.launchpad.picker.addAria', {
+                    defaultValue: 'Add {{label}} to bar',
+                    label: entry.label,
+                  });
             return (
               <button
                 key={entry.id}
                 type='button'
                 className={className}
                 onClick={() => handlePick(entry)}
-                disabled={pinned}
-                aria-disabled={pinned}
+                disabled={pinned || capLocked}
+                aria-disabled={pinned || capLocked}
                 data-testid={`launchpad-picker-card-${entry.id}`}
                 data-pinned={pinned ? 'true' : 'false'}
-                aria-label={
-                  pinned
-                    ? t('guid.launchpad.picker.pinnedAria', {
-                        defaultValue: '{{label}} (already in bar)',
-                        label: entry.label,
-                      })
-                    : t('guid.launchpad.picker.addAria', {
-                        defaultValue: 'Add {{label}} to bar',
-                        label: entry.label,
-                      })
-                }
+                data-cap-locked={capLocked ? 'true' : 'false'}
+                aria-label={ariaLabel}
               >
                 <AssistantIconTile paletteKey={entry.palette} size='sm'>
                   {entry.avatarUrl ? (

@@ -19,7 +19,11 @@ vi.mock('@/common/config/storage', () => ({
   },
 }));
 
-import { DEFAULT_BAR_ORDER, useLaunchpadBar } from '@/renderer/hooks/launchpad/useLaunchpadBar';
+import {
+  DEFAULT_BAR_ORDER,
+  LAUNCHPAD_MAX_ENTRIES,
+  useLaunchpadBar,
+} from '@/renderer/hooks/launchpad/useLaunchpadBar';
 
 describe('useLaunchpadBar', () => {
   beforeEach(() => {
@@ -121,6 +125,25 @@ describe('useLaunchpadBar', () => {
     });
     expect(result.current.barOrder).toEqual(DEFAULT_BAR_ORDER);
     expect(setMock).toHaveBeenCalledWith('launchpad.barOrder', DEFAULT_BAR_ORDER);
+  });
+
+  it('addToBar refuses to grow the bar beyond LAUNCHPAD_MAX_ENTRIES', async () => {
+    const full = Array.from({ length: LAUNCHPAD_MAX_ENTRIES }, (_, i) => `pinned-${i}`);
+    getMock.mockResolvedValueOnce(full);
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const { result } = renderHook(() => useLaunchpadBar());
+    await waitFor(() => expect(result.current.loaded).toBe(true));
+    expect(result.current.barOrder).toHaveLength(LAUNCHPAD_MAX_ENTRIES);
+
+    setMock.mockClear();
+    act(() => {
+      result.current.addToBar('eleventh-card');
+    });
+
+    expect(result.current.barOrder).toHaveLength(LAUNCHPAD_MAX_ENTRIES);
+    expect(result.current.barOrder).not.toContain('eleventh-card');
+    expect(setMock).not.toHaveBeenCalled();
+    warn.mockRestore();
   });
 
   it('falls back to defaults when ConfigStorage.get rejects', async () => {
