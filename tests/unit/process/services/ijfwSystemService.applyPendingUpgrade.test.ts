@@ -44,10 +44,12 @@ vi.mock('@process/services/ijfw/preludeManager', () => ({
 
 const mcpShutdownSpy = vi.fn().mockResolvedValue(undefined);
 const mcpWaitSpy = vi.fn().mockResolvedValue(true);
-vi.mock('@process/services/ijfw/ijfwMcpClientStub', () => ({
+vi.mock('@process/services/ijfw/ijfwMcpClient', () => ({
   ijfwMcpClient: {
     shutdown: () => mcpShutdownSpy(),
     waitForExit: (ms: number) => mcpWaitSpy(ms),
+    getMode: () => 'degraded',
+    invoke: () => Promise.resolve({ ok: false, errorReason: 'unavailable' }),
   },
 }));
 

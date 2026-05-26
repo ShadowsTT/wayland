@@ -1,0 +1,290 @@
+/**
+ * @license
+ * Copyright 2026 Ferrox Labs
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Unit tests for `ijfwMcpClient` — covers wire-protocol multiplexing, timeout
+ * rejection, decode-error → kill, stdin-write-error → null process, crash
+ * detection → degraded mode, and shutdown SIGTERM/SIGKILL escalation.
+ */
+
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { EventEmitter } from 'node:events';
+import * as os from 'node:os';
+import * as path from 'node:path';
+
+let tmpHome: string;
+vi.mock('node:os', async () => {
+  const actual = await vi.importActual<typeof import('node:os')>('node:os');
+  return { ...actual, homedir: () => tmpHome };
+});
+
+vi.mock('electron', () => ({
+  app: { getPath: (key: string) => `/tmp/wayland-test-${key}` },
+}));
+
+vi.mock('@process/services/ijfw/entryResolver', () => ({
+  resolveEntry: vi.fn(async () => '/tmp/fake-ijfw-entry.js'),
+}));
+
+// Build a fake ChildProcess we can drive from inside each test. Tracks all
+// writes via `writeSpy` and exposes signal capture via `killSignals[]`.
+type FakeChild = EventEmitter & {
+  stdout: EventEmitter;
+  stderr: EventEmitter;
+  stdin: {
+    write: (data: Buffer | string, cb?: (err?: Error | null) => void) => boolean;
+  };
+  kill: (signal?: string) => boolean;
+  killSignals: string[];
+  writes: Buffer[];
+  pid: number;
+  killed: boolean;
+};
+
+let currentChild: FakeChild | null = null;
+let writeShouldError = false;
+
+function makeFakeChild(): FakeChild {
+  const child = new EventEmitter() as FakeChild;
+  child.stdout = new EventEmitter();
+  child.stderr = new EventEmitter();
+  child.writes = [];
+  child.killSignals = [];
+  child.pid = 12345;
+  child.killed = false;
+  child.stdin = {
+    write: (data, cb) => {
+      child.writes.push(Buffer.isBuffer(data) ? data : Buffer.from(data));
+      if (writeShouldError) {
+        setImmediate(() => cb?.(new Error('write EPIPE')));
+        return false;
+      }
+      setImmediate(() => cb?.(null));
+      return true;
+    },
+  };
+  child.kill = (signal?: string) => {
+    child.killSignals.push(signal ?? 'SIGTERM');
+    child.killed = true;
+    return true;
+  };
+  return child;
+}
+
+const spawnSpy = vi.fn(() => {
+  currentChild = makeFakeChild();
+  return currentChild;
+});
+
+vi.mock('node:child_process', async () => {
+  const actual = await vi.importActual<typeof import('node:child_process')>('node:child_process');
+  return { ...actual, spawn: (...args: unknown[]) => spawnSpy(...args) };
+});
+
+beforeEach(() => {
+  vi.resetModules();
+  tmpHome = path.join(os.tmpdir(), `ijfw-mcp-client-test-${Date.now()}`);
+  spawnSpy.mockClear();
+  writeShouldError = false;
+  currentChild = null;
+});
+
+afterEach(() => {
+  vi.useRealTimers();
+});
+
+async function loadClient() {
+  // Fresh module each test so module-level state (process handle, pending map)
+  // is isolated.
+  const mod = await import('@process/services/ijfw/ijfwMcpClient');
+  // Reset for safety in case a previous test left state.
+  mod.__resetForTests();
+  return mod;
+}
+
+function encodeNewline(obj: unknown): string {
+  return `${JSON.stringify(obj)}\n`;
+}
+
+describe('ijfwMcpClient', () => {
+  it('spawns on first invoke and routes the response back to the caller', async () => {
+    const { ijfwMcpClient } = await loadClient();
+    const promise = ijfwMcpClient.invoke('memory_recall', { query: 'hello' });
+
+    await new Promise((r) => setImmediate(r));
+    expect(spawnSpy).toHaveBeenCalledTimes(1);
+
+    // Find the id of the request we just made.
+    const written = currentChild!.writes[0]!.toString('utf-8');
+    const parsed = JSON.parse(written.trim());
+    expect(parsed.method).toBe('tools/call');
+    expect(parsed.params).toEqual({ name: 'memory_recall', arguments: { query: 'hello' } });
+
+    // Reply.
+    currentChild!.stdout.emit(
+      'data',
+      Buffer.from(encodeNewline({ jsonrpc: '2.0', id: parsed.id, result: { hits: [] } })),
+    );
+
+    const result = await promise;
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.data).toEqual({ hits: [] });
+  });
+
+  it('rejects with errorReason "timeout" when no response arrives', async () => {
+    const { ijfwMcpClient } = await loadClient();
+    // Use a small real timeout — quicker than swapping in fake timers across an
+    // async spawn (childPromise + resolveEntry both microtask-await).
+    const result = await ijfwMcpClient.invoke('memory_recall', {}, { timeoutMs: 25 });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.errorReason).toBe('timeout');
+  });
+
+  it('on decode-error kills child and respawns on next invoke', async () => {
+    const { ijfwMcpClient } = await loadClient();
+    const promise = ijfwMcpClient.invoke('memory_recall', {});
+    await new Promise((r) => setImmediate(r));
+    const firstChild = currentChild!;
+
+    // Push a malformed line — triggers DecodeError → kill child.
+    firstChild.stdout.emit('data', Buffer.from('{not json\n'));
+    await new Promise((r) => setImmediate(r));
+
+    expect(firstChild.killed).toBe(true);
+
+    // First call should reject (the child was killed before response landed).
+    firstChild.emit('exit', 1, null);
+    const result = await promise;
+    expect(result.ok).toBe(false);
+
+    // Next invoke spawns a fresh child.
+    void ijfwMcpClient.invoke('memory_recall', {});
+    await new Promise((r) => setImmediate(r));
+    expect(spawnSpy).toHaveBeenCalledTimes(2);
+  });
+
+  it('on stdin write error nulls process and rejects in-flight request', async () => {
+    writeShouldError = true;
+    const { ijfwMcpClient } = await loadClient();
+    const result = await ijfwMcpClient.invoke('memory_recall', {});
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.errorReason).toBe('mcp_crashed');
+  });
+
+  it('serializes writes — second invoke does not start until first stdin write resolves', async () => {
+    const { ijfwMcpClient } = await loadClient();
+    const p1 = ijfwMcpClient.invoke('memory_recall', { q: 1 });
+    const p2 = ijfwMcpClient.invoke('memory_recall', { q: 2 });
+
+    // Drain spawn + both write callbacks + queue serializer (each `drainQueue`
+    // step schedules the next via `setImmediate`).
+    for (let i = 0; i < 6; i++) await new Promise((r) => setImmediate(r));
+
+    expect(currentChild!.writes.length).toBe(2);
+    const first = JSON.parse(currentChild!.writes[0]!.toString().trim());
+    const second = JSON.parse(currentChild!.writes[1]!.toString().trim());
+    expect(first.id).not.toBe(second.id);
+
+    // Resolve both.
+    currentChild!.stdout.emit(
+      'data',
+      Buffer.from(encodeNewline({ jsonrpc: '2.0', id: first.id, result: 'A' })),
+    );
+    currentChild!.stdout.emit(
+      'data',
+      Buffer.from(encodeNewline({ jsonrpc: '2.0', id: second.id, result: 'B' })),
+    );
+
+    const [r1, r2] = await Promise.all([p1, p2]);
+    expect(r1.ok && r1.data).toBe('A');
+    expect(r2.ok && r2.data).toBe('B');
+  });
+
+  it('child crash flips mode to degraded and rejects pending requests', async () => {
+    const { ijfwMcpClient } = await loadClient();
+    expect(ijfwMcpClient.getMode()).toBe('degraded'); // no spawn yet
+
+    const promise = ijfwMcpClient.invoke('memory_recall', {});
+    await new Promise((r) => setImmediate(r));
+    expect(ijfwMcpClient.getMode()).toBe('full');
+
+    currentChild!.emit('exit', 137, 'SIGKILL');
+    await new Promise((r) => setImmediate(r));
+
+    const result = await promise;
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.errorReason).toBe('mcp_crashed');
+    expect(ijfwMcpClient.getMode()).toBe('degraded');
+  });
+
+  it('shutdown sends SIGTERM and waits for exit', async () => {
+    const { ijfwMcpClient } = await loadClient();
+    void ijfwMcpClient.invoke('memory_recall', {});
+    await new Promise((r) => setImmediate(r));
+
+    const child = currentChild!;
+    const shutdownPromise = ijfwMcpClient.shutdown();
+    await new Promise((r) => setImmediate(r));
+    expect(child.killSignals).toContain('SIGTERM');
+
+    child.emit('exit', 0, null);
+    await shutdownPromise;
+  });
+
+  it('shutdown escalates to SIGKILL when child does not exit', async () => {
+    vi.useFakeTimers();
+    const { ijfwMcpClient } = await loadClient();
+    void ijfwMcpClient.invoke('memory_recall', {});
+    await Promise.resolve();
+    // Allow spawn callback to register.
+    await vi.advanceTimersByTimeAsync(0);
+
+    const child = currentChild!;
+    const shutdownPromise = ijfwMcpClient.shutdown(50);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(child.killSignals).toContain('SIGTERM');
+
+    // Don't emit exit — let timeout fire.
+    await vi.advanceTimersByTimeAsync(100);
+    expect(child.killSignals).toContain('SIGKILL');
+
+    child.emit('exit', 137, 'SIGKILL');
+    await shutdownPromise;
+  });
+
+  it('shutdown when no child running is a no-op', async () => {
+    const { ijfwMcpClient } = await loadClient();
+    await expect(ijfwMcpClient.shutdown()).resolves.toBeUndefined();
+  });
+
+  it('waitForExit resolves true when child has exited', async () => {
+    const { ijfwMcpClient } = await loadClient();
+    expect(await ijfwMcpClient.waitForExit(50)).toBe(true);
+  });
+
+  it('returns mcp_error when JSON-RPC envelope contains error', async () => {
+    const { ijfwMcpClient } = await loadClient();
+    const promise = ijfwMcpClient.invoke('memory_recall', {});
+    await new Promise((r) => setImmediate(r));
+
+    const written = JSON.parse(currentChild!.writes[0]!.toString().trim());
+    currentChild!.stdout.emit(
+      'data',
+      Buffer.from(
+        encodeNewline({
+          jsonrpc: '2.0',
+          id: written.id,
+          error: { code: -32601, message: 'method not found' },
+        }),
+      ),
+    );
+
+    const result = await promise;
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.errorReason).toBe('mcp_error');
+      expect(result.error).toMatch(/method not found/);
+    }
+  });
+});

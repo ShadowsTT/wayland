@@ -46,7 +46,7 @@ import { watchInstallRoot } from '@process/services/ijfw/healthCheck';
 import { resolveEntry } from '@process/services/ijfw/entryResolver';
 import { encode, decode } from '@process/services/ijfw/mcpWireProtocol';
 import { jsonRpcResponseSchema } from '@process/services/ijfw/ipcSchemas';
-import { ijfwMcpClient } from '@process/services/ijfw/ijfwMcpClientStub';
+import { ijfwMcpClient } from '@process/services/ijfw/ijfwMcpClient';
 import { agentRegistry } from '@process/agent/AgentRegistry';
 import { ProcessConfig } from '@process/utils/initStorage';
 
