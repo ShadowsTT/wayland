@@ -849,6 +849,7 @@ export type I18nKey =
   | 'memory.degraded.toast'
   | 'memory.drop.browse_button'
   | 'memory.drop.ingest_success'
+  | 'memory.drop.path_unavailable'
   | 'memory.drop.quarantine_button'
   | 'memory.drop.quarantine_success'
   | 'memory.drop.queue_empty'

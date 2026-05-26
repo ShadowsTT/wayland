@@ -85,10 +85,13 @@ beforeEach(() => {
   messageErrorMock.mockReset();
   messageSuccessMock.mockReset();
   dropListMock.mockResolvedValue({ files: [] });
+  // Default: no electronAPI bridge — tests fall through to File.path legacy.
+  (window as unknown as { electronAPI?: unknown }).electronAPI = undefined;
 });
 
 afterEach(() => {
   cleanup();
+  (window as unknown as { electronAPI?: unknown }).electronAPI = undefined;
 });
 
 describe('DropTab', () => {
@@ -165,6 +168,58 @@ describe('DropTab', () => {
       expect(dropQuarantineMock).toHaveBeenCalledWith({ name: 'killme.txt' });
     });
     expect(messageSuccessMock).toHaveBeenCalled();
+  });
+
+  it('uses window.electronAPI.getPathForFile (Electron 41+) when available', async () => {
+    const getPathForFile = vi.fn((_f: File) => '/abs/via-bridge/x.md');
+    (window as unknown as { electronAPI: { getPathForFile: (f: File) => string } }).electronAPI = {
+      getPathForFile,
+    };
+    dropIngestMock.mockResolvedValue({ ok: true, name: 'x.md' });
+    await act(async () => {
+      render(<DropTab />);
+    });
+    await waitFor(() => {
+      expect(screen.getByTestId('memory-drop-empty')).toBeTruthy();
+    });
+
+    const zone = screen.getByTestId('memory-drop-zone');
+    // No .path on the file — bridge MUST be used.
+    const fakeFile = { name: 'x.md' } as unknown as File;
+
+    await act(async () => {
+      fireEvent.drop(zone, { dataTransfer: { files: [fakeFile] } });
+    });
+
+    await waitFor(() => {
+      expect(getPathForFile).toHaveBeenCalledTimes(1);
+      expect(dropIngestMock).toHaveBeenCalledWith({ path: '/abs/via-bridge/x.md' });
+    });
+  });
+
+  it('shows path_unavailable toast when no path can be resolved', async () => {
+    await act(async () => {
+      render(<DropTab />);
+    });
+    await waitFor(() => {
+      expect(screen.getByTestId('memory-drop-empty')).toBeTruthy();
+    });
+
+    const zone = screen.getByTestId('memory-drop-zone');
+    // No bridge, no .path — path resolution must fail.
+    const fakeFile = { name: 'lost.md' } as unknown as File;
+
+    await act(async () => {
+      fireEvent.drop(zone, { dataTransfer: { files: [fakeFile] } });
+    });
+
+    await waitFor(() => {
+      expect(messageErrorMock).toHaveBeenCalled();
+    });
+    const calls = messageErrorMock.mock.calls.map((c) => String(c[0]));
+    expect(calls.some((s) => s === 'memory.drop.path_unavailable')).toBe(true);
+    // No ingest should be attempted.
+    expect(dropIngestMock).not.toHaveBeenCalled();
   });
 
   it('shows a localized error toast when dropIngest returns ok:false with errorReason', async () => {

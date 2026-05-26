@@ -158,6 +158,7 @@
     "queue_empty": "No files queued",
     "quarantine_button": "Quarantine",
     "ingest_success": "Queued {{name}}",
-    "quarantine_success": "Quarantined {{name}}"
+    "quarantine_success": "Quarantined {{name}}",
+    "path_unavailable": "Could not read file path. Try the Browse button instead."
   }
 }

@@ -12,8 +12,10 @@
  * results.
  *
  * Surface:
- *   - HTML5 drag/drop zone calling `dropIngest.invoke({ path })` per file
- *     (Electron exposes `file.path` on `DataTransfer.files`).
+ *   - HTML5 drag/drop zone calling `dropIngest.invoke({ path })` per file.
+ *     Electron 41+ deprecated `File.path`; we use `webUtils.getPathForFile`
+ *     exposed via `window.electronAPI.getPathForFile` instead, with a
+ *     `File.path` fallback for any non-Electron build path.
  *   - "Browse" Arco Button that opens a native multi-select file dialog via
  *     `dialog.showOpen.invoke()` and ingests each picked path.
  *   - Queued-files list backed by `dropList.invoke()`; refreshes on mount and
@@ -32,8 +34,36 @@ import { ipcBridge } from '@/common';
 import type { IjfwDropEntry } from '@/common/adapter/ipcBridge';
 import styles from './DropTab.module.css';
 
-// Extended File shape exposed by Electron — `path` is the absolute fs path.
+// Extended File shape exposed by older Electron builds — `path` is the
+// absolute fs path. Modern Electron (>=41) deprecates this in favor of
+// `webUtils.getPathForFile`; we still read `.path` as a defensive fallback.
 type ElectronFile = File & { path?: string };
+
+/**
+ * Resolve an absolute filesystem path for a File from a DataTransfer using
+ * Electron 41+'s `webUtils.getPathForFile` bridge. Falls back to the
+ * deprecated `File.path` property if the bridge is unavailable. Returns
+ * `null` when no path can be recovered (e.g. the file came from a browser
+ * source and not the OS file picker / drag-drop).
+ */
+const resolveDroppedPath = (file: File): string | null => {
+  const bridgeGet = window.electronAPI?.getPathForFile;
+  if (typeof bridgeGet === 'function') {
+    try {
+      const viaBridge = bridgeGet(file);
+      if (typeof viaBridge === 'string' && viaBridge.length > 0) {
+        return viaBridge;
+      }
+    } catch {
+      // Bridge errored; fall through to legacy path read.
+    }
+  }
+  const legacy = (file as ElectronFile).path;
+  if (typeof legacy === 'string' && legacy.length > 0) {
+    return legacy;
+  }
+  return null;
+};
 
 const formatSize = (bytes: number): string => {
   if (bytes < 1024) return `${bytes} B`;
@@ -133,11 +163,23 @@ const DropTab: React.FC = () => {
       event.preventDefault();
       event.stopPropagation();
       setDragActive(false);
-      const dropped = Array.from(event.dataTransfer.files) as ElectronFile[];
-      const paths = dropped
-        .map((f) => f.path)
-        .filter((p): p is string => typeof p === 'string' && p.length > 0);
-      await ingestPaths(paths);
+      const dropped = Array.from(event.dataTransfer.files);
+      const paths: string[] = [];
+      let pathFailures = 0;
+      for (const file of dropped) {
+        const resolved = resolveDroppedPath(file);
+        if (resolved !== null) {
+          paths.push(resolved);
+        } else {
+          pathFailures += 1;
+        }
+      }
+      if (pathFailures > 0) {
+        Message.error(tRef.current('memory.drop.path_unavailable'));
+      }
+      if (paths.length > 0) {
+        await ingestPaths(paths);
+      }
     },
     [ingestPaths]
   );
