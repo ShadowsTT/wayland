@@ -86,5 +86,75 @@
     "installing_notice": "IJFW のインストールが進行中です。外部 CLI（Claude Code、Codex、Gemini CLI）はインストール完了後に連携します。",
     "disabled_notice": "IJFW は Wayland の設定で無効化されています。外部 CLI とメモリを共有するには再度有効にしてください。",
     "failed_notice": "IJFW のインストールに失敗しました。Wayland のメモリページから再試行してください。"
+  },
+  "home": {
+    "wiki_title": "Wiki",
+    "wiki_empty": "Wiki エントリはまだありません",
+    "links_title": "最近のリンク",
+    "links_empty": "リレーションはまだありません",
+    "promote_title": "プロモーション準備完了",
+    "promote_empty": "候補はまだありません",
+    "promote_button": "プロモート",
+    "promote_success": "Wiki にプロモートしました"
+  },
+  "search": {
+    "placeholder": "あなたの作業についてメモリが知っていることを尋ねてください",
+    "examples_title": "次のいずれかから始めてみてください:",
+    "example_1": "採用した認証スタックは何ですか？",
+    "example_2": "前回のデプロイで何が壊れましたか？",
+    "example_3": "cron スケジューリングを担当しているアシスタントはどれですか？",
+    "citation_stub": "引用ナビゲーションは Wave 6 で対応します"
+  },
+  "promotions": {
+    "title": "Wiki へのプロモーション待ち",
+    "refresh": "更新",
+    "empty": "待機中の項目はありません。新しい事実がプロモート可能になるとここに表示されます。",
+    "promote": "プロモート",
+    "skip": "スキップ",
+    "preview": "プレビュー",
+    "preview_hide": "隠す",
+    "queued_at": "キュー登録 {{time}}",
+    "promote_success": "Wiki にプロモートしました。",
+    "promote_error": "プロモートできませんでした。再試行してください。",
+    "skip_success": "スキップしました。",
+    "skip_error": "スキップできませんでした。再試行してください。"
+  },
+  "conflicts": {
+    "empty": "競合は検出されませんでした。メモリは整合しています。",
+    "keep_this": "これを残す",
+    "resolve_success": "競合を解決しました"
+  },
+  "wiki": {
+    "list_empty": "Wiki エントリはまだありません。メモリをプロモートして開始してください。",
+    "select_prompt": "内容を表示するエントリを選択してください。",
+    "promote": "プロモート",
+    "export": "エクスポート",
+    "share_readme": "README を共有",
+    "promote_ok": "Wiki にプロモートしました",
+    "promote_err": "エントリをプロモートできませんでした",
+    "export_queued": "エクスポートをキューに入れました。Wave 6 でダウンロードに対応します",
+    "export_err": "エントリをエクスポートできませんでした",
+    "share_ok": "README の共有をキューに入れました",
+    "share_err": "README を共有できませんでした"
+  },
+  "crossProject": {
+    "scope_label_app": "検索範囲: すべてのプロジェクト (アプリ全体)",
+    "scope_label_project": "検索範囲: {{project}} (プロジェクト単位)",
+    "search_placeholder": "プロジェクトをまたいでメモリを検索",
+    "search_button": "検索",
+    "toggle_label": "他のプロジェクトを含める",
+    "prompt_empty": "プロジェクト横断で検索するクエリを入力してください。",
+    "results_empty": "対象範囲には一致がありません。",
+    "navigation_stub": "プロジェクト横断ナビゲーションは Wave 6 で対応します"
+  },
+  "drop": {
+    "zone_title": "ここにファイルをドロップ",
+    "zone_hint": "Markdown、テキスト、JSON、YAML、CSV。最大 50MB。キューは最大 20 ファイルまで。",
+    "browse_button": "参照",
+    "queue_title": "キュー内のファイル",
+    "queue_empty": "キュー内のファイルはありません",
+    "quarantine_button": "隔離",
+    "ingest_success": "{{name}} をキューに登録しました",
+    "quarantine_success": "{{name}} を隔離しました"
   }
 }

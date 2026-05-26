@@ -86,5 +86,75 @@
     "installing_notice": "IJFW 正在安装。外部命令行工具（Claude Code、Codex、Gemini CLI）会在安装完成后识别它。",
     "disabled_notice": "IJFW 已在 Wayland 设置中关闭。重新启用以与外部命令行共享记忆。",
     "failed_notice": "IJFW 安装失败。请在 Wayland 的记忆页面重试。"
+  },
+  "home": {
+    "wiki_title": "Wiki",
+    "wiki_empty": "暂无 Wiki 条目",
+    "links_title": "最近的关联",
+    "links_empty": "暂无关联",
+    "promote_title": "可以提升",
+    "promote_empty": "没有可提升的候选",
+    "promote_button": "提升",
+    "promote_success": "已提升至 Wiki"
+  },
+  "search": {
+    "placeholder": "向记忆询问任何关于你工作的内容",
+    "examples_title": "试试下面的一个开始:",
+    "example_1": "我们最后选定的认证方案是什么？",
+    "example_2": "上次部署里出了什么问题？",
+    "example_3": "哪个助手负责 cron 调度？",
+    "citation_stub": "引用导航将在 Wave 6 中支持"
+  },
+  "promotions": {
+    "title": "等待提升到 Wiki",
+    "refresh": "刷新",
+    "empty": "目前没有待处理项。新事实准备好提升时会出现在这里。",
+    "promote": "提升",
+    "skip": "跳过",
+    "preview": "预览",
+    "preview_hide": "隐藏",
+    "queued_at": "{{time}} 加入队列",
+    "promote_success": "已提升至 Wiki。",
+    "promote_error": "无法提升该条目。请重试。",
+    "skip_success": "已跳过。",
+    "skip_error": "无法跳过该条目。请重试。"
+  },
+  "conflicts": {
+    "empty": "未检测到冲突。记忆保持一致。",
+    "keep_this": "保留这条",
+    "resolve_success": "冲突已解决"
+  },
+  "wiki": {
+    "list_empty": "暂无 Wiki 条目。提升一条记忆以开始。",
+    "select_prompt": "选择一个条目查看内容。",
+    "promote": "提升",
+    "export": "导出",
+    "share_readme": "分享 README",
+    "promote_ok": "已提升至 Wiki",
+    "promote_err": "无法提升该条目",
+    "export_queued": "导出已加入队列。下载将在 Wave 6 中接入",
+    "export_err": "无法导出该条目",
+    "share_ok": "README 分享已加入队列",
+    "share_err": "无法分享 README"
+  },
+  "crossProject": {
+    "scope_label_app": "搜索: 所有项目（应用范围）",
+    "scope_label_project": "搜索: {{project}}（项目范围）",
+    "search_placeholder": "跨项目搜索记忆",
+    "search_button": "搜索",
+    "toggle_label": "包含其他项目",
+    "prompt_empty": "输入查询以跨项目记忆搜索。",
+    "results_empty": "搜索范围内没有匹配。",
+    "navigation_stub": "跨项目导航将在 Wave 6 中支持"
+  },
+  "drop": {
+    "zone_title": "将文件拖到这里",
+    "zone_hint": "Markdown、文本、JSON、YAML、CSV。最大 50MB。队列最多 20 个文件。",
+    "browse_button": "浏览",
+    "queue_title": "队列中的文件",
+    "queue_empty": "队列中没有文件",
+    "quarantine_button": "隔离",
+    "ingest_success": "已将 {{name}} 加入队列",
+    "quarantine_success": "已隔离 {{name}}"
   }
 }

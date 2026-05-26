@@ -86,5 +86,75 @@
     "installing_notice": "IJFW를 설치하고 있습니다. 외부 CLI (Claude Code, Codex, Gemini CLI)는 설치 완료 후 인식됩니다.",
     "disabled_notice": "IJFW가 Wayland 설정에서 비활성화되어 있습니다. 외부 CLI와 메모리를 공유하려면 다시 활성화하세요.",
     "failed_notice": "IJFW 설치에 실패했습니다. Wayland의 메모리 페이지에서 다시 시도하세요."
+  },
+  "home": {
+    "wiki_title": "Wiki",
+    "wiki_empty": "아직 Wiki 항목이 없습니다",
+    "links_title": "최근 링크",
+    "links_empty": "아직 관계가 없습니다",
+    "promote_title": "승격 준비됨",
+    "promote_empty": "준비된 후보가 없습니다",
+    "promote_button": "승격",
+    "promote_success": "Wiki로 승격되었습니다"
+  },
+  "search": {
+    "placeholder": "메모리가 당신의 작업에 대해 아는 것을 무엇이든 물어보세요",
+    "examples_title": "다음 중 하나로 시작해 보세요:",
+    "example_1": "우리가 결정한 인증 스택은 무엇입니까?",
+    "example_2": "지난 배포에서 무엇이 깨졌습니까?",
+    "example_3": "cron 스케줄링은 어떤 어시스턴트가 처리합니까?",
+    "citation_stub": "인용 탐색 기능은 Wave 6에서 제공됩니다"
+  },
+  "promotions": {
+    "title": "Wiki 승격 대기 중",
+    "refresh": "새로 고침",
+    "empty": "대기 중인 항목이 없습니다. 새로운 사실은 승격 준비가 되면 여기에 표시됩니다.",
+    "promote": "승격",
+    "skip": "건너뛰기",
+    "preview": "미리보기",
+    "preview_hide": "숨기기",
+    "queued_at": "{{time}}에 대기열에 추가됨",
+    "promote_success": "Wiki로 승격되었습니다.",
+    "promote_error": "승격할 수 없습니다. 다시 시도하세요.",
+    "skip_success": "건너뛰었습니다.",
+    "skip_error": "건너뛸 수 없습니다. 다시 시도하세요."
+  },
+  "conflicts": {
+    "empty": "충돌이 감지되지 않았습니다. 메모리가 일관됩니다.",
+    "keep_this": "이것을 유지",
+    "resolve_success": "충돌이 해결되었습니다"
+  },
+  "wiki": {
+    "list_empty": "아직 Wiki 항목이 없습니다. 메모리를 승격하여 시작하세요.",
+    "select_prompt": "내용을 보려면 항목을 선택하세요.",
+    "promote": "승격",
+    "export": "내보내기",
+    "share_readme": "README 공유",
+    "promote_ok": "Wiki로 승격되었습니다",
+    "promote_err": "항목을 승격할 수 없습니다",
+    "export_queued": "내보내기가 대기열에 추가되었습니다. Wave 6에서 다운로드를 연결합니다",
+    "export_err": "항목을 내보낼 수 없습니다",
+    "share_ok": "README 공유가 대기열에 추가되었습니다",
+    "share_err": "README를 공유할 수 없습니다"
+  },
+  "crossProject": {
+    "scope_label_app": "검색 중: 모든 프로젝트 (앱 범위)",
+    "scope_label_project": "검색 중: {{project}} (프로젝트 범위)",
+    "search_placeholder": "프로젝트 전체에서 메모리 검색",
+    "search_button": "검색",
+    "toggle_label": "다른 프로젝트 포함",
+    "prompt_empty": "프로젝트 브레인에서 검색할 쿼리를 입력하세요.",
+    "results_empty": "검색 범위에서 일치하는 항목이 없습니다.",
+    "navigation_stub": "프로젝트 간 탐색은 Wave 6에서 제공됩니다"
+  },
+  "drop": {
+    "zone_title": "여기에 파일을 끌어다 놓으세요",
+    "zone_hint": "Markdown, 텍스트, JSON, YAML, CSV. 최대 50MB. 대기열 최대 20개 파일.",
+    "browse_button": "찾아보기",
+    "queue_title": "대기 중인 파일",
+    "queue_empty": "대기 중인 파일이 없습니다",
+    "quarantine_button": "격리",
+    "ingest_success": "{{name}}을(를) 대기열에 추가했습니다",
+    "quarantine_success": "{{name}}을(를) 격리했습니다"
   }
 }
