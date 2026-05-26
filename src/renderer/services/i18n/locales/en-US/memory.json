@@ -57,7 +57,10 @@
     "placeholder": "What should Memory know about you?",
     "chip1": "Remember the stack we ship on",
     "chip2": "Recall what we decided about auth",
-    "chip3": "What broke in the last deploy"
+    "chip3": "What broke in the last deploy",
+    "save_button": "Save memory",
+    "save_ok": "Memory saved",
+    "save_err": "Could not save memory"
   },
   "panel": {
     "header_breadcrumb": "Memory",

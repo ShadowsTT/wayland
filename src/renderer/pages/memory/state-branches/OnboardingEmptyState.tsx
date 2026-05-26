@@ -60,19 +60,16 @@ const OnboardingEmptyState: React.FC = () => {
       });
       if (result && result.ok) {
         setValue('');
-        // TODO: i18n — no key exists yet for the saved-success toast.
-        Message.success('Memory saved');
+        Message.success(t('memory.empty.save_ok'));
       } else {
-        // TODO: i18n — no key exists yet for the save-error toast.
-        Message.error('Could not save memory');
+        Message.error(t('memory.empty.save_err'));
       }
     } catch {
-      // TODO: i18n — no key exists yet for the save-error toast.
-      Message.error('Could not save memory');
+      Message.error(t('memory.empty.save_err'));
     } finally {
       setIsSubmitting(false);
     }
-  }, [value, isSubmitting]);
+  }, [value, isSubmitting, t]);
 
   const chips: Array<{ key: string; text: string }> = [
     { key: 'chip1', text: t('memory.empty.chip1') },
@@ -124,8 +121,7 @@ const OnboardingEmptyState: React.FC = () => {
             onClick={handleSubmit}
             data-testid='memory-onboarding-empty-submit'
           >
-            {/* TODO: i18n — no key exists yet for the save-memory CTA. */}
-            Save memory
+            {t('memory.empty.save_button')}
           </Button>
         </div>
       </div>
