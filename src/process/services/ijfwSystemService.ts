@@ -20,11 +20,16 @@
  * (fake) on-the-wire fingerprint. The trust boundary lives at publish time.
  */
 
-import { spawnSync } from 'node:child_process';
+import { spawnSync, type ChildProcess } from 'node:child_process';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
+import semver from 'semver';
+import log from 'electron-log';
+import { app } from 'electron';
 import { buildChildEnv } from '@process/services/ijfw/envAllowlist';
+import { safeSpawn } from '@process/services/ijfw/safeSpawn';
+import { writeAtomic, ijfwCacheKey } from '@process/services/ijfw/atomicFile';
 
 export type IjfwRuntimeMode = 'disabled' | 'enabled' | 'pending_activation';
 
@@ -117,13 +122,112 @@ async function detectLocalInstallImpl(): Promise<IjfwDetectionResult> {
   return { installed: false, detectedVia: 'none', pathProbe };
 }
 
+const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+
+type LatestCache = { version: string; fetchedAt: number };
+let inMemoryCache: LatestCache | null = null;
+
+function cachePath(): string {
+  return path.join(app.getPath('userData'), `ijfw-latest-cache-${ijfwCacheKey()}.json`);
+}
+
+async function readCache(): Promise<LatestCache | null> {
+  if (inMemoryCache) return inMemoryCache;
+  try {
+    const raw = await fs.promises.readFile(cachePath(), 'utf-8');
+    const parsed = JSON.parse(raw) as Partial<LatestCache>;
+    if (
+      typeof parsed.version !== 'string' ||
+      typeof parsed.fetchedAt !== 'number' ||
+      !semver.valid(parsed.version)
+    ) {
+      return null;
+    }
+    inMemoryCache = { version: parsed.version, fetchedAt: parsed.fetchedAt };
+    return inMemoryCache;
+  } catch {
+    return null;
+  }
+}
+
+async function writeCache(version: string): Promise<void> {
+  const entry: LatestCache = { version, fetchedAt: Date.now() };
+  inMemoryCache = entry;
+  try {
+    await writeAtomic(cachePath(), JSON.stringify(entry));
+  } catch (err) {
+    log.warn('[ijfw] failed to write latest-version cache', { err });
+  }
+}
+
+async function getLatestPublishedImpl(): Promise<string | null> {
+  const cached = await readCache();
+  if (cached && Date.now() - cached.fetchedAt < CACHE_TTL_MS) {
+    return cached.version;
+  }
+
+  let child: ChildProcess;
+  try {
+    child = await safeSpawn({
+      cmd: 'npm',
+      args: ['view', '@ijfw/install', 'version'],
+    });
+  } catch (err) {
+    log.warn('[ijfw] safeSpawn(npm view) failed', { err });
+    return cached ? cached.version : null;
+  }
+
+  return new Promise<string | null>((resolve) => {
+    let stdout = '';
+    let stderr = '';
+    let settled = false;
+    const settle = (value: string | null) => {
+      if (settled) return;
+      settled = true;
+      resolve(value);
+    };
+    child.stdout?.on('data', (chunk: Buffer) => {
+      stdout += chunk.toString();
+    });
+    child.stderr?.on('data', (chunk: Buffer) => {
+      stderr += chunk.toString();
+    });
+    child.on('error', (err) => {
+      log.warn('[ijfw] npm view error', { err });
+      settle(cached ? cached.version : null);
+    });
+    child.on('exit', (code) => {
+      void (async () => {
+        if (code !== 0) {
+          log.info('[ijfw] npm view non-zero exit', { code, stderr });
+          settle(cached ? cached.version : null);
+          return;
+        }
+        const trimmed = stdout.trim();
+        if (!semver.valid(trimmed)) {
+          log.warn('[ijfw] npm view returned non-semver', { trimmed });
+          settle(cached ? cached.version : null);
+          return;
+        }
+        await writeCache(trimmed);
+        settle(trimmed);
+      })();
+    });
+  });
+}
+
+/** Test-only — clear the latest-version cache. */
+export function __resetCacheForTests(): void {
+  inMemoryCache = null;
+}
+
 export const ijfwSystemService = {
   async detectLocalInstall(): Promise<IjfwDetectionResult> {
     return detectLocalInstallImpl();
   },
 
   async getLatestPublished(): Promise<string | null> {
-    throw NOT_IMPLEMENTED;
+    return getLatestPublishedImpl();
   },
 
   async bootstrap(): Promise<void> {
