@@ -50,6 +50,32 @@
         "no-floating-promises": "off",
         "no-await-thenable": "off"
       }
+    },
+    {
+      "files": ["src/process/services/ijfw/**/*.ts"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "paths": [
+              {
+                "name": "node:child_process",
+                "message": "Use safeSpawn from './safeSpawn' instead — direct child_process imports are banned in ijfw modules."
+              },
+              {
+                "name": "child_process",
+                "message": "Use safeSpawn from './safeSpawn' instead — direct child_process imports are banned in ijfw modules."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["src/process/services/ijfw/safeSpawn.ts"],
+      "rules": {
+        "no-restricted-imports": "off"
+      }
     }
   ],
   "ignorePatterns": [
