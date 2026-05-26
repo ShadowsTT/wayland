@@ -2,29 +2,38 @@
  * @license
  * Copyright 2026 Ferrox Labs
  * SPDX-License-Identifier: Apache-2.0
+ *
+ * Tests for the newline-delimited MCP wire protocol (matches IJFW's
+ * readline-based server in `~/.ijfw/mcp-server/src/server.js`).
  */
 
 import { describe, expect, it } from 'vitest';
-import { DecodeError, decode, encode } from '@process/services/ijfw/mcpWireProtocol';
+import {
+  DecodeError,
+  MAX_LINE_BYTES,
+  decode,
+  encode,
+} from '@process/services/ijfw/mcpWireProtocol';
 
-describe('ijfw/mcpWireProtocol', () => {
+describe('ijfw/mcpWireProtocol (newline-delimited)', () => {
   describe('encode', () => {
-    it('produces a Content-Length header and CRLFCRLF separator', () => {
+    it('produces a JSON line terminated by \\n', () => {
       const buf = encode({ jsonrpc: '2.0', id: 1, method: 'ping' });
       const text = buf.toString('utf-8');
-      expect(text).toMatch(/^Content-Length: \d+\r\n\r\n/);
-      const body = text.split('\r\n\r\n')[1];
-      expect(JSON.parse(body)).toEqual({ jsonrpc: '2.0', id: 1, method: 'ping' });
+      expect(text.endsWith('\n')).toBe(true);
+      expect(JSON.parse(text.slice(0, -1))).toEqual({ jsonrpc: '2.0', id: 1, method: 'ping' });
     });
 
-    it('reports the byte length of the body, not utf-16 length', () => {
+    it('serializes multibyte UTF-8 correctly in the byte stream', () => {
       const buf = encode({ q: '😀😀😀' });
-      const headerText = buf.toString('utf-8').split('\r\n\r\n')[0];
-      const m = headerText.match(/Content-Length: (\d+)/);
-      const declared = m ? Number(m[1]) : -1;
-      // Body bytes after CRLFCRLF
-      const bodyBytes = buf.length - buf.indexOf(Buffer.from('\r\n\r\n')) - 4;
-      expect(declared).toBe(bodyBytes);
+      const text = buf.toString('utf-8');
+      const json = JSON.parse(text.trim());
+      expect(json.q).toBe('😀😀😀');
+    });
+
+    it('throws when encoded message would exceed MAX_LINE_BYTES', () => {
+      const huge = { x: 'A'.repeat(MAX_LINE_BYTES) };
+      expect(() => encode(huge)).toThrow(/exceeds MAX_LINE_BYTES/);
     });
   });
 
@@ -42,98 +51,79 @@ describe('ijfw/mcpWireProtocol', () => {
       expect(messages).toEqual([{ a: 1 }, { b: 2 }]);
       expect(remainder.length).toBe(0);
     });
+
+    it('tolerates \\r\\n line endings (strips trailing CR before JSON.parse)', () => {
+      const buf = Buffer.from('{"crlf":true}\r\n', 'utf-8');
+      const { messages, remainder } = decode(buf);
+      expect(messages).toEqual([{ crlf: true }]);
+      expect(remainder.length).toBe(0);
+    });
+
+    it('skips empty lines between messages (server keepalive tolerance)', () => {
+      const buf = Buffer.from('{"a":1}\n\n\n{"b":2}\n', 'utf-8');
+      const { messages, remainder } = decode(buf);
+      expect(messages).toEqual([{ a: 1 }, { b: 2 }]);
+      expect(remainder.length).toBe(0);
+    });
   });
 
   describe('partial buffer streaming', () => {
-    it('returns no messages and the partial buffer when header is incomplete', () => {
-      const partial = Buffer.from('Content-Length: 10\r\n', 'ascii');
+    it('returns no messages and retains the partial line when no newline yet', () => {
+      const partial = Buffer.from('{"hello":"wor', 'utf-8');
       const { messages, remainder } = decode(partial);
       expect(messages).toEqual([]);
-      expect(remainder.length).toBe(partial.length);
+      expect(remainder.equals(partial)).toBe(true);
     });
 
-    it('returns no messages and partial buffer when body is incomplete', () => {
-      const full = encode({ a: 1 });
-      const half = full.subarray(0, full.length - 1);
-      const { messages, remainder } = decode(half);
-      expect(messages).toEqual([]);
-      expect(remainder.length).toBe(half.length);
-    });
-
-    it('decodes prefix + retains body suffix for next call', () => {
+    it('decodes the complete prefix and retains the tail for next call', () => {
       const a = encode({ a: 1 });
-      const b = encode({ b: 2 });
-      const concat = Buffer.concat([a, b]);
-      // Cut in the middle of message b's body
-      const cut = concat.subarray(0, a.length + Math.floor(b.length / 2));
-      const { messages, remainder } = decode(cut);
+      const partial = Buffer.from('{"b":', 'utf-8');
+      const concat = Buffer.concat([a, partial]);
+      const { messages, remainder } = decode(concat);
       expect(messages).toEqual([{ a: 1 }]);
-      expect(remainder.length).toBe(cut.length - a.length);
+      expect(remainder.equals(partial)).toBe(true);
+    });
+
+    it('appending the tail and re-running decode yields the second message', () => {
+      const a = encode({ a: 1 });
+      const partial = Buffer.from('{"b":', 'utf-8');
+      const tail = Buffer.from('2}\n', 'utf-8');
+      const first = decode(Buffer.concat([a, partial]));
+      const second = decode(Buffer.concat([first.remainder, tail]));
+      expect(second.messages).toEqual([{ b: 2 }]);
+      expect(second.remainder.length).toBe(0);
     });
   });
 
-  describe('header bounds (SEC-009)', () => {
-    it('throws DecodeError when header exceeds MAX_HEADER_BYTES without terminator', () => {
-      const oversized = Buffer.alloc(5000, 0x41); // 'A' * 5000, no CRLFCRLF
+  describe('line bounds (SEC-004 / GEM-R-03)', () => {
+    it('throws DecodeError when an unterminated line exceeds MAX_LINE_BYTES', () => {
+      const oversized = Buffer.alloc(MAX_LINE_BYTES + 100, 0x41); // 'A' * (MAX+100), no \n
       expect(() => decode(oversized)).toThrow(DecodeError);
     });
 
-    it('throws when header is present but exceeds 4096 bytes', () => {
-      const filler = 'X'.repeat(4100);
-      const header = `Content-Length: 1\r\nX-Junk: ${filler}\r\n\r\n` + 'a';
-      const buf = Buffer.from(header, 'ascii');
-      expect(() => decode(buf)).toThrow(DecodeError);
-    });
-  });
-
-  describe('Content-Length validation (SEC-004)', () => {
-    it('throws on missing Content-Length', () => {
-      const buf = Buffer.from('X-Other: 1\r\n\r\n{}', 'ascii');
-      expect(() => decode(buf)).toThrow(/missing Content-Length/);
-    });
-
-    it('throws on duplicate Content-Length', () => {
-      const body = '{}';
-      const buf = Buffer.from(
-        `Content-Length: ${body.length}\r\nContent-Length: ${body.length}\r\n\r\n${body}`,
-        'ascii',
-      );
-      expect(() => decode(buf)).toThrow(/duplicate Content-Length/);
-    });
-
-    it('rejects negative Content-Length (anchored regex declines to match)', () => {
-      // The Content-Length regex only matches `\d+` so a negative value never
-      // matches at all, which surfaces as 'missing Content-Length'. Either way
-      // the message is rejected — the goal is that it does NOT reach JSON.parse.
-      const buf = Buffer.from('Content-Length: -1\r\n\r\n{}', 'ascii');
-      expect(() => decode(buf)).toThrow(/missing Content-Length/);
-    });
-
-    it('throws on Content-Length larger than MAX_BODY_BYTES', () => {
-      const tooBig = 11 * 1024 * 1024;
-      const buf = Buffer.from(`Content-Length: ${tooBig}\r\n\r\n`, 'ascii');
-      expect(() => decode(buf)).toThrow(/invalid Content-Length/);
-    });
-
-    it('throws on Content-Length with trailing garbage (anchored regex)', () => {
-      const buf = Buffer.from('Content-Length: 2X\r\n\r\n{}', 'ascii');
-      expect(() => decode(buf)).toThrow(/missing Content-Length/);
-    });
-
-    it('accepts Content-Length: 0 with empty body', () => {
-      const buf = Buffer.from('Content-Length: 0\r\n\r\n', 'ascii');
-      // JSON.parse('') will throw — emulate empty-body by sending the literal 0
-      // The plan accepts 0 length but JSON.parse('') will then fail.
-      // The plan's intent: parsed=0 valid for length-check, then JSON.parse('') throws DecodeError.
-      expect(() => decode(buf)).toThrow(/invalid body JSON/);
+    it('throws DecodeError when a terminated line exceeds MAX_LINE_BYTES', () => {
+      const oversized = Buffer.concat([
+        Buffer.alloc(MAX_LINE_BYTES + 100, 0x41),
+        Buffer.from([0x0a]),
+      ]);
+      expect(() => decode(oversized)).toThrow(/exceeds MAX_LINE_BYTES/);
     });
   });
 
   describe('body validation', () => {
-    it('throws DecodeError on malformed JSON body', () => {
-      const body = '{not json';
-      const buf = Buffer.from(`Content-Length: ${body.length}\r\n\r\n${body}`, 'ascii');
-      expect(() => decode(buf)).toThrow(/invalid body JSON/);
+    it('throws DecodeError on malformed JSON line', () => {
+      const buf = Buffer.from('{not json\n', 'utf-8');
+      expect(() => decode(buf)).toThrow(/invalid JSON line/);
+    });
+
+    it('throws DecodeError naming the underlying parse error', () => {
+      try {
+        decode(Buffer.from('{"a":undefined}\n', 'utf-8'));
+        throw new Error('expected DecodeError');
+      } catch (err) {
+        expect(err).toBeInstanceOf(DecodeError);
+        expect((err as Error).message).toMatch(/invalid JSON line/);
+      }
     });
   });
 });

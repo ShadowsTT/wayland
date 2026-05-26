@@ -3,20 +3,32 @@
  * Copyright 2026 Ferrox Labs
  * SPDX-License-Identifier: Apache-2.0
  *
- * IJFW MCP wire protocol — bounded Content-Length framing.
- * Fixes SEC-004 (Content-Length anchored regex + bounds), SEC-009 (header byte
- * cap), GEM-R-03 (duplicate header reject + DecodeError on malformed input).
+ * IJFW MCP wire protocol — newline-delimited JSON-RPC over stdio.
+ *
+ * Wave-0-followup correction: the original Wave 0 implementation used
+ * LSP-style Content-Length framing per Claude Agent's F-B05 audit finding.
+ * Live verification against the actual `~/.ijfw/mcp-server/src/server.js`
+ * confirmed IJFW uses `readline`-based newline-delimited JSON-RPC (the
+ * standard MCP stdio transport). The real artifact wins over audit-cycle
+ * assumptions about the spec.
+ *
+ * Bounded-buffer hardenings retained from the prior Content-Length impl
+ * (SEC-004 / GEM-R-03): MAX_LINE_BYTES caps each message, MAX_BUFFER_SIZE
+ * prevents unbounded growth on missing newlines, DecodeError fires on
+ * malformed JSON or oversize lines so callers can quarantine the child.
  */
 
-const HEADER_TERMINATOR = Buffer.from('\r\n\r\n');
-export const MAX_HEADER_BYTES = 4096;
-export const MAX_BODY_BYTES = 10 * 1024 * 1024; // 10 MiB
-const CONTENT_LENGTH_RE = /^Content-Length:\s*(\d+)\s*$/i;
+const NEWLINE = 0x0a; // '\n'
+
+export const MAX_LINE_BYTES = 10 * 1024 * 1024; // 10 MiB per message
+export const MAX_BUFFER_SIZE = 16 * 1024 * 1024; // 16 MiB retained-buffer cap
 
 export function encode(message: object): Buffer {
   const body = Buffer.from(JSON.stringify(message), 'utf-8');
-  const header = `Content-Length: ${body.length}\r\n\r\n`;
-  return Buffer.concat([Buffer.from(header, 'ascii'), body]);
+  if (body.length + 1 > MAX_LINE_BYTES) {
+    throw new Error(`encoded message exceeds MAX_LINE_BYTES (${body.length + 1} > ${MAX_LINE_BYTES})`);
+  }
+  return Buffer.concat([body, Buffer.from([NEWLINE])]);
 }
 
 export class DecodeError extends Error {
@@ -36,46 +48,45 @@ export function decode(buf: Buffer): DecodeResult {
   let cursor = buf;
 
   while (cursor.length > 0) {
-    const headerEnd = cursor.indexOf(HEADER_TERMINATOR);
-    if (headerEnd < 0) {
-      if (cursor.length > MAX_HEADER_BYTES) {
-        throw new DecodeError('header too large');
+    const newlineIdx = cursor.indexOf(NEWLINE);
+
+    if (newlineIdx < 0) {
+      // Partial line — verify it doesn't exceed bounds before returning remainder.
+      if (cursor.length > MAX_LINE_BYTES) {
+        throw new DecodeError(
+          `unterminated line exceeds MAX_LINE_BYTES (${cursor.length} > ${MAX_LINE_BYTES})`,
+        );
       }
-      break; // partial header — wait for more bytes
-    }
-    if (headerEnd > MAX_HEADER_BYTES) {
-      throw new DecodeError('header exceeded limit');
+      break;
     }
 
-    const headerLines = cursor.slice(0, headerEnd).toString('ascii').split('\r\n');
-    let bodyLen: number | null = null;
-    for (const line of headerLines) {
-      const match = line.match(CONTENT_LENGTH_RE);
-      if (match) {
-        if (bodyLen !== null) {
-          throw new DecodeError('duplicate Content-Length');
-        }
-        const parsed = Number(match[1]);
-        if (!Number.isInteger(parsed) || parsed < 0 || parsed > MAX_BODY_BYTES) {
-          throw new DecodeError(`invalid Content-Length: ${match[1]}`);
-        }
-        bodyLen = parsed;
+    if (newlineIdx > MAX_LINE_BYTES) {
+      throw new DecodeError(`line exceeds MAX_LINE_BYTES (${newlineIdx} > ${MAX_LINE_BYTES})`);
+    }
+
+    const lineBuf = cursor.subarray(0, newlineIdx);
+    // Tolerate \r\n line endings by stripping a single trailing CR (0x0d).
+    const trimmed = lineBuf.length > 0 && lineBuf[lineBuf.length - 1] === 0x0d
+      ? lineBuf.subarray(0, lineBuf.length - 1)
+      : lineBuf;
+    const lineText = trimmed.toString('utf-8');
+
+    if (lineText.trim().length > 0) {
+      try {
+        messages.push(JSON.parse(lineText));
+      } catch (err) {
+        throw new DecodeError(`invalid JSON line: ${(err as Error).message}`);
       }
     }
-    if (bodyLen === null) {
-      throw new DecodeError('missing Content-Length');
-    }
+    // Empty lines (keepalives / blank stdin chunks) are skipped silently.
 
-    const bodyStart = headerEnd + HEADER_TERMINATOR.length;
-    if (cursor.length < bodyStart + bodyLen) break; // partial body — wait
+    cursor = cursor.subarray(newlineIdx + 1);
+  }
 
-    const body = cursor.slice(bodyStart, bodyStart + bodyLen);
-    try {
-      messages.push(JSON.parse(body.toString('utf-8')));
-    } catch (err) {
-      throw new DecodeError(`invalid body JSON: ${(err as Error).message}`);
-    }
-    cursor = cursor.slice(bodyStart + bodyLen);
+  if (cursor.length > MAX_BUFFER_SIZE) {
+    throw new DecodeError(
+      `remainder exceeds MAX_BUFFER_SIZE (${cursor.length} > ${MAX_BUFFER_SIZE}) — possible slow loris`,
+    );
   }
 
   return { messages, remainder: cursor };
