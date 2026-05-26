@@ -57,7 +57,10 @@
     "placeholder": "メモリに覚えさせたいことは何ですか？",
     "chip1": "私たちが採用しているスタックを覚えておいて",
     "chip2": "認証について決めたことを思い出して",
-    "chip3": "前回のデプロイで何が壊れたか"
+    "chip3": "前回のデプロイで何が壊れたか",
+    "save_button": "メモリを保存",
+    "save_ok": "メモリを保存しました",
+    "save_err": "メモリを保存できませんでした"
   },
   "panel": {
     "header_breadcrumb": "メモリ",
@@ -155,6 +158,7 @@
     "queue_empty": "キュー内のファイルはありません",
     "quarantine_button": "隔離",
     "ingest_success": "{{name}} をキューに登録しました",
-    "quarantine_success": "{{name}} を隔離しました"
+    "quarantine_success": "{{name}} を隔離しました",
+    "path_unavailable": "ファイルパスを読み取れませんでした。代わりに参照ボタンを使ってください。"
   }
 }

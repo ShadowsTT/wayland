@@ -57,7 +57,10 @@
     "placeholder": "메모리가 당신에 대해 무엇을 알아야 할까요?",
     "chip1": "우리가 출시하는 스택을 기억해 두세요",
     "chip2": "인증에 대해 우리가 결정한 내용을 떠올려 보세요",
-    "chip3": "지난 배포에서 무엇이 망가졌나요"
+    "chip3": "지난 배포에서 무엇이 망가졌나요",
+    "save_button": "메모리 저장",
+    "save_ok": "메모리를 저장했습니다",
+    "save_err": "메모리를 저장할 수 없습니다"
   },
   "panel": {
     "header_breadcrumb": "메모리",
@@ -155,6 +158,7 @@
     "queue_empty": "대기 중인 파일이 없습니다",
     "quarantine_button": "격리",
     "ingest_success": "{{name}}을(를) 대기열에 추가했습니다",
-    "quarantine_success": "{{name}}을(를) 격리했습니다"
+    "quarantine_success": "{{name}}을(를) 격리했습니다",
+    "path_unavailable": "파일 경로를 읽을 수 없습니다. 대신 찾아보기 버튼을 사용하세요."
   }
 }

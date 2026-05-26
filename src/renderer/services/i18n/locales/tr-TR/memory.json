@@ -57,7 +57,10 @@
     "placeholder": "Bellek sizin hakkınızda ne bilmeli?",
     "chip1": "Yayınladığımız teknoloji yığınını hatırla",
     "chip2": "Kimlik doğrulama konusunda neye karar verdiğimizi hatırlat",
-    "chip3": "Son dağıtımda ne bozuldu"
+    "chip3": "Son dağıtımda ne bozuldu",
+    "save_button": "Belleği kaydet",
+    "save_ok": "Bellek kaydedildi",
+    "save_err": "Bellek kaydedilemedi"
   },
   "panel": {
     "header_breadcrumb": "Bellek",
@@ -155,6 +158,7 @@
     "queue_empty": "Sırada dosya yok",
     "quarantine_button": "Karantinaya al",
     "ingest_success": "{{name}} sıraya eklendi",
-    "quarantine_success": "{{name}} karantinaya alındı"
+    "quarantine_success": "{{name}} karantinaya alındı",
+    "path_unavailable": "Dosya yolu okunamadı. Bunun yerine Gözat düğmesini kullanın."
   }
 }

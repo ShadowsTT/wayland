@@ -57,7 +57,10 @@
     "placeholder": "記憶應該知道關於你的什麼？",
     "chip1": "記住我們發佈所用的技術堆疊",
     "chip2": "回想我們關於驗證的決定",
-    "chip3": "上次部署中哪裡出問題了"
+    "chip3": "上次部署中哪裡出問題了",
+    "save_button": "儲存記憶",
+    "save_ok": "已儲存記憶",
+    "save_err": "無法儲存記憶"
   },
   "panel": {
     "header_breadcrumb": "記憶",
@@ -155,6 +158,7 @@
     "queue_empty": "佇列中沒有檔案",
     "quarantine_button": "隔離",
     "ingest_success": "已將 {{name}} 加入佇列",
-    "quarantine_success": "已隔離 {{name}}"
+    "quarantine_success": "已隔離 {{name}}",
+    "path_unavailable": "無法讀取檔案路徑。請改用瀏覽按鈕。"
   }
 }

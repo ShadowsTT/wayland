@@ -57,7 +57,10 @@
     "placeholder": "记忆应该知道关于你的什么？",
     "chip1": "记住我们发布所用的技术栈",
     "chip2": "回忆我们关于认证的决定",
-    "chip3": "上次部署中哪里出问题了"
+    "chip3": "上次部署中哪里出问题了",
+    "save_button": "保存记忆",
+    "save_ok": "已保存记忆",
+    "save_err": "无法保存记忆"
   },
   "panel": {
     "header_breadcrumb": "记忆",
@@ -155,6 +158,7 @@
     "queue_empty": "队列中没有文件",
     "quarantine_button": "隔离",
     "ingest_success": "已将 {{name}} 加入队列",
-    "quarantine_success": "已隔离 {{name}}"
+    "quarantine_success": "已隔离 {{name}}",
+    "path_unavailable": "无法读取文件路径。请改用浏览按钮。"
   }
 }
