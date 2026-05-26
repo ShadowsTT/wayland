@@ -8,6 +8,7 @@ import { Brain } from 'lucide-react';
 import React from 'react';
 import { Tooltip } from '@arco-design/web-react';
 import classNames from 'classnames';
+import { useTranslation } from 'react-i18next';
 import type { SiderTooltipProps } from '@renderer/utils/ui/siderTooltip';
 
 /**
@@ -15,8 +16,7 @@ import type { SiderTooltipProps } from '@renderer/utils/ui/siderTooltip';
  * (Wave 3 of v0.6.3). Matches the visual contract of `SiderScheduledEntry`,
  * `SiderWorkflowsEntry`, and `SiderTeamsEntry` so the four top-zone entries
  * stay visually aligned (icon size, padding, active treatment, collapsed
- * fallback). Wave 6 will swap the literal `'Memory'` label for
- * `t('sider.memory')`.
+ * fallback).
  */
 interface SiderMemoryEntryProps {
   isMobile: boolean;
@@ -33,8 +33,10 @@ const SiderMemoryEntry: React.FC<SiderMemoryEntryProps> = ({
   siderTooltipProps,
   onClick,
 }) => {
-  // TODO: i18n — Wave 6 will replace this literal with `t('sider.memory')`.
-  const label = 'Memory';
+  const { t } = useTranslation();
+  // Wave 7 H4: i18n. Was a hardcoded 'Memory' literal; now resolves via the
+  // sider module's `memory` key (present in all 8 supported locales).
+  const label = t('sider.memory');
 
   if (collapsed) {
     return (

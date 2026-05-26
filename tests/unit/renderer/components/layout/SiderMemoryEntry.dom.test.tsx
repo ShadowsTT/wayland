@@ -20,7 +20,20 @@
 import React from 'react';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+
+// Wave 7 H4: the entry now resolves its label via `useTranslation()`. Mock
+// react-i18next so the test asserts on the i18n key path explicitly — if the
+// component is wired to a wrong key, the test fails. Mirrors the pattern used
+// by other Sider sub-component DOM tests.
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (key: string) => key,
+  }),
+}));
+
+// eslint-disable-next-line import/first
 import SiderMemoryEntry from '@renderer/components/layout/Sider/SiderNav/SiderMemoryEntry';
+// eslint-disable-next-line import/first
 import type { SiderTooltipProps } from '@renderer/utils/ui/siderTooltip';
 
 const tooltipProps: SiderTooltipProps = {
@@ -33,7 +46,10 @@ afterEach(() => {
 });
 
 describe('SiderMemoryEntry', () => {
-  it('renders the Memory label when expanded', () => {
+  // Wave 7 H4: assertion is now on the i18n key path. The mocked t() returns
+  // the key, so the rendered text is `sider.memory` — proves the component
+  // resolves through i18n instead of a hardcoded literal.
+  it('renders the sider.memory label when expanded', () => {
     render(
       <SiderMemoryEntry
         isMobile={false}
@@ -44,7 +60,7 @@ describe('SiderMemoryEntry', () => {
       />
     );
     expect(screen.getByTestId('sider-memory-entry')).toBeTruthy();
-    expect(screen.getByText('Memory')).toBeTruthy();
+    expect(screen.getByText('sider.memory')).toBeTruthy();
   });
 
   it('hides the label and renders icon-only when collapsed', () => {
@@ -58,7 +74,7 @@ describe('SiderMemoryEntry', () => {
       />
     );
     expect(screen.getByTestId('sider-memory-entry')).toBeTruthy();
-    expect(screen.queryByText('Memory')).toBeNull();
+    expect(screen.queryByText('sider.memory')).toBeNull();
   });
 
   it('invokes onClick when clicked', () => {

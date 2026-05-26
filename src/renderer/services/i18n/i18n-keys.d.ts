@@ -2833,6 +2833,7 @@ export type I18nKey =
   | 'sider.accordion.showMore'
   | 'sider.accordion.teams'
   | 'sider.accordion.workflows'
+  | 'sider.memory'
   | 'skills.actions.build'
   | 'skills.actions.delete'
   | 'skills.actions.disable'

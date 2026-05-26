@@ -1,4 +1,5 @@
 {
+  "memory": "Memory",
   "accordion": {
     "scheduled": "Scheduled Tasks",
     "workflows": "Workflows",
