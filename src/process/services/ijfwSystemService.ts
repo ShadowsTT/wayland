@@ -373,10 +373,18 @@ async function bootstrapImpl(): Promise<void> {
     }
 
     let stderr = '';
+    // Checkpoint B H1: Node child_process can fire BOTH `error` and `exit`
+    // for a single failed child. Without a latch we emit install_failed twice,
+    // release the lock twice, and (worst case) call agentRegistry.refreshAll
+    // after we already emitted install_failed. Mirrors spawnTestVerify's
+    // existing `settled` pattern.
+    let settled = false;
     child.stderr?.on('data', (chunk: Buffer) => {
       stderr += chunk.toString();
     });
     child.on('error', (err) => {
+      if (settled) return;
+      settled = true;
       log.error('[ijfw] install child error', { err });
       emitStatus({
         status: 'install_failed',
@@ -387,6 +395,8 @@ async function bootstrapImpl(): Promise<void> {
       void releaseLock(lockHandle);
     });
     child.on('exit', (code) => {
+      if (settled) return;
+      settled = true;
       void (async () => {
         try {
           if (code !== 0) {

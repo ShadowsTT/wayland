@@ -232,6 +232,53 @@ describe('ijfwSystemService.bootstrap', () => {
     expect(fs.existsSync(mcp)).toBe(false);
   });
 
+  it('Checkpoint B H1: install_failed emitted once when both error and exit fire', async () => {
+    // child_process can fire BOTH `error` and `exit` for a single failed
+    // spawn. The settle latch must ensure we emit install_failed only once
+    // and release the lock only once.
+    safeSpawnSpy.mockReset();
+    safeSpawnSpy.mockImplementationOnce(() => {
+      const child = new EventEmitter() as EventEmitter & {
+        stdout: EventEmitter;
+        stderr: EventEmitter;
+        kill: () => void;
+      };
+      child.stdout = new EventEmitter();
+      child.stderr = new EventEmitter();
+      child.kill = () => {};
+      setImmediate(() => {
+        child.stdout.emit('data', Buffer.from('1.5.4\n'));
+        child.emit('exit', 0);
+      });
+      return Promise.resolve(child);
+    });
+    safeSpawnSpy.mockImplementationOnce(() => {
+      const child = new EventEmitter() as EventEmitter & {
+        stdout: EventEmitter;
+        stderr: EventEmitter;
+        kill: () => void;
+      };
+      child.stdout = new EventEmitter();
+      child.stderr = new EventEmitter();
+      child.kill = () => {};
+      // Fire BOTH error and exit back-to-back — Node really does this for some
+      // spawn failures. Before H1 each handler would emit independently.
+      setImmediate(() => {
+        child.emit('error', new Error('ENOENT'));
+        child.emit('exit', 1);
+      });
+      return Promise.resolve(child);
+    });
+
+    await ijfwSystemService.bootstrap();
+    for (let i = 0; i < 20; i++) await flush();
+
+    const failedEmits = emitSpy.mock.calls.filter(
+      (c) => (c[0] as { status?: string }).status === 'install_failed',
+    );
+    expect(failedEmits.length).toBe(1);
+  });
+
   it('emits install_failed when the install npx child exits non-zero', async () => {
     safeSpawnSpy.mockReset();
     safeSpawnSpy.mockImplementationOnce(() => {
