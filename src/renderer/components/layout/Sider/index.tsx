@@ -9,6 +9,7 @@ import { blurActiveElement } from '@renderer/utils/ui/focus';
 import { useThemeContext } from '@renderer/hooks/context/ThemeContext';
 import {
   SiderAssistantsEntry,
+  SiderMemoryEntry,
   SiderScheduledEntry,
   SiderSearchEntry,
   SiderTeamsEntry,
@@ -244,6 +245,13 @@ const Sider: React.FC<SiderProps> = ({ onSessionClick, collapsed = false }) => {
           collapsed={collapsed}
           siderTooltipProps={siderTooltipProps}
           onClick={() => handleTopZoneNav('/teams')}
+        />
+        <SiderMemoryEntry
+          isMobile={isMobile}
+          isActive={pathname.startsWith('/memory')}
+          collapsed={collapsed}
+          siderTooltipProps={siderTooltipProps}
+          onClick={() => handleTopZoneNav('/memory')}
         />
       </div>
 
