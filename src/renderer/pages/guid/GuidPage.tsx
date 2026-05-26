@@ -9,7 +9,7 @@ import { ipcBridge } from '@/common';
 import { resolveLocaleKey } from '@/common/utils';
 
 import { useInputFocusRing } from '@/renderer/hooks/chat/useInputFocusRing';
-import { openExternalUrl, resolveExtensionAssetUrl } from '@/renderer/utils/platform';
+import { resolveExtensionAssetUrl } from '@/renderer/utils/platform';
 import { isImageAvatar } from '@/renderer/utils/avatar';
 import { getLucideIcon } from '@/renderer/utils/lucideAvatar';
 import { useConversationTabs } from '@/renderer/pages/conversation/hooks/ConversationTabsContext';
@@ -21,7 +21,7 @@ import KickoffCard from './components/newChatStarter/KickoffCard';
 import IntentPillBar from './components/newChatStarter/IntentPillBar';
 import IntentSuggestionPanel from './components/newChatStarter/IntentSuggestionPanel';
 import LaunchpadBar from './components/newChatStarter/LaunchpadBar';
-import RecentsStrip from './components/newChatStarter/RecentsStrip';
+import { HomeHintBar } from './components/HomeHintBar';
 import type { IntentKey, IntentPrompt } from './intents';
 import type { QuickLaunchAnchor } from './quickLaunchAnchors';
 import { useUsageTelemetry } from '@/renderer/hooks/usage/useUsageTelemetry';
@@ -34,7 +34,6 @@ import GuidActionRow from './components/GuidActionRow';
 import GuidInputCard from './components/GuidInputCard';
 import GuidModelSelector from './components/GuidModelSelector';
 import MentionDropdown, { MentionSelectorBadge } from './components/MentionDropdown';
-import QuickActionButtons from './components/QuickActionButtons';
 import FeedbackReportModal from '@/renderer/components/settings/SettingsModal/contents/FeedbackReportModal';
 import SpeechInputButton from '@/renderer/components/chat/SpeechInputButton';
 import { appendSpeechTranscript } from '@/renderer/hooks/system/useSpeechInput';
@@ -45,7 +44,6 @@ import { useGuidModelSelection } from './hooks/useGuidModelSelection';
 import { useGuidSend } from './hooks/useGuidSend';
 import { useTypewriterPlaceholder } from './hooks/useTypewriterPlaceholder';
 import { useWorkflowSession } from '@/renderer/hooks/workflow/useWorkflowSession';
-import { InFlightWorkflowsStrip } from './components/workflow/InFlightWorkflowsStrip';
 import type { WorkflowSession } from '@/common/types/workflowTypes';
 import { ConfigStorage } from '@/common/config/storage';
 import { ACP_BACKENDS_ALL } from '@/common/types/acpTypes';
@@ -70,6 +68,18 @@ const GuidPage: React.FC = () => {
   const localeKey = resolveLocaleKey(i18n.language);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
 
+  // W3 (v0.6.2) — discoverability HomeHintBar visibility counter. Persisted in
+  // localStorage so it auto-hides after the user's 5th chat across sessions.
+  const [chatStartedCount, setChatStartedCount] = useState<number>(() => {
+    try {
+      const raw = localStorage.getItem('guid.chat_started_count');
+      const n = raw ? parseInt(raw, 10) : 0;
+      return Number.isFinite(n) && n >= 0 ? n : 0;
+    } catch {
+      return 0;
+    }
+  });
+
   // W4 — Workflow launch surface (SPEC §5.10). When the Workflows page (or
   // the InFlightWorkflowsStrip below) navigates here with a workflowSessionId,
   // the hook resolves the session and `WorkflowSurface` takes over the page.
@@ -84,15 +94,6 @@ const GuidPage: React.FC = () => {
     workflowRouteState?.workflowSessionId,
     workflowRouteState?.initialWorkflowSession
   );
-
-  // Open external link
-  const openLink = useCallback(async (url: string) => {
-    try {
-      await openExternalUrl(url);
-    } catch (error) {
-      console.error('Failed to open external link:', error);
-    }
-  }, []);
 
   // --- Skills state ---
   const [builtinAutoSkills, setBuiltinAutoSkills] = useState<Array<{ name: string; description: string }>>([]);
@@ -228,6 +229,18 @@ const GuidPage: React.FC = () => {
       assistantId: agentSelection.selectedAgentInfo?.customAgentId,
       cliBackend: agentSelection.selectedAgent,
       metadata: { hasFiles: guidInput.files.length > 0 },
+    });
+    // W3 (v0.6.2) — bump persisted chat-started counter for HomeHintBar
+    // auto-hide. Wrapped in try/catch because some environments block
+    // localStorage (e.g. Safari private mode).
+    setChatStartedCount((prev) => {
+      const next = prev + 1;
+      try {
+        localStorage.setItem('guid.chat_started_count', String(next));
+      } catch {
+        /* ignore — counter stays in-memory for this session */
+      }
+      return next;
     });
   }, [recordTelemetry, agentSelection.selectedAgentInfo, agentSelection.selectedAgent, guidInput.files]);
 
@@ -523,13 +536,6 @@ const GuidPage: React.FC = () => {
       mention.setMentionActiveIndex,
       recordTelemetry,
     ]
-  );
-
-  const handleSelectRecent = useCallback(
-    (conv: { id: string }) => {
-      void navigate(`/conversation/${conv.id}`);
-    },
-    [navigate]
   );
 
   // Typewriter placeholder
@@ -1078,18 +1084,6 @@ const GuidPage: React.FC = () => {
                   onClose={handleCloseIntentPanel}
                 />
               ) : null}
-              {/* W4 (SPEC §5.9) — in-flight workflows row above "Jump back in". */}
-              <InFlightWorkflowsStrip
-                onResume={(session) => {
-                  void navigate(`/conversation/${session.conversation_id}`, {
-                    state: {
-                      workflowSessionId: session.id,
-                      initialWorkflowSession: session,
-                    },
-                  });
-                }}
-              />
-              <RecentsStrip onSelect={handleSelectRecent} />
             </div>
           ) : null}
 
@@ -1112,12 +1106,7 @@ const GuidPage: React.FC = () => {
           />
         </div>
 
-        <QuickActionButtons
-          onOpenLink={openLink}
-          onOpenBugReport={() => setShowFeedbackModal(true)}
-          inactiveBorderColor={inactiveBorderColor}
-          activeShadow={activeShadow}
-        />
+        <HomeHintBar chatStartedCount={chatStartedCount} />
         <FeedbackReportModal visible={showFeedbackModal} onCancel={() => setShowFeedbackModal(false)} />
       </div>
     </ConfigProvider>

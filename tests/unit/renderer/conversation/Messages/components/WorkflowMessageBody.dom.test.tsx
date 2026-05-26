@@ -11,35 +11,44 @@
 // Verifies:
 //   - No workflowSessionId: children receive body verbatim, no IPC calls.
 //   - With workflowSessionId + step marker: children receive stripped body;
-//     applyStepMarker fires once with the correct args.
+//     the HOISTED workflowApplyStepMarker callback fires once with correct args.
 //   - Multiple step markers: all fire in order.
 //   - ask markers: stripped from body; applyStepMarker is NOT called (v1 no-op).
-//   - totalSteps falls back to the session data's total_steps once loaded.
+//
+// W0.6 N+1 contract: WorkflowMessageBody must NOT call useWorkflowSession
+// itself — it reads both `workflowTotalSteps` and `workflowApplyStepMarker`
+// from `ConversationContext`, which `ChatConversation` hoists from a single
+// `useWorkflowSession(...)` call. The regression assertion below verifies
+// the module no longer imports the hook.
 
 import { render } from '@testing-library/react';
 import React from 'react';
 import { describe, expect, it, vi } from 'vitest';
+import { readFileSync } from 'fs';
+import path from 'path';
 
 // ------------------------------------------------------------------ mocks ---
 
 const applyStepMarkerMock = vi.fn().mockResolvedValue(undefined);
 
-vi.mock('@/renderer/hooks/workflow/useWorkflowSession', () => ({
-  useWorkflowSession: vi.fn(() => ({
-    data: { total_steps: 6 },
-    loading: false,
-    error: null,
-    isActive: () => true,
-    jumpToStep: vi.fn(),
-    runStepAutonomously: vi.fn(),
-    answerAsk: vi.fn(),
-    pause: vi.fn(),
-    resume: vi.fn(),
-    end: vi.fn(),
-    refresh: vi.fn(),
-    applyStepMarker: applyStepMarkerMock,
-  })),
-}));
+// Mock ConversationContext so the hoisted callback + total_steps are
+// reachable through useConversationContextSafe without rendering a full
+// ConversationProvider tree.
+vi.mock('@/renderer/hooks/context/ConversationContext', async () => {
+  const actual = await vi.importActual<typeof import('@/renderer/hooks/context/ConversationContext')>(
+    '@/renderer/hooks/context/ConversationContext'
+  );
+  return {
+    ...actual,
+    useConversationContextSafe: () => ({
+      conversationId: 'test-conv',
+      type: 'acp' as const,
+      workflowSessionId: 'wf-mock',
+      workflowTotalSteps: 6,
+      workflowApplyStepMarker: applyStepMarkerMock,
+    }),
+  };
+});
 
 // ---- import after mocks are set up ----
 import { WorkflowMessageBody } from '@/renderer/pages/conversation/Messages/components/WorkflowMessageBody';
@@ -70,7 +79,7 @@ describe('WorkflowMessageBody', () => {
     expect(applyStepMarkerMock).not.toHaveBeenCalled();
   });
 
-  it('strips a step marker and calls applyStepMarker when workflowSessionId is set', async () => {
+  it('strips a step marker and calls the hoisted applyStepMarker when workflowSessionId is set', async () => {
     applyStepMarkerMock.mockClear();
     const body = 'Starting step 1.<step n="1" status="now"/> Work in progress.';
     const outputs = collectOutput('wf-session-1', body);
@@ -121,5 +130,22 @@ describe('WorkflowMessageBody', () => {
 
     await Promise.resolve();
     expect(applyStepMarkerMock).not.toHaveBeenCalled();
+  });
+
+  // ------------------- W0.6 N+1 regression assertion ------------------------
+  // The N+1 hoist is only effective if WorkflowMessageBody stops mounting
+  // its own useWorkflowSession hook (each mount triggers a findAllActive
+  // IPC roundtrip via the hook's initial-fetch useEffect). This assertion
+  // pins the contract at the source-text level so an accidental re-import
+  // fails the suite loudly. We check only `import` lines — the symbol may
+  // still appear in JSDoc context.
+  it('does NOT import useWorkflowSession (N+1 regression guard — W0.6)', () => {
+    const source = readFileSync(
+      path.resolve(__dirname, '../../../../../../src/renderer/pages/conversation/Messages/components/WorkflowMessageBody.tsx'),
+      'utf-8'
+    );
+    const importLines = source.split('\n').filter((l) => /^\s*import\b/.test(l));
+    const importsHook = importLines.some((l) => l.includes('useWorkflowSession'));
+    expect(importsHook).toBe(false);
   });
 });

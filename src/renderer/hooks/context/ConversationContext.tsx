@@ -5,6 +5,7 @@
  */
 
 import React, { createContext, useContext } from 'react';
+import type { StepStatus, StepTransitionSource } from '@/common/types/workflowTypes';
 
 /**
  * Conversation context interface
@@ -42,6 +43,25 @@ export interface ConversationContextValue {
    * forwarded to the session rail.
    */
   workflowSessionId?: string;
+
+  /**
+   * Total step count for the active workflow session, hoisted from
+   * `useWorkflowSession` in ChatConversation so per-message renderers do not
+   * each subscribe to the workflow IPC (N+1 audit fix). `null` while the
+   * session is loading or when there is no workflow.
+   */
+  workflowTotalSteps?: number | null;
+
+  /**
+   * Step-marker dispatcher hoisted from the same `useWorkflowSession`
+   * subscription in ChatConversation. When non-null, per-message
+   * `WorkflowMessageBody` instances forward parsed `<step>` markers through
+   * this callback INSTEAD of mounting their own `useWorkflowSession` hook
+   * (which would trigger N IPC fetches — one per assistant message).
+   */
+  workflowApplyStepMarker?:
+    | ((stepN: number, status: StepStatus, source?: StepTransitionSource) => Promise<void>)
+    | null;
 }
 
 /**

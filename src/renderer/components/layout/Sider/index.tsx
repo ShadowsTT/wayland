@@ -7,22 +7,14 @@ import { useAuth } from '@renderer/hooks/context/AuthContext';
 import { useLayoutContext } from '@renderer/hooks/context/LayoutContext';
 import { blurActiveElement } from '@renderer/utils/ui/focus';
 import { useThemeContext } from '@renderer/hooks/context/ThemeContext';
-import { useAllCronJobs } from '@renderer/pages/cron/useCronJobs';
-import {
-  SiderActiveTeams,
-  SiderToolbar,
-  SiderSearchEntry,
-  SiderScheduledEntry,
-  SiderAssistantsEntry,
-  SiderWorkflowsEntry,
-  SiderTeamsEntry,
-} from './SiderNav';
+import { SiderToolbar, SiderSearchEntry, SiderAssistantsEntry } from './SiderNav';
 import SiderFooter from './SiderFooter';
-import CronJobSiderSection from './CronJobSiderSection';
-import TeamSiderSection from './TeamSiderSection';
+import { SiderScheduledSection } from './SiderAccordion/SiderScheduledSection';
+import { SiderWorkflowsSection } from './SiderAccordion/SiderWorkflowsSection';
+import { SiderTeamsSection } from './SiderAccordion/SiderTeamsSection';
+import { SiderRecentChatsSection } from './SiderAccordion/SiderRecentChatsSection';
 import siderStyles from './Sider.module.css';
 
-const WorkspaceGroupedHistory = React.lazy(() => import('@renderer/pages/conversation/GroupedHistory'));
 const SettingsSider = React.lazy(() => import('@renderer/pages/settings/components/SettingsSider'));
 
 interface SiderProps {
@@ -41,7 +33,6 @@ const Sider: React.FC<SiderProps> = ({ onSessionClick, collapsed = false }) => {
   const { logout, status } = useAuth();
   const { theme, setTheme } = useThemeContext();
   const [isBatchMode, setIsBatchMode] = useState(false);
-  const { jobs: cronJobs } = useAllCronJobs();
   const isSettings = pathname.startsWith('/settings');
   const lastNonSettingsPathRef = useRef('/guid');
   const showLogout =
@@ -91,51 +82,12 @@ const Sider: React.FC<SiderProps> = ({ onSessionClick, collapsed = false }) => {
     setIsBatchMode(false);
   };
 
-  const handleScheduledClick = () => {
-    cleanupSiderTooltips();
-    blurActiveElement();
-    closePreview();
-    setIsBatchMode(false);
-    Promise.resolve(navigate('/scheduled')).catch((error) => {
-      console.error('Navigation failed:', error);
-    });
-    if (onSessionClick) {
-      onSessionClick();
-    }
-  };
-
   const handleAssistantsClick = () => {
     cleanupSiderTooltips();
     blurActiveElement();
     closePreview();
     setIsBatchMode(false);
     Promise.resolve(navigate('/assistants')).catch((error) => {
-      console.error('Navigation failed:', error);
-    });
-    if (onSessionClick) {
-      onSessionClick();
-    }
-  };
-
-  const handleWorkflowsClick = () => {
-    cleanupSiderTooltips();
-    blurActiveElement();
-    closePreview();
-    setIsBatchMode(false);
-    Promise.resolve(navigate('/workflows')).catch((error) => {
-      console.error('Navigation failed:', error);
-    });
-    if (onSessionClick) {
-      onSessionClick();
-    }
-  };
-
-  const handleTeamsClick = () => {
-    cleanupSiderTooltips();
-    blurActiveElement();
-    closePreview();
-    setIsBatchMode(false);
-    Promise.resolve(navigate('/teams')).catch((error) => {
       console.error('Navigation failed:', error);
     });
     if (onSessionClick) {
@@ -197,107 +149,87 @@ const Sider: React.FC<SiderProps> = ({ onSessionClick, collapsed = false }) => {
     onBatchModeChange: setIsBatchMode,
   };
 
-  return (
-    <div className='size-full flex flex-col'>
-      {/* Main content area */}
-      <div className='flex-1 min-h-0 overflow-hidden'>
-        {isSettings ? (
+  if (isSettings) {
+    return (
+      <div className='size-full flex flex-col'>
+        <div className='flex-1 min-h-0 overflow-hidden'>
           <Suspense fallback={<div className='size-full' />}>
             <SettingsSider collapsed={collapsed} tooltipEnabled={tooltipEnabled} />
           </Suspense>
-        ) : (
-          <div className='size-full flex flex-col gap-2px'>
-            <SiderToolbar
-              isMobile={isMobile}
-              isBatchMode={isBatchMode}
-              collapsed={collapsed}
-              siderTooltipProps={siderTooltipProps}
-              onNewChat={handleNewChat}
-              onToggleBatchMode={() => setIsBatchMode((prev) => !prev)}
-            />
-            {/* Search entry */}
-            <SiderSearchEntry
-              isMobile={isMobile}
-              collapsed={collapsed}
-              siderTooltipProps={siderTooltipProps}
-              onConversationSelect={handleConversationSelect}
-              onSessionClick={onSessionClick}
-            />
-            {/* Workspace nav order (Sean's directive, 2026-05-21):
-                Assistants → Scheduled → Workflows → Teams.
-                Reasoning: the single-shot person → the timed task →
-                the procedure → the full org sit in increasing scope,
-                so the user descends the list when they need more
-                machinery. */}
-            <SiderAssistantsEntry
-              isMobile={isMobile}
-              isActive={pathname === '/assistants'}
-              collapsed={collapsed}
-              siderTooltipProps={siderTooltipProps}
-              onClick={handleAssistantsClick}
-            />
-            <SiderScheduledEntry
-              isMobile={isMobile}
-              isActive={pathname === '/scheduled'}
-              collapsed={collapsed}
-              siderTooltipProps={siderTooltipProps}
-              onClick={handleScheduledClick}
-            />
-            <SiderWorkflowsEntry
-              isMobile={isMobile}
-              isActive={pathname === '/workflows'}
-              collapsed={collapsed}
-              siderTooltipProps={siderTooltipProps}
-              onClick={handleWorkflowsClick}
-            />
-            <SiderTeamsEntry
-              isMobile={isMobile}
-              isActive={pathname === '/teams' || pathname.startsWith('/teams/')}
-              collapsed={collapsed}
-              siderTooltipProps={siderTooltipProps}
-              onClick={handleTeamsClick}
-            />
-            {/* Divider between fixed top nav and scrollable content area */}
-            <div
-              className={classNames(
-                'shrink-0 mt-4px mb-4px h-1px bg-[var(--color-border-2)]',
-                collapsed ? 'mx-6px' : 'mx-10px'
-              )}
-            />
-            {/* Scrollable content: active rollup + team + scheduled tasks + conversation history */}
-            <div className={classNames('flex-1 min-h-0 overflow-y-auto', siderStyles.scrollArea)}>
-              {/* W2d — Active section: running teams with token+cost rollup */}
-              <SiderActiveTeams pathname={pathname} collapsed={collapsed} onSessionClick={onSessionClick} />
-              {/* Team section */}
-              <TeamSiderSection
-                collapsed={collapsed}
-                pathname={pathname}
-                siderTooltipProps={siderTooltipProps}
-                onSessionClick={onSessionClick}
-              />
-              {/* Scheduled section */}
-              {!collapsed && (
-                <CronJobSiderSection jobs={cronJobs} pathname={pathname} onNavigate={handleCronNavigate} />
-              )}
-              <Suspense fallback={<div className='min-h-200px' />}>
-                <WorkspaceGroupedHistory {...workspaceHistoryProps} />
-              </Suspense>
-            </div>
-          </div>
-        )}
+        </div>
+        <SiderFooter
+          isMobile={isMobile}
+          isSettings={isSettings}
+          collapsed={collapsed}
+          theme={theme}
+          siderTooltipProps={siderTooltipProps}
+          onSettingsClick={handleSettingsClick}
+          onThemeToggle={handleQuickThemeToggle}
+          showLogout={showLogout}
+          onLogoutClick={handleLogout}
+        />
       </div>
-      {/* Footer */}
-      <SiderFooter
-        isMobile={isMobile}
-        isSettings={isSettings}
-        collapsed={collapsed}
-        theme={theme}
-        siderTooltipProps={siderTooltipProps}
-        onSettingsClick={handleSettingsClick}
-        onThemeToggle={handleQuickThemeToggle}
-        showLogout={showLogout}
-        onLogoutClick={handleLogout}
-      />
+    );
+  }
+
+  // v0.6.2 W2a — three-zone grid layout (top pinned · scroll · footer pinned).
+  // W2b will replace the legacy SiderScheduled/Workflows/Teams entries with the
+  // new accordion sections. W2c will dock SiderFooter quick actions into the
+  // footer zone alongside Settings.
+  return (
+    <div className={classNames('size-full', siderStyles.gridContainer)}>
+      <div className={siderStyles.topZone}>
+        <SiderToolbar
+          isMobile={isMobile}
+          isBatchMode={isBatchMode}
+          collapsed={collapsed}
+          siderTooltipProps={siderTooltipProps}
+          onNewChat={handleNewChat}
+          onToggleBatchMode={() => setIsBatchMode((prev) => !prev)}
+        />
+        <SiderSearchEntry
+          isMobile={isMobile}
+          collapsed={collapsed}
+          siderTooltipProps={siderTooltipProps}
+          onConversationSelect={handleConversationSelect}
+          onSessionClick={onSessionClick}
+        />
+        <SiderAssistantsEntry
+          isMobile={isMobile}
+          isActive={pathname === '/assistants'}
+          collapsed={collapsed}
+          siderTooltipProps={siderTooltipProps}
+          onClick={handleAssistantsClick}
+        />
+      </div>
+
+      <div className={classNames('overflow-y-auto', siderStyles.scrollArea, siderStyles.scrollZone)}>
+        {/* v0.6.2 W2b — accordion sections replace SiderScheduledEntry / SiderWorkflowsEntry /
+            SiderTeamsEntry / SiderActiveTeams / TeamSiderSection / CronJobSiderSection. */}
+        <SiderScheduledSection collapsed={collapsed} pathname={pathname} onNavigate={handleCronNavigate} />
+        <SiderWorkflowsSection collapsed={collapsed} />
+        <SiderTeamsSection
+          collapsed={collapsed}
+          pathname={pathname}
+          siderTooltipProps={siderTooltipProps}
+          onSessionClick={onSessionClick}
+        />
+        <SiderRecentChatsSection {...workspaceHistoryProps} />
+      </div>
+
+      <div className={siderStyles.footerZone}>
+        <SiderFooter
+          isMobile={isMobile}
+          isSettings={isSettings}
+          collapsed={collapsed}
+          theme={theme}
+          siderTooltipProps={siderTooltipProps}
+          onSettingsClick={handleSettingsClick}
+          onThemeToggle={handleQuickThemeToggle}
+          showLogout={showLogout}
+          onLogoutClick={handleLogout}
+        />
+      </div>
     </div>
   );
 };

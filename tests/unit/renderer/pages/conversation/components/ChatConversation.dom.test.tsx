@@ -59,15 +59,31 @@ vi.mock('@/renderer/pages/conversation/components/ChatSider', () => ({
   default: () => <div data-testid='mock-chat-sider' />,
 }));
 
-// Platform chat mocks — each renders a distinctive testid.
+// Platform chat mocks — each renders a distinctive testid and captures props
+// so W0.3 can assert that `workflowTotalSteps` is forwarded from the hoisted
+// `useWorkflowSession` call in ChatConversation.
+type PlatformChatCaptured = Record<string, unknown>;
+const acpChatCalls: PlatformChatCaptured[] = [];
+const wcoreChatCalls: PlatformChatCaptured[] = [];
+const geminiChatCalls: PlatformChatCaptured[] = [];
+
 vi.mock('@/renderer/pages/conversation/platforms/acp/AcpChat', () => ({
-  default: () => <div data-testid='mock-acp-chat' />,
+  default: (props: PlatformChatCaptured) => {
+    acpChatCalls.push(props);
+    return <div data-testid='mock-acp-chat' />;
+  },
 }));
 vi.mock('@/renderer/pages/conversation/platforms/wcore/WCoreChat', () => ({
-  default: () => <div data-testid='mock-wcore-chat' />,
+  default: (props: PlatformChatCaptured) => {
+    wcoreChatCalls.push(props);
+    return <div data-testid='mock-wcore-chat' />;
+  },
 }));
 vi.mock('@/renderer/pages/conversation/platforms/gemini/GeminiChat', () => ({
-  default: () => <div data-testid='mock-gemini-chat' />,
+  default: (props: PlatformChatCaptured) => {
+    geminiChatCalls.push(props);
+    return <div data-testid='mock-gemini-chat' />;
+  },
 }));
 vi.mock('@/renderer/pages/conversation/platforms/nanobot/NanobotChat', () => ({
   default: () => <div data-testid='mock-nanobot-chat' />,
@@ -119,6 +135,28 @@ vi.mock('@/renderer/pages/conversation/Preview', () => ({
 vi.mock('@/renderer/hooks/agent/usePresetAssistantInfo', () => ({
   usePresetAssistantInfo: () => ({ info: null, isLoading: false }),
   resolveAssistantConfigId: () => null,
+}));
+
+// W0.3: hoisted workflow-session subscription lives in ChatConversation.
+// Mocked so we can assert `workflowTotalSteps` is forwarded to the platform
+// chat without touching the IPC bridge.
+let mockWorkflowSessionData: { total_steps: number } | null = null;
+vi.mock('@/renderer/hooks/workflow/useWorkflowSession', () => ({
+  useWorkflowSession: () => ({
+    data: mockWorkflowSessionData,
+    loading: false,
+    error: null,
+    isActive: () => true,
+    jumpToStep: vi.fn(),
+    runStepAutonomously: vi.fn(),
+    answerAsk: vi.fn(),
+    pause: vi.fn(),
+    resume: vi.fn(),
+    end: vi.fn(),
+    refresh: vi.fn(),
+    applyStepMarker: vi.fn(),
+    markBeginSent: vi.fn(),
+  }),
 }));
 vi.mock('@/renderer/hooks/agent/useModelProviderList', () => ({
   useModelProviderList: () => ({
@@ -204,7 +242,11 @@ const buildGeminiConversation = (extra: Record<string, unknown> = {}) =>
 beforeEach(() => {
   chatLayoutCalls.length = 0;
   workflowSurfaceCalls.length = 0;
+  acpChatCalls.length = 0;
+  wcoreChatCalls.length = 0;
+  geminiChatCalls.length = 0;
   mockLocationState = null;
+  mockWorkflowSessionData = null;
 });
 
 describe('ChatConversation — non-workflow path', () => {
@@ -288,5 +330,34 @@ describe('ChatConversation — workflowSessionId from location.state', () => {
     render(<ChatConversation conversation={buildAcpConversation()} />);
 
     expect(workflowSurfaceCalls[0]?.initialSession).toEqual(initialSession);
+  });
+});
+
+describe('ChatConversation — W0.3 hoisted workflow total_steps', () => {
+  it('threads workflowTotalSteps from the hoisted useWorkflowSession into AcpChat', () => {
+    mockWorkflowSessionData = { total_steps: 7 };
+    render(<ChatConversation conversation={buildAcpConversation({ workflowSessionId: 'sess-totals' })} />);
+
+    expect(acpChatCalls.length).toBeGreaterThan(0);
+    expect(acpChatCalls[0]?.workflowSessionId).toBe('sess-totals');
+    expect(acpChatCalls[0]?.workflowTotalSteps).toBe(7);
+  });
+
+  it('passes workflowTotalSteps=null when the workflow session data has not resolved', () => {
+    mockWorkflowSessionData = null;
+    render(<ChatConversation conversation={buildAcpConversation({ workflowSessionId: 'sess-loading' })} />);
+
+    expect(acpChatCalls[0]?.workflowSessionId).toBe('sess-loading');
+    expect(acpChatCalls[0]?.workflowTotalSteps).toBeNull();
+  });
+
+  it('forwards workflowApplyStepMarker from the hoisted session into AcpChat', () => {
+    mockWorkflowSessionData = { total_steps: 3 };
+    render(<ChatConversation conversation={buildAcpConversation({ workflowSessionId: 'sess-marker' })} />);
+
+    // The hoisted hook's applyStepMarker callback is forwarded as a sibling
+    // prop so per-message WorkflowMessageBody can call it through context
+    // without each mounting its own useWorkflowSession (the N+1 fix).
+    expect(typeof acpChatCalls[0]?.workflowApplyStepMarker).toBe('function');
   });
 });

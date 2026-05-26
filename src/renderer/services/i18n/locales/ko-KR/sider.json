@@ -1,0 +1,16 @@
+{
+  "accordion": {
+    "scheduled": "예약된 작업",
+    "workflows": "워크플로",
+    "teams": "팀",
+    "recentChats": "최근 채팅",
+    "inFlight": "진행 중",
+    "running": "실행 중",
+    "recentlyLaunched": "최근 실행",
+    "myTeams": "내 팀",
+    "seeAllWorkflows": "모든 워크플로 보기 →",
+    "seeAllScheduled": "모든 예약 작업 보기 →",
+    "seeAllChats": "모든 채팅 보기 →",
+    "showMore": "{{count}}개 더 보기 →"
+  }
+}

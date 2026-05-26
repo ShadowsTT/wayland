@@ -1,0 +1,183 @@
+/**
+ * @license
+ * Copyright 2026 Ferrox Labs
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+import { Workflow } from 'lucide-react';
+import React, { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
+
+import { ipcBridge } from '@/common';
+
+import { SiderAccordionShell } from './SiderAccordionShell';
+import { useSiderAccordionState } from './useSiderAccordionState';
+
+const IN_FLIGHT_CAP = 5;
+const COUNT_DEBOUNCE_MS = 300;
+
+type InFlightRow = {
+  sessionId: string;
+  workflowName: string;
+  conversationId: string;
+  currentStep: number;
+  totalSteps: number;
+};
+
+export type SiderWorkflowsSectionProps = {
+  collapsed: boolean;
+};
+
+/**
+ * Sider accordion that surfaces in-flight workflow sessions plus a See-all
+ * link. Badge subscribes to the lightweight `workflow.countActive` provider
+ * (debounced 300ms) so updates do not pay for a full session-list refetch.
+ * Full row data is fetched lazily, only while the accordion is open.
+ *
+ * Source of truth: SPEC §4.4 (Workflows accordion). W0 froze the IPC surface.
+ */
+export const SiderWorkflowsSection: React.FC<SiderWorkflowsSectionProps> = ({ collapsed }) => {
+  const { t } = useTranslation();
+  const navigate = useNavigate();
+  const { state, toggle } = useSiderAccordionState();
+  const [count, setCount] = useState(0);
+  const [activeSessions, setActiveSessions] = useState<InFlightRow[]>([]);
+
+  // Badge subscription — lightweight countActive with 300ms trailing debounce.
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    let alive = true;
+    const refresh = () => {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => {
+        void (async () => {
+          try {
+            const n = await ipcBridge.workflow.countActive.invoke();
+            if (alive) setCount(n);
+          } catch {
+            /* badge can stay stale on transient IPC failure */
+          }
+        })();
+      }, COUNT_DEBOUNCE_MS);
+    };
+    refresh();
+    const unsub = ipcBridge.workflow.sessionChanged.on(refresh);
+    return () => {
+      alive = false;
+      if (timer) clearTimeout(timer);
+      unsub();
+    };
+  }, []);
+
+  // Full session payload — only when accordion is open.
+  useEffect(() => {
+    if (!state.workflows) return;
+    let alive = true;
+    const fetchAll = async () => {
+      try {
+        const result = await ipcBridge.workflow.findAllActive.invoke({});
+        if (!alive) return;
+        const rows: InFlightRow[] = (result?.sessions ?? []).map((row) => ({
+          sessionId: row.session.id,
+          workflowName: row.session.workflow_title || row.session.workflow_name,
+          conversationId: row.session.conversation_id,
+          currentStep: row.session.current_step ?? 1,
+          totalSteps: row.session.total_steps ?? 1,
+        }));
+        setActiveSessions(rows);
+      } catch {
+        /* keep previous list on transient IPC failure */
+      }
+    };
+    void fetchAll();
+    const unsub = ipcBridge.workflow.sessionChanged.on(() => {
+      void fetchAll();
+    });
+    return () => {
+      alive = false;
+      unsub();
+    };
+  }, [state.workflows]);
+
+  const visibleInFlight = activeSessions.slice(0, IN_FLIGHT_CAP);
+  const overflow = Math.max(0, activeSessions.length - IN_FLIGHT_CAP);
+
+  const handleRowClick = useCallback(
+    (row: InFlightRow) => {
+      // Defensive guard: preset launch defer leaves these null until the
+      // session is materialised — bail rather than navigating to a broken URL.
+      if (!row.sessionId || !row.conversationId) return;
+      navigate(`/conversation/${row.conversationId}`, { state: { workflowSessionId: row.sessionId } });
+    },
+    [navigate]
+  );
+
+  if (collapsed) {
+    const liveDot = count > 0;
+    return (
+      <button
+        type='button'
+        className='w-full h-40px flex items-center justify-center rd-7px hover:bg-fill-2 text-text-2 hover:text-text-1 relative'
+        onClick={() => navigate('/workflows')}
+        aria-label={`Workflows${liveDot ? ` (${count} in-flight)` : ''}`}
+        title={`Workflows${liveDot ? ` · ${count} in-flight` : ''}`}
+      >
+        <Workflow size={18} />
+        {liveDot && (
+          <span
+            className='absolute top-6px right-6px w-6px h-6px rounded-full bg-[rgb(var(--primary-6))] shadow-[0_0_0_2px_rgba(254,153,0,0.25)]'
+            aria-hidden
+          />
+        )}
+      </button>
+    );
+  }
+
+  const liveBadge = count > 0;
+
+  return (
+    <SiderAccordionShell
+      icon={<Workflow size={16} />}
+      label={t('sider.accordion.workflows')}
+      badgeCount={count}
+      isLive={liveBadge}
+      open={state.workflows}
+      onToggle={() => toggle('workflows')}
+      badgeAriaLabel={`${count} in-flight workflows`}
+      testId='sider-workflows-section'
+    >
+      {visibleInFlight.length > 0 && (
+        <>
+          <div className='px-10px py-4px text-9px tracking-wide text-text-4 uppercase font-bold'>
+            {t('sider.accordion.inFlight')}
+          </div>
+          {visibleInFlight.map((row) => (
+            <div
+              key={row.sessionId}
+              data-testid={`workflow-row-${row.sessionId}`}
+              className='flex items-center gap-8px px-10px py-6px pl-28px cursor-pointer hover:bg-fill-2 text-text-2'
+              onClick={() => handleRowClick(row)}
+            >
+              <span className='w-6px h-6px rounded-full bg-success' />
+              <span className='truncate flex-1'>{row.workflowName}</span>
+              <span className='text-text-3 tabular-nums text-10px'>
+                {row.currentStep} / {row.totalSteps}
+              </span>
+            </div>
+          ))}
+        </>
+      )}
+
+      <div
+        data-testid='sider-workflows-see-all'
+        className='px-10px py-6px pl-28px text-10px text-text-3 italic cursor-pointer hover:text-orange'
+        onClick={() => navigate('/workflows')}
+      >
+        {overflow > 0
+          ? t('sider.accordion.showMore', { count: overflow })
+          : t('sider.accordion.seeAllWorkflows')}
+      </div>
+    </SiderAccordionShell>
+  );
+};

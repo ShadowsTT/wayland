@@ -14,25 +14,34 @@
  *   - Passes the body through the AST-authoritative finalize() pass so
  *     `<step>` and `<ask>` markers are stripped before the markdown renderer
  *     sees the text.
- *   - Fires `useWorkflowSession.applyStepMarker(n, status, 'parent')` for
- *     every `step` marker the parser extracts.
+ *   - Forwards every parsed `step` marker through the hoisted
+ *     `workflowApplyStepMarker` callback from `ConversationContext`.
  *   - No-ops `ask` markers for v1 (the WorkflowSurface AskCard handles them
  *     via IPC-pushed session state; the parser result here is informational).
  *
  * Non-workflow conversations (no `workflowSessionId`) are a zero-overhead
  * pass-through: children receives the body verbatim and no IPC is touched.
  *
- * `totalSteps` is derived from the session data held by `useWorkflowSession`.
- * Before the session loads, it falls back to a permissive ceiling (999) so
- * markers with any valid step number are accepted rather than silently
- * discarded while the initial IPC fetch is in flight.
+ * `totalSteps` AND the marker dispatcher are both read from
+ * `ConversationContext` (hoisted in `ChatConversation` from a single
+ * `useWorkflowSession(...)` call). This component intentionally does NOT
+ * call `useWorkflowSession` itself — doing so would re-introduce the N+1
+ * `findAllActive` IPC fan-out on first render (one fetch per assistant
+ * message), which the W0 → W0.6 audit explicitly closed.
+ *
+ * Before the hoisted session loads, totalSteps falls back to a permissive
+ * ceiling (999) so markers with any valid step number are accepted rather
+ * than silently discarded while the initial IPC fetch is in flight. If
+ * `workflowApplyStepMarker` is not yet populated (context still hydrating)
+ * the marker dispatch is a no-op — the next render will see the populated
+ * callback and the next marker batch will fire normally.
  *
  * Spec: .planning/brainstorm/2026-05-25-workflow-launch-surface/SPEC.md §8, §11.2
  */
 
 import React, { useCallback } from 'react';
 import { WorkflowAwareMessage } from '@/renderer/pages/guid/components/workflow/WorkflowAwareMessage';
-import { useWorkflowSession } from '@/renderer/hooks/workflow/useWorkflowSession';
+import { useConversationContextSafe } from '@/renderer/hooks/context/ConversationContext';
 import type { WorkflowMarker } from '@/common/types/workflowTypes';
 
 /** Fallback ceiling used before the session data resolves. */
@@ -50,23 +59,31 @@ export type WorkflowMessageBodyProps = {
 /**
  * Routes an assistant message body through WorkflowAwareMessage when the
  * conversation has a workflow session, so step markers are stripped from the
- * rendered text and forwarded into session rail state via applyStepMarker.
- * Pass-through for non-workflow conversations.
+ * rendered text and forwarded into session rail state via the hoisted
+ * `workflowApplyStepMarker` callback. Pass-through for non-workflow
+ * conversations.
  */
 export const WorkflowMessageBody: React.FC<WorkflowMessageBodyProps> = ({ workflowSessionId, body, children }) => {
-  const session = useWorkflowSession(workflowSessionId, undefined);
-  const totalSteps = session.data?.total_steps ?? UNLOADED_TOTAL_STEPS;
+  const conversationContext = useConversationContextSafe();
+  const hoistedTotalSteps = conversationContext?.workflowTotalSteps ?? null;
+  const totalSteps = hoistedTotalSteps ?? UNLOADED_TOTAL_STEPS;
+  const applyStepMarker = conversationContext?.workflowApplyStepMarker ?? null;
 
   const handleMarker = useCallback(
     (marker: WorkflowMarker) => {
       if (!workflowSessionId) return;
       if (marker.kind === 'step') {
-        void session.applyStepMarker(marker.n, marker.status, 'parent');
+        // applyStepMarker may briefly be null while the context populates;
+        // dropping the marker is the right behavior — the next render with a
+        // non-null callback will pick up the next batch from the stream.
+        if (applyStepMarker !== null) {
+          void applyStepMarker(marker.n, marker.status, 'parent');
+        }
       }
       // ask markers are no-op for v1 — WorkflowSurface reads asks from
       // IPC-pushed session state, not from the message body.
     },
-    [session, workflowSessionId]
+    [applyStepMarker, workflowSessionId]
   );
 
   if (!workflowSessionId) {

@@ -1,0 +1,16 @@
+{
+  "accordion": {
+    "scheduled": "Заплановані завдання",
+    "workflows": "Робочі процеси",
+    "teams": "Команди",
+    "recentChats": "Недавні чати",
+    "inFlight": "У роботі",
+    "running": "Виконується",
+    "recentlyLaunched": "Нещодавно запущені",
+    "myTeams": "Мої команди",
+    "seeAllWorkflows": "Усі робочі процеси →",
+    "seeAllScheduled": "Усі заплановані →",
+    "seeAllChats": "Усі чати →",
+    "showMore": "Показати ще {{count}} →"
+  }
+}

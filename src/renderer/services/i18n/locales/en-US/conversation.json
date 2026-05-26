@@ -20,6 +20,7 @@
   },
   "history": {
     "recents": "Recents",
+    "recentChats": "Recent Chats",
     "noHistory": "No chat history",
     "deleteTitle": "Delete",
     "deleteConfirm": "Are you sure you want to delete this chat?",

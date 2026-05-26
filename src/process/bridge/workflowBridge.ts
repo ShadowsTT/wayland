@@ -130,6 +130,11 @@ export function registerWorkflowBridge(): void {
     return { sessions };
   });
 
+  ipcBridge.workflow.countActive.provider(async () => {
+    const svc = requireService('countActive');
+    return svc.countActive();
+  });
+
   ipcBridge.workflow.updateSessionState.provider(async (input) => {
     const svc = requireService('updateSessionState');
     const session = await applyPatch(svc, input.sessionId, input.patch);

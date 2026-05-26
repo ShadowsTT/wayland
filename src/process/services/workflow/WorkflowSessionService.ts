@@ -280,6 +280,10 @@ export class WorkflowSessionService {
 
     this.repo.insert(session);
 
+    // Sidebar listeners (Workflows section + in-flight strip) consume this
+    // emit to refresh without re-fetching the full session payload.
+    ipcBridge.workflow.sessionChanged.emit({ session_id: sessionId, action: 'start' });
+
     const systemPromptDirective = composeWorkflowSystemPrompt(session);
 
     await this.telemetry.record({
@@ -443,6 +447,8 @@ export class WorkflowSessionService {
       },
     });
 
+    ipcBridge.workflow.sessionChanged.emit({ session_id: sessionId, action: 'update' });
+
     return updated;
   }
 
@@ -453,7 +459,9 @@ export class WorkflowSessionService {
       throw new Error(`WorkflowSessionService.appendAsk: unknown session ${sessionId}`);
     }
     const nextAsks = [...current.asks, ask];
-    return this.repo.update(sessionId, { asks: nextAsks });
+    const updated = this.repo.update(sessionId, { asks: nextAsks });
+    ipcBridge.workflow.sessionChanged.emit({ session_id: sessionId, action: 'update' });
+    return updated;
   }
 
   /**
@@ -490,6 +498,8 @@ export class WorkflowSessionService {
       },
     });
 
+    ipcBridge.workflow.sessionChanged.emit({ session_id: sessionId, action: 'update' });
+
     return updated;
   }
 
@@ -516,6 +526,7 @@ export class WorkflowSessionService {
         total_steps: current.total_steps,
       },
     });
+    ipcBridge.workflow.sessionChanged.emit({ session_id: sessionId, action: 'complete' });
     return updated;
   }
 
@@ -529,7 +540,9 @@ export class WorkflowSessionService {
     if (current === null) {
       throw new Error(`WorkflowSessionService.endSession: unknown session ${sessionId}`);
     }
-    return this.repo.update(sessionId, { status: 'ended' });
+    const updated = this.repo.update(sessionId, { status: 'ended' });
+    ipcBridge.workflow.sessionChanged.emit({ session_id: sessionId, action: 'complete' });
+    return updated;
   }
 
   /**
@@ -552,7 +565,9 @@ export class WorkflowSessionService {
     if (current.begin_sent_at !== null) {
       return current;
     }
-    return this.repo.update(sessionId, { begin_sent_at: at ?? Date.now() });
+    const updated = this.repo.update(sessionId, { begin_sent_at: at ?? Date.now() });
+    ipcBridge.workflow.sessionChanged.emit({ session_id: sessionId, action: 'update' });
+    return updated;
   }
 
   /**
@@ -587,7 +602,9 @@ export class WorkflowSessionService {
       },
     };
     const newSteps = current.steps.map((s, i) => (i === idx ? updatedStep : s));
-    return this.repo.update(sessionId, { steps: newSteps });
+    const updated = this.repo.update(sessionId, { steps: newSteps });
+    ipcBridge.workflow.sessionChanged.emit({ session_id: sessionId, action: 'update' });
+    return updated;
   }
 
   /**
@@ -623,6 +640,17 @@ export class WorkflowSessionService {
       },
     };
     const newSteps = current.steps.map((s, i) => (i === idx ? updatedStep : s));
-    return this.repo.update(sessionId, { steps: newSteps });
+    const updated = this.repo.update(sessionId, { steps: newSteps });
+    ipcBridge.workflow.sessionChanged.emit({ session_id: sessionId, action: 'update' });
+    return updated;
+  }
+
+  /**
+   * Count of currently-active (non-complete, non-ended) workflow sessions.
+   * Backs the sidebar Workflows-section badge. Delegates to the repository's
+   * lightweight `SELECT COUNT(*)` path — does not materialize rows.
+   */
+  async countActive(): Promise<number> {
+    return this.repo.countActive();
   }
 }

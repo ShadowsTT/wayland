@@ -16,6 +16,7 @@ import gemini from './gemini.json';
 import cron from './cron.json';
 import starOffice from './starOffice.json';
 import guid from './guid.json';
+import sider from './sider.json';
 import agent from './agent.json';
 import team from './team.json';
 import assistants from './assistants.json';
@@ -41,6 +42,7 @@ export default {
   cron,
   starOffice,
   guid,
+  sider,
   agent,
   team,
   assistants,

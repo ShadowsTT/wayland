@@ -8,6 +8,11 @@
   "promptExamplesHint": "Спробуйте приклади промптів:",
   "agentSwitcherLabel": "Агент",
   "switchedToAgent": "Переключено на {{agent}}",
+  "hint": {
+    "search": "Натисніть {{key}} для пошуку",
+    "backend": "{{key}} для бекенду",
+    "newChat": "{{key}} для нового чату"
+  },
   "scanning": {
     "initialMessage": "Поточний Агент недоступний, пошук інших доступних агентів...",
     "scanningMessage": "Сканування доступних локальних агентів...",

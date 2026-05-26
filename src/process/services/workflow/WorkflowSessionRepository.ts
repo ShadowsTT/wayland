@@ -171,6 +171,18 @@ export class WorkflowSessionRepository {
   }
 
   /**
+   * Count of currently-active sessions. Lightweight COUNT(*) path for the
+   * sidebar Workflows-section badge — avoids materializing full session rows
+   * just to take `.length`.
+   */
+  countActive(): number {
+    const row = this.driver
+      .prepare(`SELECT COUNT(*) AS n FROM workflow_sessions WHERE status = 'active'`)
+      .get() as { n: number } | undefined;
+    return row?.n ?? 0;
+  }
+
+  /**
    * Partial update. Only fields present in `patch` are written;
    * `updated_at` is always bumped to `Date.now()`. Returns the resulting
    * row. Throws if `id` does not exist.

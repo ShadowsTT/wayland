@@ -1783,6 +1783,19 @@ export const workflow = {
   dispatchAutonomousStep: buildProvider<{ dispatchId: string }, { sessionId: string; stepN: number }>(
     'workflow.dispatchAutonomousStep'
   ),
+  // 6.6 — Fire-and-forget notification that a workflow session was created,
+  // mutated, or completed. Sidebar listeners use this to update the in-flight
+  // strip and badge counts without re-fetching the full session payload.
+  // `action` distinguishes lifecycle phase: 'start' (insert), 'update'
+  // (any state mutation), 'complete' (terminal flip to complete/ended).
+  sessionChanged: buildEmitter<{ session_id: string; action: 'start' | 'update' | 'complete' }>(
+    'workflow.session-changed'
+  ),
+  // 6.7 — Count of currently-active (non-complete, non-ended) workflow
+  // sessions. Backs the sidebar Workflows-section badge so the badge can
+  // refresh in response to `sessionChanged` without paying for the full
+  // findAllActive payload.
+  countActive: buildProvider<number, void>('workflow.count-active'),
 };
 
 // SPEC §6.4 patch shape — union of partial mutations the renderer can submit

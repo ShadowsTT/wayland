@@ -25,6 +25,7 @@ const WCoreChat: React.FC<{
   sessionMode?: string;
   emptySlot?: React.ReactNode;
   workflowSessionId?: string;
+  workflowTotalSteps?: number | null;
 }> = ({
   conversation_id,
   workspace,
@@ -34,6 +35,7 @@ const WCoreChat: React.FC<{
   sessionMode,
   emptySlot,
   workflowSessionId,
+  workflowTotalSteps,
 }) => {
   useMessageLstCache(conversation_id);
   const updateLocalImage = LocalImageView.useUpdateLocalImage();
@@ -41,8 +43,8 @@ const WCoreChat: React.FC<{
     updateLocalImage({ root: workspace });
   }, [workspace]);
   const conversationValue = useMemo<ConversationContextValue>(() => {
-    return { conversationId: conversation_id, workspace, type: 'wcore', workflowSessionId };
-  }, [conversation_id, workspace, workflowSessionId]);
+    return { conversationId: conversation_id, workspace, type: 'wcore', workflowSessionId, workflowTotalSteps };
+  }, [conversation_id, workspace, workflowSessionId, workflowTotalSteps]);
 
   return (
     <ConversationProvider value={conversationValue}>

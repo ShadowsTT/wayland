@@ -1,0 +1,16 @@
+{
+  "accordion": {
+    "scheduled": "スケジュール済みタスク",
+    "workflows": "ワークフロー",
+    "teams": "チーム",
+    "recentChats": "最近のチャット",
+    "inFlight": "進行中",
+    "running": "実行中",
+    "recentlyLaunched": "最近起動",
+    "myTeams": "マイチーム",
+    "seeAllWorkflows": "すべてのワークフローを表示 →",
+    "seeAllScheduled": "すべてのスケジュールを表示 →",
+    "seeAllChats": "すべてのチャットを表示 →",
+    "showMore": "さらに {{count}} 件を表示 →"
+  }
+}

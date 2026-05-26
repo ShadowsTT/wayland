@@ -1,0 +1,16 @@
+{
+  "accordion": {
+    "scheduled": "Запланированные задачи",
+    "workflows": "Рабочие процессы",
+    "teams": "Команды",
+    "recentChats": "Недавние чаты",
+    "inFlight": "В работе",
+    "running": "Выполняется",
+    "recentlyLaunched": "Недавно запущенные",
+    "myTeams": "Мои команды",
+    "seeAllWorkflows": "Все рабочие процессы →",
+    "seeAllScheduled": "Все запланированные →",
+    "seeAllChats": "Все чаты →",
+    "showMore": "Показать ещё {{count}} →"
+  }
+}

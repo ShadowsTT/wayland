@@ -20,6 +20,7 @@
   },
   "history": {
     "recents": "Недавні",
+    "recentChats": "Недавні чати",
     "noHistory": "Немає історії чатів",
     "deleteTitle": "Видалити",
     "deleteConfirm": "Ви впевнені, що хочете видалити цей чат?",

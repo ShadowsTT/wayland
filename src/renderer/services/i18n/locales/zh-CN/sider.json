@@ -1,0 +1,16 @@
+{
+  "accordion": {
+    "scheduled": "定时任务",
+    "workflows": "工作流",
+    "teams": "团队",
+    "recentChats": "最近对话",
+    "inFlight": "进行中",
+    "running": "运行中",
+    "recentlyLaunched": "最近启动",
+    "myTeams": "我的团队",
+    "seeAllWorkflows": "查看所有工作流 →",
+    "seeAllScheduled": "查看所有任务 →",
+    "seeAllChats": "查看所有对话 →",
+    "showMore": "再显示 {{count}} 个 →"
+  }
+}

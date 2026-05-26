@@ -21,12 +21,21 @@ import type { Mock } from 'vitest';
 // Mock @/common so ipcBridge.conversation.listChanged.emit is spy-able.
 // WorkflowSessionService calls this singleton directly (mirrors the cron
 // pattern at WorkerTaskManagerJobExecutor.ts:254-258).
+//
+// Also stub ipcBridge.workflow.sessionChanged.emit so the W0.2 lifecycle
+// emit assertions below can spy on it. Downstream sidebar listeners react
+// to this emit to refresh the in-flight strip + badge counts without
+// re-fetching the full session payload.
 // ---------------------------------------------------------------------------
 const listChangedEmitMock = vi.fn();
+const sessionChangedEmitMock = vi.fn();
 vi.mock('@/common', () => ({
   ipcBridge: {
     conversation: {
       listChanged: { emit: (...args: unknown[]) => listChangedEmitMock(...args) },
+    },
+    workflow: {
+      sessionChanged: { emit: (...args: unknown[]) => sessionChangedEmitMock(...args) },
     },
   },
 }));
@@ -97,6 +106,9 @@ function makeRepo() {
       const matches = Array.from(rows.values()).filter((r) => r.status === 'active');
       matches.sort((a, b) => b.updated_at - a.updated_at);
       return matches.slice(0, limit ?? 3);
+    }),
+    countActive: vi.fn(() => {
+      return Array.from(rows.values()).filter((r) => r.status === 'active').length;
     }),
     update: vi.fn((id: string, patch: Record<string, unknown>) => {
       const row = rows.get(id);
@@ -901,6 +913,92 @@ describe('WorkflowSessionService.start() — launch target consumption', () => {
     // backend must fall back to 'claude' and type to 'acp'
     expect(callArg.extra.backend).toBe('claude');
     expect(callArg.type).toBe('acp');
+  });
+});
+
+describe('WorkflowSessionService — sessionChanged emitter + countActive', () => {
+  beforeEach(() => {
+    sessionChangedEmitMock.mockClear();
+  });
+
+  it('emits sessionChanged with action=start on start()', async () => {
+    const parts = buildService();
+    parts.skillMap.set('demo', {
+      entry: skillEntry({ name: 'demo', type: 'workflow' }),
+      body: TWO_STEP_BODY,
+    });
+
+    const result = await parts.service.start({ workflow_name: 'demo' });
+
+    expect(sessionChangedEmitMock).toHaveBeenCalledWith({
+      session_id: result.sessionId,
+      action: 'start',
+    });
+  });
+
+  it('emits sessionChanged with action=update on session state update (applyStepTransition)', async () => {
+    const parts = buildService();
+    parts.skillMap.set('demo', {
+      entry: skillEntry({ name: 'demo', type: 'workflow' }),
+      body: TWO_STEP_BODY,
+    });
+    const { sessionId } = await parts.service.start({ workflow_name: 'demo' });
+
+    sessionChangedEmitMock.mockClear();
+
+    await parts.service.applyStepTransition(sessionId, {
+      step_n: 1,
+      status: 'now',
+      source: 'parent',
+      dispatch_id: null,
+      timestamp: 1_700_000_000_000,
+    });
+
+    expect(sessionChangedEmitMock).toHaveBeenCalledWith({
+      session_id: sessionId,
+      action: 'update',
+    });
+  });
+
+  it('emits sessionChanged with action=complete on completeSession()', async () => {
+    const parts = buildService();
+    parts.skillMap.set('demo', {
+      entry: skillEntry({ name: 'demo', type: 'workflow' }),
+      body: TWO_STEP_BODY,
+    });
+    const { sessionId } = await parts.service.start({ workflow_name: 'demo' });
+
+    sessionChangedEmitMock.mockClear();
+
+    await parts.service.completeSession(sessionId);
+
+    expect(sessionChangedEmitMock).toHaveBeenCalledWith({
+      session_id: sessionId,
+      action: 'complete',
+    });
+  });
+
+  it('countActive() returns the number of active (non-complete) sessions', async () => {
+    const parts = buildService();
+    parts.skillMap.set('a', {
+      entry: skillEntry({ name: 'a', type: 'workflow' }),
+      body: TWO_STEP_BODY,
+    });
+    parts.skillMap.set('b', {
+      entry: skillEntry({ name: 'b', type: 'workflow' }),
+      body: TWO_STEP_BODY,
+    });
+
+    expect(await parts.service.countActive()).toBe(0);
+
+    const first = await parts.service.start({ workflow_name: 'a' });
+    expect(await parts.service.countActive()).toBe(1);
+
+    await parts.service.start({ workflow_name: 'b' });
+    expect(await parts.service.countActive()).toBe(2);
+
+    await parts.service.completeSession(first.sessionId);
+    expect(await parts.service.countActive()).toBe(1);
   });
 });
 

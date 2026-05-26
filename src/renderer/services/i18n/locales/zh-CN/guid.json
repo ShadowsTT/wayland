@@ -8,6 +8,11 @@
   "promptExamplesHint": "试试这些可点击的案例提示词：",
   "agentSwitcherLabel": "Agent",
   "switchedToAgent": "已切换到 {{agent}}",
+  "hint": {
+    "search": "按 {{key}} 搜索",
+    "backend": "{{key}} 切换后端",
+    "newChat": "{{key}} 新建对话"
+  },
   "scanning": {
     "initialMessage": "当前Agent不可用, 正在检测其他可用agent...",
     "scanningMessage": "正在扫描本地可用agent...",

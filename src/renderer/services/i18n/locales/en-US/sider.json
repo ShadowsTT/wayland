@@ -1,0 +1,16 @@
+{
+  "accordion": {
+    "scheduled": "Scheduled Tasks",
+    "workflows": "Workflows",
+    "teams": "Teams",
+    "recentChats": "Recent Chats",
+    "inFlight": "In-flight",
+    "running": "Running",
+    "recentlyLaunched": "Recently launched",
+    "myTeams": "My teams",
+    "seeAllWorkflows": "See all workflows →",
+    "seeAllScheduled": "See all scheduled →",
+    "seeAllChats": "See all chats →",
+    "showMore": "Show {{count}} more →"
+  }
+}

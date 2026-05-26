@@ -11,6 +11,7 @@ import { ArrowLeftCircle, LogOut, Moon, Settings, Sun } from 'lucide-react';
 import classNames from 'classnames';
 import { iconColors } from '@renderer/styles/colors';
 import type { SiderTooltipProps } from '@renderer/utils/ui/siderTooltip';
+import { SiderFooterQuickActions } from './SiderFooter/SiderFooterQuickActions';
 
 interface SiderFooterProps {
   isMobile: boolean;
@@ -22,6 +23,9 @@ interface SiderFooterProps {
   onThemeToggle: () => void;
   showLogout?: boolean;
   onLogoutClick?: () => void;
+  /** Optional handlers forwarded into SiderFooterQuickActions (W2c). */
+  onOpenBugReport?: () => void;
+  onOpenLink?: (url: string) => void;
 }
 
 const SiderFooter: React.FC<SiderFooterProps> = ({
@@ -34,6 +38,8 @@ const SiderFooter: React.FC<SiderFooterProps> = ({
   onThemeToggle,
   showLogout = false,
   onLogoutClick,
+  onOpenBugReport,
+  onOpenLink,
 }) => {
   const { t } = useTranslation();
 
@@ -85,6 +91,10 @@ const SiderFooter: React.FC<SiderFooterProps> = ({
               </span>
             </div>
           </Tooltip>
+        )}
+        {/* W2c — quick actions row (Bug · WebUI · GitHub). Hidden in collapsed mode. */}
+        {!collapsed && !isSettings && (
+          <SiderFooterQuickActions onOpenBugReport={onOpenBugReport} onOpenLink={onOpenLink} collapsed={collapsed} />
         )}
         {/* Theme toggle — lightweight icon button, only while inside Settings page (not in collapsed mode) */}
         {showThemeToggle && (

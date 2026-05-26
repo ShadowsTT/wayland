@@ -12,6 +12,7 @@ import { uuid } from '@/common/utils';
 import addChatIcon from '@/renderer/assets/icons/add-chat.svg';
 import { CronJobManager } from '@/renderer/pages/cron';
 import { usePresetAssistantInfo, resolveAssistantConfigId } from '@/renderer/hooks/agent/usePresetAssistantInfo';
+import { useWorkflowSession } from '@/renderer/hooks/workflow/useWorkflowSession';
 import { iconColors } from '@/renderer/styles/colors';
 import { Button, Dropdown, Menu, Tooltip, Typography } from '@arco-design/web-react';
 import React, { useCallback, useMemo, useRef } from 'react';
@@ -291,6 +292,18 @@ const ChatConversation: React.FC<{
   const initialWorkflowSession: WorkflowSession | undefined = locationState?.initialWorkflowSession;
   const isWorkflow = Boolean(workflowSessionId);
 
+  // W0.3 N+1 fix (completed in W0.6): subscribe to the workflow session ONCE
+  // at the conversation level and thread BOTH `workflowTotalSteps` AND
+  // `applyStepMarker` through ConversationContext. Per-message
+  // `WorkflowMessageBody` instances no longer mount their own
+  // `useWorkflowSession` — without removing that per-message hook, the
+  // mount-effect at `useWorkflowSession.ts:115-122` was still triggering N
+  // `findAllActive` IPC roundtrips (one per assistant message) on first
+  // render.
+  const hoistedWorkflowSession = useWorkflowSession(workflowSessionId, initialWorkflowSession);
+  const workflowTotalSteps: number | null = hoistedWorkflowSession.data?.total_steps ?? null;
+  const workflowApplyStepMarker = hoistedWorkflowSession.applyStepMarker;
+
   const isGeminiConversation = conversation?.type === 'gemini';
   const isWCoreConversation = conversation?.type === 'wcore';
 
@@ -318,6 +331,8 @@ const ChatConversation: React.FC<{
             cronJobId={(conversation.extra as { cronJobId?: string })?.cronJobId}
             hideSendBox={hideSendBox}
             workflowSessionId={workflowSessionId}
+            workflowTotalSteps={workflowTotalSteps}
+            workflowApplyStepMarker={workflowApplyStepMarker}
           ></AcpChat>
         );
       case 'codex': // Legacy: codex now uses ACP protocol
@@ -337,6 +352,8 @@ const ChatConversation: React.FC<{
             }
             hideSendBox={hideSendBox}
             workflowSessionId={workflowSessionId}
+            workflowTotalSteps={workflowTotalSteps}
+            workflowApplyStepMarker={workflowApplyStepMarker}
           />
         );
       case 'openclaw-gateway':
@@ -369,7 +386,16 @@ const ChatConversation: React.FC<{
       default:
         return null;
     }
-  }, [conversation, isGeminiConversation, isWCoreConversation, assistantDisplayName, hideSendBox, workflowSessionId]);
+  }, [
+    conversation,
+    isGeminiConversation,
+    isWCoreConversation,
+    assistantDisplayName,
+    hideSendBox,
+    workflowSessionId,
+    workflowTotalSteps,
+    workflowApplyStepMarker,
+  ]);
 
   const sliderTitle = useMemo(() => {
     return (
@@ -434,6 +460,8 @@ const ChatConversation: React.FC<{
           modelSelection={WORKFLOW_WCORE_MODEL_SELECTION}
           sessionMode={wcoreConv.extra?.sessionMode}
           workflowSessionId={workflowSessionId}
+          workflowTotalSteps={workflowTotalSteps}
+          workflowApplyStepMarker={workflowApplyStepMarker}
         />
       );
       return (
@@ -466,6 +494,8 @@ const ChatConversation: React.FC<{
           hideSendBox={hideSendBox}
           sessionMode={geminiConv.extra?.sessionMode}
           workflowSessionId={workflowSessionId}
+          workflowTotalSteps={workflowTotalSteps}
+          workflowApplyStepMarker={workflowApplyStepMarker}
         />
       );
       return (

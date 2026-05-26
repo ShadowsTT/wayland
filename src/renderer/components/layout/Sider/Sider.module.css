@@ -51,3 +51,34 @@
 :global(.group):hover .pinnedTextSlot {
   padding-right: 18px;
 }
+
+/* v0.6.2 W2a — three-zone grid (top pinned · scroll · footer pinned).
+   Top + scroll render as one continuous visual list (no divider). Footer is
+   broken out with darker bg + top border + upward shadow per SPEC §3.1. */
+.gridContainer {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  min-height: 0;
+  height: 100%;
+}
+
+.topZone {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 0 0 2px 0;
+}
+
+.scrollZone {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.footerZone {
+  background: var(--color-bg-2);
+  border-top: 1px solid var(--color-border-2);
+  box-shadow: 0 -8px 16px -8px rgba(0, 0, 0, 0.6);
+  position: relative;
+  z-index: 5;
+}
