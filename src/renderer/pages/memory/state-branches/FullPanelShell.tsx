@@ -61,13 +61,15 @@ const FullPanelShell: React.FC = () => {
     return isMemoryTabKey(tabParam) ? tabParam : 'home';
   });
 
-  // Re-sync if the URL changes externally (browser back/forward).
+  // Re-sync if the URL changes externally (browser back/forward). Narrow the
+  // dep to the specific `tab` query param so unrelated param mutations (slug
+  // changes in WikiTab, etc.) don't refire this effect and cause render churn.
+  const tabParam = searchParams.get('tab');
   useEffect(() => {
-    const tabParam = searchParams.get('tab');
     if (isMemoryTabKey(tabParam) && tabParam !== activeTab) {
       setActiveTab(tabParam);
     }
-  }, [searchParams, activeTab]);
+  }, [tabParam, activeTab]);
 
   const handleTabChange = useCallback(
     (key: string) => {

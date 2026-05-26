@@ -184,13 +184,15 @@ const WikiTab: React.FC = () => {
     [activeSlug]
   );
 
-  // Re-sync slug from URL on browser navigation.
+  // Re-sync slug from URL on browser navigation. Narrow the dep to the
+  // specific `slug` query param so unrelated param mutations (tab switches,
+  // etc.) don't refire this effect and cause render churn.
+  const slugParam = searchParams.get('slug');
   useEffect(() => {
-    const slugParam = searchParams.get('slug');
     if (slugParam !== activeSlug) {
       setActiveSlug(slugParam);
     }
-  }, [searchParams, activeSlug]);
+  }, [slugParam, activeSlug]);
 
   const selectEntry = useCallback(
     (slug: string) => {
