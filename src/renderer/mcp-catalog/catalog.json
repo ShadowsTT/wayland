@@ -1,7 +1,7 @@
 {
   "$schema": "./schema/catalog.schema.json",
   "version": "1.0.0",
-  "publishedAt": "2026-05-27T16:46:45.018Z",
+  "publishedAt": "2026-05-27T16:49:54.657Z",
   "entries": [
     {
       "id": "io.github.taylorwilsdon/google-workspace-mcp",
@@ -302,14 +302,14 @@
     {
       "id": "com.microsoft/teams-mcp",
       "name": "Microsoft Teams",
-      "shortDescription": "Channel messages, chats, meetings, and presence — Microsoft Teams via Graph.",
+      "shortDescription": "Channel messages, chats, meetings, and presence via Microsoft Graph — community-maintained MCP server.",
       "iconUrl": "icons/teams.svg",
       "tier": "worker",
       "categories": [
         "communication",
         "productivity"
       ],
-      "maintainerType": "official",
+      "maintainerType": "community",
       "verifiedByWayland": "2026-05-12",
       "popularityRank": 19,
       "installRate": 0.25,
@@ -364,23 +364,6 @@
       "installRate": 0.19,
       "entryUrl": "entries/com.zoom-zoom-mcp.json",
       "guideUrl": "guides/com.zoom-zoom-mcp.md"
-    },
-    {
-      "id": "com.cisco/webex-mcp",
-      "name": "Webex",
-      "shortDescription": "Send messages, schedule meetings, and manage spaces in Cisco Webex.",
-      "iconUrl": "icons/webex.svg",
-      "tier": "worker",
-      "categories": [
-        "communication",
-        "calendar"
-      ],
-      "maintainerType": "official",
-      "verifiedByWayland": "2026-05-12",
-      "popularityRank": 23,
-      "installRate": 0.14,
-      "entryUrl": "entries/com.cisco-webex-mcp.json",
-      "guideUrl": "guides/com.cisco-webex-mcp.md"
     },
     {
       "id": "com.calendly/calendly-mcp",
@@ -625,7 +608,7 @@
     {
       "id": "com.amazon/aws-mcp",
       "name": "AWS",
-      "shortDescription": "EC2, S3, Lambda, CloudFormation, and core AWS services via your AWS credentials.",
+      "shortDescription": "Call any AWS CLI command (all services) and get natural-language command suggestions via AWS Labs' official MCP server.",
       "iconUrl": "icons/aws.svg",
       "tier": "builder",
       "categories": [
@@ -801,14 +784,14 @@
     {
       "id": "com.docker/docker-mcp",
       "name": "Docker",
-      "shortDescription": "List, inspect, start, stop, and log local Docker containers, images, and Compose services.",
+      "shortDescription": "Execute commands inside local Docker containers via the Docker socket — community MCP server.",
       "iconUrl": "icons/docker.svg",
       "tier": "builder",
       "categories": [
         "developer",
         "devops"
       ],
-      "maintainerType": "official",
+      "maintainerType": "community",
       "verifiedByWayland": "2026-05-12",
       "popularityRank": 48,
       "installRate": 0.16,
