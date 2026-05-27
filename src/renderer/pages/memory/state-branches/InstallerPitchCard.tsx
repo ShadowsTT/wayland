@@ -5,16 +5,19 @@
  */
 
 /**
- * InstallerPitchCard -- Wave 4 surface shown when IJFW status is
- * `not_installed`. Persistence-led pitch (handoff §4.4): headline + 3-bullet
- * value prop + single Install CTA. Skip lives in Settings per Decision 3b,
- * surfaced here as a small footer link only.
+ * InstallerPitchCard -- v0.6.3 re-enable surface.
  *
- * On install click we call `ipcBridge.ijfw.triggerInstall.invoke()` and
- * disable the CTA with an inline spinner. MemoryPage swaps to InstallingCard
- * as soon as the bridge emits the `installing` status, so this card usually
- * unmounts within a tick -- the local disabled state is a defensive guard
- * against double-fires before the status flip arrives.
+ * Originally the default `not_installed` surface (Wave 4). After the v0.6.3
+ * auto-install UX flip, MemoryPage routes here ONLY when the user has
+ * explicitly opted out (`status.reason === 'opt_out'`). For the first-boot
+ * / auto-install-pending case it now routes to AutoSettingUpCard, which is
+ * the truly silent background-install surface.
+ *
+ * Discloses IJFW + Ferrox Labs provenance per Sean's directive and renames
+ * the primary CTA from "Install Memory" to "Enable Memory" -- the user
+ * already chose to disable it, so the action they're taking now is to
+ * re-enable. The click handler chains BOTH the opt-out clear AND the
+ * install kick so the user does not have to flip the Settings switch first.
  */
 
 import { Button, Spin } from '@arco-design/web-react';
@@ -34,11 +37,17 @@ const InstallerPitchCard: React.FC = () => {
     if (isInstalling) return;
     setIsInstalling(true);
     try {
+      // Order matters: clear opt-out BEFORE kicking install, otherwise the
+      // bootstrap path may short-circuit on the still-set skip flag. We await
+      // both serially so a skipSetup failure aborts before we spawn the
+      // installer.
+      await ipcBridge.ijfw.skipSetup.invoke({ enabled: false });
       await ipcBridge.ijfw.triggerInstall.invoke();
     } catch {
-      // If the bridge rejects, flip the button back so the user can retry.
-      // MemoryPage will route to InstallFailedCard if the lifecycle status
-      // moves to `install_failed`; here we only own the local CTA state.
+      // If either bridge call rejects, flip the button back so the user can
+      // retry. MemoryPage will route to InstallFailedCard if the lifecycle
+      // status moves to `install_failed`; here we only own the local CTA
+      // state.
       setIsInstalling(false);
     }
   }, [isInstalling]);
@@ -84,7 +93,7 @@ const InstallerPitchCard: React.FC = () => {
                 {t('memory.installing.title')}
               </span>
             ) : (
-              t('memory.pitch.install_cta')
+              t('memory.pitch.enable_cta')
             )}
           </Button>
           <Button

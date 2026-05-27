@@ -7,11 +7,14 @@
 // @vitest-environment jsdom
 
 /**
- * Wave 4 -- DOM tests for the persistence-led InstallerPitchCard.
+ * v0.6.3 -- DOM tests for the re-enable InstallerPitchCard.
  *
  * Covers:
  *   - Headline + lede + 3 bullets render with the right i18n keys.
- *   - Clicking the primary CTA invokes `ipcBridge.ijfw.triggerInstall`.
+ *   - Primary CTA is labelled "Enable Memory" (was "Install Memory").
+ *   - Clicking the CTA calls skipSetup({enabled:false}) FIRST then
+ *     triggerInstall.invoke() -- both must fire and in order, otherwise
+ *     bootstrap short-circuits on the still-set opt-out flag.
  *   - Settings link navigates to `/settings/ijfw`.
  *   - Button enters a disabled "installing" state on click (defensive guard
  *     before MemoryPage swaps in InstallingCard via the status emitter).
@@ -21,9 +24,10 @@ import React from 'react';
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { mockNavigate, triggerInstallInvoke } = vi.hoisted(() => ({
+const { mockNavigate, triggerInstallInvoke, skipSetupInvoke } = vi.hoisted(() => ({
   mockNavigate: vi.fn(),
   triggerInstallInvoke: vi.fn<() => Promise<{ ok: true } | { ok: false; error: string }>>(),
+  skipSetupInvoke: vi.fn<(args: { enabled: boolean }) => Promise<{ ok: true }>>(),
 }));
 
 vi.mock('react-i18next', () => ({
@@ -38,6 +42,7 @@ vi.mock('@/common', () => ({
   ipcBridge: {
     ijfw: {
       triggerInstall: { invoke: triggerInstallInvoke },
+      skipSetup: { invoke: skipSetupInvoke },
     },
   },
 }));
@@ -48,6 +53,8 @@ beforeEach(() => {
   mockNavigate.mockReset();
   triggerInstallInvoke.mockReset();
   triggerInstallInvoke.mockResolvedValue({ ok: true });
+  skipSetupInvoke.mockReset();
+  skipSetupInvoke.mockResolvedValue({ ok: true });
 });
 
 afterEach(() => {
@@ -64,19 +71,39 @@ describe('InstallerPitchCard', () => {
     expect(screen.getByText('memory.pitch.bullet3')).toBeTruthy();
   });
 
-  it('renders the install CTA with the expected label', () => {
+  it('renders the Enable Memory CTA (re-enable surface, not first install)', () => {
     render(<InstallerPitchCard />);
     const cta = screen.getByTestId('memory-installer-pitch-install-cta');
-    expect(cta.textContent).toContain('memory.pitch.install_cta');
+    expect(cta.textContent).toContain('memory.pitch.enable_cta');
   });
 
-  it('calls ipcBridge.ijfw.triggerInstall.invoke when the CTA is clicked', async () => {
+  it('calls skipSetup({enabled:false}) AND triggerInstall.invoke when the CTA is clicked', async () => {
     render(<InstallerPitchCard />);
     const cta = screen.getByTestId('memory-installer-pitch-install-cta');
     await act(async () => {
       fireEvent.click(cta);
     });
+    expect(skipSetupInvoke).toHaveBeenCalledTimes(1);
+    expect(skipSetupInvoke).toHaveBeenCalledWith({ enabled: false });
     expect(triggerInstallInvoke).toHaveBeenCalledTimes(1);
+  });
+
+  it('fires skipSetup BEFORE triggerInstall (bootstrap short-circuits on stale flag otherwise)', async () => {
+    const callOrder: string[] = [];
+    skipSetupInvoke.mockImplementationOnce(async () => {
+      callOrder.push('skipSetup');
+      return { ok: true };
+    });
+    triggerInstallInvoke.mockImplementationOnce(async () => {
+      callOrder.push('triggerInstall');
+      return { ok: true };
+    });
+    render(<InstallerPitchCard />);
+    const cta = screen.getByTestId('memory-installer-pitch-install-cta');
+    await act(async () => {
+      fireEvent.click(cta);
+    });
+    expect(callOrder).toEqual(['skipSetup', 'triggerInstall']);
   });
 
   it('disables the CTA and swaps to an installing label after click', async () => {
@@ -132,7 +159,19 @@ describe('InstallerPitchCard', () => {
       fireEvent.click(cta);
     });
     expect(cta.disabled).toBe(false);
-    expect(cta.textContent).toContain('memory.pitch.install_cta');
+    expect(cta.textContent).toContain('memory.pitch.enable_cta');
+  });
+
+  it('re-enables the CTA if skipSetup itself rejects (does not call triggerInstall)', async () => {
+    skipSetupInvoke.mockRejectedValueOnce(new Error('skipSetup bridge error'));
+    render(<InstallerPitchCard />);
+    const cta = screen.getByTestId('memory-installer-pitch-install-cta') as HTMLButtonElement;
+    await act(async () => {
+      fireEvent.click(cta);
+    });
+    expect(triggerInstallInvoke).not.toHaveBeenCalled();
+    expect(cta.disabled).toBe(false);
+    expect(cta.textContent).toContain('memory.pitch.enable_cta');
   });
 
   it('navigates to /settings/ijfw when the settings link is clicked', () => {
