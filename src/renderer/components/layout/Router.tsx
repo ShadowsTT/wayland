@@ -21,6 +21,15 @@ const EditorSettings = React.lazy(() => import('@renderer/pages/settings/EditorS
 const GeneralSettings = React.lazy(() => import('@renderer/pages/settings/GeneralSettings'));
 const ImageGenSettings = React.lazy(() => import('@renderer/pages/settings/ImageGenSettings'));
 const McpSettings = React.lazy(() => import('@renderer/pages/settings/McpSettings'));
+const McpLibraryBrowsePage = React.lazy(() =>
+  import('@renderer/pages/settings/McpLibrary').then((m) => ({ default: m.BrowsePage }))
+);
+const McpLibraryInstalledPage = React.lazy(() =>
+  import('@renderer/pages/settings/McpLibrary').then((m) => ({ default: m.InstalledPage }))
+);
+const McpLibraryDetailPage = React.lazy(() =>
+  import('@renderer/pages/settings/McpLibrary').then((m) => ({ default: m.DetailPage }))
+);
 const NotificationsSettings = React.lazy(() => import('@renderer/pages/settings/NotificationsSettings'));
 const ModelsSettings = React.lazy(() => import('@renderer/pages/settings/ModelsSettings'));
 const SkillsSettings = React.lazy(() => import('@renderer/pages/settings/SkillsSettings'));
@@ -40,6 +49,8 @@ const TeamsLibraryPage = React.lazy(() => import('@renderer/pages/teams/TeamsLib
 const TeamLauncherPage = React.lazy(() => import('@renderer/pages/teams/TeamLauncherPage'));
 const MemoryPage = React.lazy(() => import('@renderer/pages/memory/MemoryPage'));
 const IjfwSettingsPanel = React.lazy(() => import('@renderer/pages/settings/IjfwSettingsPanel'));
+const WikiHomePage = React.lazy(() => import('@renderer/pages/wiki/WikiHomePage').then((m) => ({ default: m.WikiHomePage })));
+const WikiDetailPage = React.lazy(() => import('@renderer/pages/wiki/WikiDetailPage').then((m) => ({ default: m.WikiDetailPageRoute })));
 
 const withRouteFallback = (Component: React.LazyExoticComponent<React.ComponentType>) => (
   <Suspense fallback={<AppLoader />}>
@@ -97,6 +108,19 @@ const PanelRoute: React.FC<{ layout: React.ReactElement }> = ({ layout }) => {
             <Route path='/settings/channels' element={withRouteFallback(ChannelsIndex)} />
             <Route path='/settings/channels/:id' element={withRouteFallback(ChannelDetailPage)} />
             <Route path='/settings/mcp' element={withRouteFallback(McpSettings)} />
+            {/* MCP Library — new catalog-driven Browse / Installed / Detail surface. */}
+            <Route
+              path='/settings/mcp-library'
+              element={<Navigate to='/settings/mcp-library/browse' replace />}
+            />
+            <Route path='/settings/mcp-library/browse' element={withRouteFallback(McpLibraryBrowsePage)} />
+            <Route path='/settings/mcp-library/installed' element={withRouteFallback(McpLibraryInstalledPage)} />
+            <Route path='/settings/mcp-library/:entryId' element={withRouteFallback(McpLibraryDetailPage)} />
+            {/* Legacy redirect — old `/settings/tools/mcp` route now lands on Installed. */}
+            <Route
+              path='/settings/tools/mcp'
+              element={<Navigate to='/settings/mcp-library/installed' replace />}
+            />
             {/* APPEARANCE */}
             <Route path='/settings/theme' element={withRouteFallback(DisplaySettings)} />
             <Route path='/settings/editor' element={withRouteFallback(EditorSettings)} />
@@ -140,6 +164,8 @@ const PanelRoute: React.FC<{ layout: React.ReactElement }> = ({ layout }) => {
             <Route path='/teams/new' element={withRouteFallback(TeamLauncherPage)} />
             <Route path='/teams/:teamId/launch' element={withRouteFallback(TeamLauncherPage)} />
             <Route path='/memory' element={withRouteFallback(MemoryPage)} />
+            <Route path='/wiki' element={withRouteFallback(WikiHomePage)} />
+            <Route path='/wiki/:slug' element={withRouteFallback(WikiDetailPage)} />
           </Route>
           <Route path='*' element={<Navigate to={status === 'authenticated' ? '/guid' : '/login'} replace />} />
         </Routes>
