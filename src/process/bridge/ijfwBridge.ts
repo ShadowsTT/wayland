@@ -42,7 +42,26 @@ export function initIjfwBridge(): void {
   });
 
   ipcBridge.ijfw.getStatus.provider(async () => {
-    return getLastStatus() ?? { status: 'not_installed' as const };
+    // Prefer the cached lifecycle status emitted by bootstrap/applyPendingUpgrade.
+    const cached = getLastStatus();
+    if (cached) return cached;
+
+    // Bootstrap is deferred 5s on app boot, so for the first window the cache
+    // is empty. Returning a static `not_installed` here was wrong — the
+    // MemoryPage renders the install pitch when IJFW is in fact already
+    // present at `~/.ijfw/mcp-server`. Do an active detection so the renderer
+    // sees the truth without waiting for bootstrap to emit.
+    try {
+      const local = await ijfwSystemService.detectLocalInstall();
+      if (local.installed) {
+        return local.version
+          ? { status: 'installed_current' as const, version: local.version }
+          : { status: 'installed_current' as const };
+      }
+    } catch (err) {
+      log.warn('[ijfw-bridge] getStatus detect failed; falling back', { err });
+    }
+    return { status: 'not_installed' as const };
   });
 
   ipcBridge.ijfw.checkNow.provider(async () => {
