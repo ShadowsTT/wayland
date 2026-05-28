@@ -6,10 +6,37 @@
 
 import { MCPOAuthProvider, OAUTH_DISPLAY_MESSAGE_EVENT } from '@office-ai/aioncli-core/dist/src/mcp/oauth-provider.js';
 import { MCPOAuthTokenStorage } from '@office-ai/aioncli-core/dist/src/mcp/oauth-token-storage.js';
+import { OAuthUtils } from '@office-ai/aioncli-core/dist/src/mcp/oauth-utils.js';
 import type { MCPOAuthConfig } from '@office-ai/aioncli-core/dist/src/mcp/oauth-provider.js';
 import { coreEvents, CoreEvent } from '@office-ai/aioncli-core/dist/src/utils/events.js';
 import { EventEmitter } from 'node:events';
 import type { IMcpServer } from '@/common/config/storage';
+
+// Upstream OAuthUtils.buildResourceParameter uses `new URL(endpointUrl).pathname`
+// which the WHATWG URL parser normalizes to '/' for root-only URLs. Most MCP
+// servers (Slack, Asana, Box, Stripe, Vercel, etc.) return their RFC 9728
+// `resource` field without that trailing slash, which makes the strict `!==`
+// comparison inside discoverOAuthConfig throw ResourceMismatchError:
+//   "Protected resource https://mcp.slack.com does not match expected
+//    https://mcp.slack.com/"
+// Patch the static method to strip the trailing slash for root-only URLs so
+// the comparison matches the canonical form servers actually return. 20 of
+// the 29 hosted-OAuth catalog entries depend on this fix.
+const originalBuildResourceParameter = OAuthUtils.buildResourceParameter.bind(OAuthUtils);
+(OAuthUtils as unknown as { buildResourceParameter: (url: string) => string }).buildResourceParameter = (
+  endpointUrl: string,
+): string => {
+  const result = originalBuildResourceParameter(endpointUrl);
+  try {
+    const u = new URL(endpointUrl);
+    if ((u.pathname === '/' || u.pathname === '') && result.endsWith('/')) {
+      return result.slice(0, -1);
+    }
+  } catch {
+    /* fall through */
+  }
+  return result;
+};
 
 export interface OAuthStatus {
   isAuthenticated: boolean;
