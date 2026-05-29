@@ -159,6 +159,13 @@ export function parseRealName(stdout: string): string | null {
 /** Resolve the macOS RealName for a user via `dscl`. Never throws. */
 function dsclRealName(username: string): Promise<string | null> {
   return new Promise((resolve) => {
+    // `username` is interpolated into the `/Users/<username>` path argument.
+    // execFile (no shell) already blocks shell injection; this guard blocks a
+    // crafted account name from path-traversing the dscl read (e.g. `../..`).
+    if (!/^[A-Za-z0-9._-]+$/.test(username)) {
+      resolve(null);
+      return;
+    }
     try {
       const child = execFile(
         'dscl',

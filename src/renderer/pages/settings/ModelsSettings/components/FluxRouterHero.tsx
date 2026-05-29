@@ -10,6 +10,7 @@ import { Lightning, Link as LinkIcon, Loading, Right } from '@icon-park/react';
 import { useTranslation } from 'react-i18next';
 import type { IModelRegistryConnectResult } from '@/common/adapter/ipcBridge';
 import type { ConnectError } from '@process/providers/types';
+import type { FluxMetrics } from '@/common/types/onboarding';
 import { openExternalUrl } from '@renderer/utils/platform';
 import FluxRouterMark from '@renderer/components/icons/FluxRouterMark';
 import styles from './FluxRouterHero.module.css';
@@ -30,21 +31,6 @@ const ERROR_KEYS: Record<ConnectError, string> = {
   unrecognized: 'settings.modelsPage.flux.errorUnrecognized',
   'no-models': 'settings.modelsPage.flux.errorNoModels',
   unknown: 'settings.modelsPage.flux.errorUnknown',
-};
-
-/**
- * Defensive shape for the Flux Desktop daemon `/api/metrics` payload. The IPC
- * method (`onboarding:fluxMetrics`) is typed `unknown | null`, so the hero
- * validates every field before rendering and never fabricates numbers. Mirrors
- * the shape `SiderFluxRouterEntry` consumes so both surfaces read one contract.
- */
-type FluxMetrics = {
-  /** Total routed turns the daemon has observed. */
-  totalTurns: number;
-  /** Last-N routing histogram: flagship (h), small (s), local Ollama (o). */
-  histogram: { h: number; s: number; o: number };
-  /** Pre-formatted savings line from the daemon, if known. */
-  savings?: string;
 };
 
 /** Narrow an arbitrary IPC payload into a `FluxMetrics`, or `null` if invalid. */

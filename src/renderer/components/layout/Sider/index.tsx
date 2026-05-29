@@ -228,7 +228,6 @@ const Sider: React.FC<SiderProps> = ({ onSessionClick, collapsed = false }) => {
         />
         <SiderFluxRouterEntry
           isMobile={isMobile}
-          isActive={false}
           collapsed={collapsed}
           siderTooltipProps={siderTooltipProps}
           onClick={() => handleTopZoneNav('/settings/models')}

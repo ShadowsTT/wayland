@@ -37,6 +37,23 @@ export type DetectionResult = {
 };
 
 /**
+ * Validated shape of the Flux Desktop daemon `/api/metrics` payload, shared by
+ * the Models hero and the sidebar status widget so both surfaces read one
+ * contract. The IPC method is typed `unknown | null`; consumers narrow into
+ * this via their `parseFluxMetrics` and never fabricate numbers.
+ */
+export type FluxMetrics = {
+  /** Total routed turns the daemon has observed. */
+  totalTurns: number;
+  /** Last-N routing histogram: flagship (h), small (s), local Ollama (o). */
+  histogram: { h: number; s: number; o: number };
+  /** Pre-formatted savings line from the daemon, if known. */
+  savings?: string;
+  /** Share of recent turns served by local Ollama (0-100), if known. */
+  ollamaSharePct?: number;
+};
+
+/**
  * Onboarding scenario the overlay renders, selected from live detection.
  *
  *  - `D` — Flux already wired: Flux is a connected provider AND Flux Desktop

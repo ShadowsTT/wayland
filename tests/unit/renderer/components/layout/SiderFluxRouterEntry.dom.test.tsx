@@ -45,7 +45,6 @@ const renderEntry = (collapsed = false): void => {
     <MemoryRouter>
       <SiderFluxRouterEntry
         isMobile={false}
-        isActive={false}
         collapsed={collapsed}
         siderTooltipProps={{}}
         onClick={() => {}}

@@ -8,7 +8,7 @@ import React, { useEffect, useState } from 'react';
 import { Tooltip } from '@arco-design/web-react';
 import classNames from 'classnames';
 import { useTranslation } from 'react-i18next';
-import type { DetectionResult } from '@/common/types/onboarding';
+import type { DetectionResult, FluxMetrics } from '@/common/types/onboarding';
 import FluxRouterMark from '@renderer/components/icons/FluxRouterMark';
 import { openExternalUrl } from '@renderer/utils/platform';
 import { useOnboardingDetection } from '@renderer/hooks/useOnboardingDetection';
@@ -18,22 +18,6 @@ const FLUX_DOWNLOADS_URL = 'https://fluxrouter.ai/downloads';
 
 /** Minimum routed turns before the data-driven states surface (per V4 mockup). */
 const MIN_TURNS_FOR_DATA = 10;
-
-/**
- * Defensive shape for the Flux Desktop daemon `/api/metrics` payload. The IPC
- * method is typed `unknown | null` (filled in W1), so the widget validates
- * every field before rendering and never fabricates numbers.
- */
-type FluxMetrics = {
-  /** Total routed turns the daemon has observed. */
-  totalTurns: number;
-  /** Last-100 routing histogram: flagship (H), small (S), local Ollama (O). */
-  histogram: { h: number; s: number; o: number };
-  /** Pre-formatted savings line (e.g. "~$120/yr saved at this pace"), if known. */
-  savings?: string;
-  /** Share of last-week turns served by local Ollama (0-100), if known. */
-  ollamaSharePct?: number;
-};
 
 /**
  * The single visual state the widget resolves to. Each maps to one TopZone
@@ -100,13 +84,12 @@ function resolveState(detection: DetectionResult | null, metrics: FluxMetrics | 
   return { kind: 'wired', tone: 'ok', metrics };
 }
 
-interface SiderFluxRouterEntryProps {
+type SiderFluxRouterEntryProps = {
   isMobile: boolean;
-  isActive: boolean;
   collapsed: boolean;
   siderTooltipProps: SiderTooltipProps;
   onClick?: () => void;
-}
+};
 
 /**
  * Flux Router status widget for the sidebar TopZone.

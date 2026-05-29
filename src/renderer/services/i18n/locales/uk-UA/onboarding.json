@@ -22,7 +22,7 @@
     "errorUnrecognized": "Це не схоже на ключ Flux Router. Він має починатися з sk-flux-.",
     "errorNoModels": "Підключено, але моделі не повернулися. Повторіть спробу трохи згодом.",
     "errorUnknown": "Щось пішло не так під час підключення. Повторіть спробу.",
-    "trust": "Від Ferrox Labs — команди, що створила Wayland."
+    "trust": "Від Ferrox Labs, команди, що створила Wayland."
   },
   "scenarioA": {
     "greeting": "{{name}}, ви вже готові",
