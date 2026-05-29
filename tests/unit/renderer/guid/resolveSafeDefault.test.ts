@@ -5,7 +5,11 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { isExperimentalProvider, resolveSafeDefault } from '@renderer/pages/guid/hooks/useGuidModelSelection';
+import {
+  isExperimentalProvider,
+  resolveFluxAuto,
+  resolveSafeDefault,
+} from '@renderer/pages/guid/hooks/useGuidModelSelection';
 import type { IProvider } from '@/common/storage/types';
 
 const provider = (over: Partial<IProvider> & { model: string[] }): IProvider =>
@@ -48,5 +52,21 @@ describe('resolveSafeDefault', () => {
 
   it('returns null for an empty list', () => {
     expect(resolveSafeDefault([])).toBeNull();
+  });
+});
+
+describe('resolveFluxAuto', () => {
+  it('returns flux-auto when a provider carries it', () => {
+    const list = [
+      provider({ platform: 'openai', model: ['gpt-5'] }),
+      provider({ platform: 'flux-router', model: ['flux-fast', 'flux-auto', 'flux-reasoning'] }),
+    ];
+    const chosen = resolveFluxAuto(list);
+    expect(chosen?.useModel).toBe('flux-auto');
+    expect(chosen?.provider.platform).toBe('flux-router');
+  });
+
+  it('returns null when flux-auto is not present (Flux not connected)', () => {
+    expect(resolveFluxAuto([provider({ platform: 'openai', model: ['gpt-5'] })])).toBeNull();
   });
 });

@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { Brain, ChevronDown, ChevronRight, Plus, Search } from 'lucide-react';
+import { Brain, ChevronDown, ChevronRight, Pin, Plus, Search } from 'lucide-react';
 import { Button, Dropdown, Input, Menu, Message, Tooltip } from '@arco-design/web-react';
 import { ipcBridge } from '@/common';
 import type { IProvider, TProviderWithModel } from '@/common/config/storage';
@@ -13,6 +13,7 @@ import { useModelRegistry } from '@/renderer/hooks/useModelRegistry';
 import { useUsageTelemetry } from '@/renderer/hooks/usage/useUsageTelemetry';
 import { useFrequentlyUsedModels, type FrequentlyUsedModel } from '@/renderer/hooks/usage/useFrequentlyUsedModels';
 import { useRecentlyUsedModels } from '@/renderer/hooks/usage/useRecentlyUsedModels';
+import { pinKey, usePinnedModels } from '@/renderer/hooks/usage/usePinnedModels';
 import { resolveAgentScope } from '@/renderer/pages/settings/AgentSettings/agentScopes';
 import { iconColors } from '@/renderer/styles/colors';
 import FluxRouterMark from '@/renderer/components/icons/FluxRouterMark';
@@ -607,6 +608,16 @@ export const ModelSelectorPanel: React.FC<ModelSelectorPanelProps> = ({
   // avoids hammering the IPC on every renderer mount.
   const { models: frequentlyUsed } = useFrequentlyUsedModels(panelOpen);
   const { models: recentlyUsed } = useRecentlyUsedModels(panelOpen);
+  const { pinned, toggle: togglePinKey } = usePinnedModels(panelOpen);
+
+  const onTogglePin = React.useCallback(
+    (model: CuratedModel) => togglePinKey(pinKey(model.providerId, model.id)),
+    [togglePinKey]
+  );
+  const isPinned = React.useCallback(
+    (model: CuratedModel) => pinned.has(pinKey(model.providerId, model.id)),
+    [pinned]
+  );
 
   // ⌘K / Ctrl+K focuses the search input while the panel is open.
   React.useEffect(() => {
@@ -724,6 +735,17 @@ export const ModelSelectorPanel: React.FC<ModelSelectorPanelProps> = ({
     return recentlyUsedRows.filter((m) => matchesQuery(m, query));
   }, [recentlyUsedRows, query]);
 
+  // Zone 0 — user-pinned models, resolved from the curated catalog. Pins that
+  // no longer exist in the catalog are dropped silently.
+  const pinnedRows = React.useMemo(() => {
+    if (!curated || pinned.size === 0) return [];
+    return curated.filter((m) => pinned.has(pinKey(m.providerId, m.id)));
+  }, [curated, pinned]);
+  const filteredPinned = React.useMemo(() => {
+    if (!query.trim()) return pinnedRows;
+    return pinnedRows.filter((m) => matchesQuery(m, query));
+  }, [pinnedRows, query]);
+
   const totalMatches = filtered?.length ?? 0;
   const searching = query.trim().length > 0;
 
@@ -798,12 +820,37 @@ export const ModelSelectorPanel: React.FC<ModelSelectorPanelProps> = ({
                   selected={isSelected(model)}
                   query={query}
                   onPick={onPick}
+                  pinned={isPinned(model)}
+                  onTogglePin={onTogglePin}
                 />
               ))
             )}
           </div>
         ) : (
           <>
+            {/* Zone 0 — Pinned (hidden until the user pins something) */}
+            {filteredPinned.length > 0 && (
+              <div className={styles.section}>
+                <div className={styles.sectionHead}>
+                  <span>{t('settings.modelsPage.homePicker.sectionPinned')}</span>
+                  <span className={styles.sectionHeadMeta}>
+                    {t('settings.modelsPage.homePicker.sectionPinnedSubtitle')}
+                  </span>
+                </div>
+                {filteredPinned.map((model) => (
+                  <ModelRow
+                    key={`pin-${model.providerId}:${model.id}`}
+                    model={model}
+                    selected={isSelected(model)}
+                    query={query}
+                    onPick={onPick}
+                    pinned
+                    onTogglePin={onTogglePin}
+                  />
+                ))}
+              </div>
+            )}
+
             {/* Zone 1 — Recently used (hidden until there's history) */}
             {filteredRecentlyUsed.length > 0 && (
               <div className={styles.section}>
@@ -820,6 +867,8 @@ export const ModelSelectorPanel: React.FC<ModelSelectorPanelProps> = ({
                     selected={isSelected(model)}
                     query={query}
                     onPick={onPick}
+                    pinned={isPinned(model)}
+                    onTogglePin={onTogglePin}
                   />
                 ))}
               </div>
@@ -847,6 +896,8 @@ export const ModelSelectorPanel: React.FC<ModelSelectorPanelProps> = ({
                         selected={isSelected(model)}
                         query={query}
                         onPick={onPick}
+                        pinned={isPinned(model)}
+                        onTogglePin={onTogglePin}
                       />
                     ))}
                   </div>
@@ -908,6 +959,8 @@ export const ModelSelectorPanel: React.FC<ModelSelectorPanelProps> = ({
                           selected={isSelected(model)}
                           query={query}
                           onPick={onPick}
+                          pinned={isPinned(model)}
+                          onTogglePin={onTogglePin}
                         />
                       ))}
                   </React.Fragment>
@@ -943,9 +996,12 @@ type ModelRowProps = {
   selected: boolean;
   query: string;
   onPick: (model: CuratedModel) => void;
+  /** Whether this model is pinned. Omit `onTogglePin` to hide the pin control. */
+  pinned?: boolean;
+  onTogglePin?: (model: CuratedModel) => void;
 };
 
-const ModelRow: React.FC<ModelRowProps> = ({ model, selected, query, onPick }) => {
+const ModelRow: React.FC<ModelRowProps> = ({ model, selected, query, onPick, pinned, onTogglePin }) => {
   const { t } = useTranslation();
   const isFlagship = model.role === 'flagship';
   const isPreview = model.status === 'preview';
@@ -963,6 +1019,22 @@ const ModelRow: React.FC<ModelRowProps> = ({ model, selected, query, onPick }) =
       {isPreview && <span className={styles.badge}>{t('settings.modelsPage.homePicker.badgePreview')}</span>}
       {isLegacy && <span className={styles.badge}>{t('settings.modelsPage.homePicker.badgeLegacy')}</span>}
       {selected && <span className={styles.check}>✓</span>}
+      {onTogglePin && (
+        <button
+          type='button'
+          className={styles.pinButton}
+          data-pinned={pinned}
+          title={t(pinned ? 'settings.modelsPage.homePicker.unpinModel' : 'settings.modelsPage.homePicker.pinModel')}
+          aria-label={t(pinned ? 'settings.modelsPage.homePicker.unpinModel' : 'settings.modelsPage.homePicker.pinModel')}
+          aria-pressed={pinned}
+          onClick={(e) => {
+            e.stopPropagation();
+            onTogglePin(model);
+          }}
+        >
+          <Pin size={12} />
+        </button>
+      )}
     </div>
   );
 };

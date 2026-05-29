@@ -116,6 +116,13 @@ export interface IConfigStorageRefer {
     preferredMode?: string;
   };
   'wcore.defaultModel'?: { id: string; useModel: string };
+  /**
+   * User-pinned models for the composer model picker, as `providerId:modelId`
+   * keys. Surfaced in a dedicated "Pinned" zone at the top of the picker so a
+   * subset of a large catalog (e.g. Flux Router's many models) stays one click
+   * away. A UI preference, not provider state, so it lives in config not the DB.
+   */
+  pinnedModels?: string[];
   'tools.imageGenerationModel': TProviderWithModel & {
     /** @deprecated Image generation is now controlled via built-in MCP server toggle */
     switch?: boolean;
