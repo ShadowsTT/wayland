@@ -6,7 +6,6 @@
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import * as fs from 'node:fs';
-import * as os from 'node:os';
 import * as path from 'node:path';
 import { IjfwArchiveService } from '@process/services/memory/ijfwArchiveService';
 import type { WatcherFactory } from '@process/services/memory/ijfwArchiveService';
@@ -16,7 +15,11 @@ import type { WatcherFactory } from '@process/services/memory/ijfwArchiveService
 const noopWatcherFactory: WatcherFactory = () => ({ close: () => undefined });
 
 function makeTmpDir(): string {
-  return fs.mkdtempSync(path.join(os.tmpdir(), 'wayland-memory-test-'));
+  // The archive service deliberately skips any project path containing '/tmp/'
+  // or 'Temp/' (ijfwArchiveService.ts:312) so a stale registry pointing at junk
+  // temp dirs never populates the archive page. Fixtures therefore cannot live
+  // under os.tmpdir(); use a repo-local scratch dir (cleaned up in afterEach).
+  return fs.mkdtempSync(path.join(process.cwd(), '.test-tmp-memory-'));
 }
 
 function writeMemoryFile(dir: string, filename: string, entries: string[]): void {
@@ -25,13 +28,7 @@ function writeMemoryFile(dir: string, filename: string, entries: string[]): void
   fs.writeFileSync(path.join(dir, filename), content, 'utf8');
 }
 
-function makeEntry(opts: {
-  type: string;
-  summary: string;
-  stored: string;
-  tags: string;
-  body: string;
-}): string {
+function makeEntry(opts: { type: string; summary: string; stored: string; tags: string; body: string }): string {
   return [
     '---',
     `type: ${opts.type}`,
@@ -63,33 +60,29 @@ describe('IjfwArchiveService', () => {
     // a custom init strategy — see note below.
 
     // Write fixture knowledge.md
-    writeMemoryFile(
-      memDir,
-      'knowledge.md',
-      [
-        makeEntry({
-          type: 'decision',
-          summary: 'Use TypeScript strict mode',
-          stored: '2026-05-01T10:00:00.000Z',
-          tags: '[typescript, architecture]',
-          body: 'Always use strict mode.\n\n**Why:** Catches bugs at compile time.\n\n**How to apply:** Set strict:true in tsconfig.',
-        }),
-        makeEntry({
-          type: 'pattern',
-          summary: 'File-per-backend pattern for parallel dispatch',
-          stored: '2026-05-15T08:00:00.000Z',
-          tags: '[architecture, pattern]',
-          body: 'One backend = one file. Eliminates merge conflicts.',
-        }),
-        makeEntry({
-          type: 'observation',
-          summary: 'npm audit shows 3 moderate vulns',
-          stored: '2026-05-20T12:00:00.000Z',
-          tags: '[security]',
-          body: 'Run npm audit --fix.',
-        }),
-      ],
-    );
+    writeMemoryFile(memDir, 'knowledge.md', [
+      makeEntry({
+        type: 'decision',
+        summary: 'Use TypeScript strict mode',
+        stored: '2026-05-01T10:00:00.000Z',
+        tags: '[typescript, architecture]',
+        body: 'Always use strict mode.\n\n**Why:** Catches bugs at compile time.\n\n**How to apply:** Set strict:true in tsconfig.',
+      }),
+      makeEntry({
+        type: 'pattern',
+        summary: 'File-per-backend pattern for parallel dispatch',
+        stored: '2026-05-15T08:00:00.000Z',
+        tags: '[architecture, pattern]',
+        body: 'One backend = one file. Eliminates merge conflicts.',
+      }),
+      makeEntry({
+        type: 'observation',
+        summary: 'npm audit shows 3 moderate vulns',
+        stored: '2026-05-20T12:00:00.000Z',
+        tags: '[security]',
+        body: 'Run npm audit --fix.',
+      }),
+    ]);
   });
 
   afterEach(() => {
@@ -105,11 +98,7 @@ describe('IjfwArchiveService', () => {
     const ijfwHomeDir = path.join(fakeHome, '.ijfw');
     fs.mkdirSync(ijfwHomeDir, { recursive: true });
     const now = new Date().toISOString();
-    fs.writeFileSync(
-      path.join(ijfwHomeDir, 'registry.md'),
-      `${projectRoot} | abc123 | ${now}\n`,
-      'utf8',
-    );
+    fs.writeFileSync(path.join(ijfwHomeDir, 'registry.md'), `${projectRoot} | abc123 | ${now}\n`, 'utf8');
 
     // Temporarily override HOME to point to our fake home.
     const origHome = process.env.HOME;
@@ -130,11 +119,7 @@ describe('IjfwArchiveService', () => {
     const ijfwHomeDir = path.join(fakeHome, '.ijfw');
     fs.mkdirSync(ijfwHomeDir, { recursive: true });
     const now = new Date().toISOString();
-    fs.writeFileSync(
-      path.join(ijfwHomeDir, 'registry.md'),
-      `${projectRoot} | abc123 | ${now}\n`,
-      'utf8',
-    );
+    fs.writeFileSync(path.join(ijfwHomeDir, 'registry.md'), `${projectRoot} | abc123 | ${now}\n`, 'utf8');
 
     const origHome = process.env.HOME;
     process.env.HOME = fakeHome;
@@ -156,7 +141,7 @@ describe('IjfwArchiveService', () => {
     fs.writeFileSync(
       path.join(ijfwHomeDir, 'registry.md'),
       `${projectRoot} | abc123 | ${new Date().toISOString()}\n`,
-      'utf8',
+      'utf8'
     );
 
     const origHome = process.env.HOME;
@@ -178,7 +163,7 @@ describe('IjfwArchiveService', () => {
     fs.writeFileSync(
       path.join(ijfwHomeDir, 'registry.md'),
       `${projectRoot} | abc123 | ${new Date().toISOString()}\n`,
-      'utf8',
+      'utf8'
     );
 
     const origHome = process.env.HOME;
@@ -205,7 +190,7 @@ describe('IjfwArchiveService', () => {
     fs.writeFileSync(
       path.join(ijfwHomeDir, 'registry.md'),
       `${projectRoot} | abc123 | ${new Date().toISOString()}\n`,
-      'utf8',
+      'utf8'
     );
 
     const origHome = process.env.HOME;
@@ -229,7 +214,7 @@ describe('IjfwArchiveService', () => {
     fs.writeFileSync(
       path.join(ijfwHomeDir, 'registry.md'),
       `${projectRoot} | abc123 | ${new Date().toISOString()}\n`,
-      'utf8',
+      'utf8'
     );
 
     const origHome = process.env.HOME;
@@ -275,7 +260,7 @@ describe('IjfwArchiveService', () => {
     fs.writeFileSync(
       path.join(ijfwHomeDir, 'registry.md'),
       `${projectRoot} | abc123 | ${new Date().toISOString()}\n`,
-      'utf8',
+      'utf8'
     );
     const origHome = process.env.HOME;
     process.env.HOME = fakeHome;
@@ -331,7 +316,7 @@ describe('IjfwArchiveService', () => {
     fs.writeFileSync(
       path.join(ijfwHomeDir, 'registry.md'),
       `${projectRoot} | abc123 | ${new Date().toISOString()}\n`,
-      'utf8',
+      'utf8'
     );
 
     const origHome = process.env.HOME;
@@ -365,7 +350,7 @@ describe('IjfwArchiveService', () => {
     fs.writeFileSync(
       path.join(ijfwHomeDir, 'registry.md'),
       `${projectRoot} | abc123 | ${new Date().toISOString()}\n`,
-      'utf8',
+      'utf8'
     );
 
     const origHome = process.env.HOME;
@@ -385,17 +370,19 @@ describe('IjfwArchiveService', () => {
     // Days: 2026-05-01, 2026-05-02, 2026-05-03 (run of 3), then 2026-05-10, 2026-05-11 (run of 2)
     const streakProject = path.join(tmpRoot, 'streak-project');
     const streakMemDir = path.join(streakProject, '.ijfw', 'memory');
-    writeMemoryFile(
-      streakMemDir,
-      'knowledge.md',
-      [
-        makeEntry({ type: 'decision', summary: 'Day 1', stored: '2026-05-01T10:00:00.000Z', tags: '[]', body: 'Body.' }),
-        makeEntry({ type: 'pattern', summary: 'Day 2', stored: '2026-05-02T10:00:00.000Z', tags: '[]', body: 'Body.' }),
-        makeEntry({ type: 'observation', summary: 'Day 3', stored: '2026-05-03T10:00:00.000Z', tags: '[]', body: 'Body.' }),
-        makeEntry({ type: 'decision', summary: 'Day 10', stored: '2026-05-10T10:00:00.000Z', tags: '[]', body: 'Body.' }),
-        makeEntry({ type: 'pattern', summary: 'Day 11', stored: '2026-05-11T10:00:00.000Z', tags: '[]', body: 'Body.' }),
-      ],
-    );
+    writeMemoryFile(streakMemDir, 'knowledge.md', [
+      makeEntry({ type: 'decision', summary: 'Day 1', stored: '2026-05-01T10:00:00.000Z', tags: '[]', body: 'Body.' }),
+      makeEntry({ type: 'pattern', summary: 'Day 2', stored: '2026-05-02T10:00:00.000Z', tags: '[]', body: 'Body.' }),
+      makeEntry({
+        type: 'observation',
+        summary: 'Day 3',
+        stored: '2026-05-03T10:00:00.000Z',
+        tags: '[]',
+        body: 'Body.',
+      }),
+      makeEntry({ type: 'decision', summary: 'Day 10', stored: '2026-05-10T10:00:00.000Z', tags: '[]', body: 'Body.' }),
+      makeEntry({ type: 'pattern', summary: 'Day 11', stored: '2026-05-11T10:00:00.000Z', tags: '[]', body: 'Body.' }),
+    ]);
 
     const fakeHome = path.join(tmpRoot, 'fake-home-streak');
     const ijfwHomeDir = path.join(fakeHome, '.ijfw');
@@ -403,7 +390,7 @@ describe('IjfwArchiveService', () => {
     fs.writeFileSync(
       path.join(ijfwHomeDir, 'registry.md'),
       `${streakProject} | abc123 | ${new Date().toISOString()}\n`,
-      'utf8',
+      'utf8'
     );
 
     const origHome = process.env.HOME;
@@ -433,7 +420,7 @@ describe('IjfwArchiveService', () => {
     fs.writeFileSync(
       path.join(ijfwHomeDir, 'registry.md'),
       `${emptyProject} | abc123 | ${new Date().toISOString()}\n`,
-      'utf8',
+      'utf8'
     );
 
     const origHome = process.env.HOME;
@@ -455,7 +442,7 @@ describe('IjfwArchiveService', () => {
     fs.writeFileSync(
       path.join(ijfwHomeDir, 'registry.md'),
       `${projectRoot} | abc123 | ${new Date().toISOString()}\n`,
-      'utf8',
+      'utf8'
     );
 
     const origHome = process.env.HOME;
