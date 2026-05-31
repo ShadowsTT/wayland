@@ -134,14 +134,11 @@ const CreateProjectModal = ModalHOC<CreateProjectModalProps>(({ modalProps, moda
                 type='button'
                 onClick={() => setIconColor(c)}
                 aria-label={c}
-                className='w-22px h-22px rd-full border-none cursor-pointer transition-transform'
-                style={{
-                  background: c,
-                  outline: iconColor === c ? '2px solid var(--color-text-1)' : 'none',
-                  outlineOffset: 2,
-                  transform: iconColor === c ? 'scale(1.05)' : 'none',
-                }}
-              />
+                className='flex items-center justify-center w-28px h-28px rd-full border-2 border-solid cursor-pointer bg-transparent p-0 transition-colors'
+                style={{ borderColor: iconColor === c ? 'var(--color-text-1)' : 'transparent' }}
+              >
+                <span className='block w-18px h-18px rd-full' style={{ background: c }} />
+              </button>
             ))}
           </div>
         </div>

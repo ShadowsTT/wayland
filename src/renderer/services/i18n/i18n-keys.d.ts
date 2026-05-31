@@ -1468,6 +1468,7 @@ export type I18nKey =
   | 'projects.card.noDescription'
   | 'projects.card.pin'
   | 'projects.card.unpin'
+  | 'projects.composer.newChatIn'
   | 'projects.delete.body'
   | 'projects.delete.confirm'
   | 'projects.delete.title'

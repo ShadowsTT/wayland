@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { Bot, ChevronDown, ChevronLeft, PenSquare } from 'lucide-react';
+import { Bot, ChevronDown, ChevronLeft, FolderKanban, PenSquare } from 'lucide-react';
 import { ipcBridge } from '@/common';
 import { resolveLocaleKey } from '@/common/utils';
 
@@ -91,10 +91,13 @@ const GuidPage: React.FC = () => {
     initialWorkflowSession?: WorkflowSession;
     /** Set when the composer is opened from a project workspace — every chat created here is stamped with it. */
     projectId?: string;
+    /** Project name, shown as a "New chat in {project}" indicator above the composer. */
+    projectName?: string;
   } | null;
   // Project scoping: when present, useGuidSend stamps extra.projectId on the new
   // conversation. Backend / model / assistant pickers stay fully free.
   const projectId = workflowRouteState?.projectId;
+  const projectName = workflowRouteState?.projectName;
   const workflowSession = useWorkflowSession(
     workflowRouteState?.workflowSessionId,
     workflowRouteState?.initialWorkflowSession
@@ -642,13 +645,14 @@ const GuidPage: React.FC = () => {
   // state when handling the Launch button. Other entry points (typed
   // input, intent prompts) clear the field as before.
   useLayoutEffect(() => {
-    const state = location.state as { workspace?: string; pendingPrompt?: string } | null;
+    const state = location.state as { workspace?: string; pendingPrompt?: string; projectWorkspace?: string } | null;
     guidInput.setInput(state?.pendingPrompt ?? '');
     guidInput.setFiles([]);
     guidInput.setLoading(false);
-    if (!state?.workspace) {
-      guidInput.setDir('');
-    }
+    // When opened from a project, root the chat in the project's workspace folder
+    // so "Chat in Folder" shows it and the chat works inside the project.
+    const initialDir = state?.projectWorkspace || state?.workspace;
+    guidInput.setDir(initialDir || '');
     setIsDescriptionExpanded(false);
   }, [guidInput.setDir, guidInput.setFiles, guidInput.setInput, guidInput.setLoading, location.key, location.state]);
 
@@ -1033,6 +1037,18 @@ const GuidPage: React.FC = () => {
               onSelectAgent={handleSelectAgent}
               suppressSelectionAnimation={resetAssistantRequested}
             />
+          ) : null}
+
+          {projectName ? (
+            <div className='flex justify-center mb-8px'>
+              <div
+                className='flex items-center gap-6px px-12px py-5px rd-full text-13px font-500'
+                style={{ background: 'rgba(var(--primary-6),0.12)', color: 'rgb(var(--primary-6))' }}
+              >
+                <FolderKanban size={14} />
+                <span>{t('projects.composer.newChatIn', { name: projectName })}</span>
+              </div>
+            </div>
           ) : null}
 
           {!showPresetHero ? <Greeting displayName={greetingDisplayName} /> : null}

@@ -220,6 +220,13 @@ const Sider: React.FC<SiderProps> = ({ onSessionClick, collapsed = false }) => {
           onConversationSelect={handleConversationSelect}
           onSessionClick={onSessionClick}
         />
+        <SiderProjectsEntry
+          isMobile={isMobile}
+          isActive={pathname.startsWith('/project')}
+          collapsed={collapsed}
+          siderTooltipProps={siderTooltipProps}
+          onClick={() => handleTopZoneNav('/projects')}
+        />
         <SiderAssistantsEntry
           isMobile={isMobile}
           isActive={pathname === '/assistants'}
@@ -253,13 +260,6 @@ const Sider: React.FC<SiderProps> = ({ onSessionClick, collapsed = false }) => {
           collapsed={collapsed}
           siderTooltipProps={siderTooltipProps}
           onClick={() => handleTopZoneNav('/teams')}
-        />
-        <SiderProjectsEntry
-          isMobile={isMobile}
-          isActive={pathname.startsWith('/project')}
-          collapsed={collapsed}
-          siderTooltipProps={siderTooltipProps}
-          onClick={() => handleTopZoneNav('/projects')}
         />
         <SiderMemoryEntry
           isMobile={isMobile}

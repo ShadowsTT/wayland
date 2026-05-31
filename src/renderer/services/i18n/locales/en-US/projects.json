@@ -62,6 +62,9 @@
     "addToProject": "Add to project",
     "removeFromProject": "Remove from project"
   },
+  "composer": {
+    "newChatIn": "New chat in {{name}}"
+  },
   "toast": {
     "created": "Project created",
     "updated": "Project updated",
