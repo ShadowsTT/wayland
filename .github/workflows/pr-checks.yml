@@ -439,12 +439,12 @@ jobs:
       # install fails HERE (with `set -x` diagnostics) instead of mid-spec.
       - name: Ensure Electron binary is installed
         run: |
-          set -x
-          rm -rf node_modules/electron
-          bun install --frozen-lockfile
-          node node_modules/electron/install.js || true
-          ls -la node_modules/electron/dist 2>/dev/null | head -5 || echo "NO DIST"
-          cat node_modules/electron/path.txt 2>/dev/null || echo "NO path.txt"
+          set -ex
+          node -e "console.log('@electron/get at', require.resolve('@electron/get'))"
+          rm -rf node_modules/electron/dist node_modules/electron/path.txt
+          force_no_cache=true node node_modules/electron/install.js
+          ls -la node_modules/electron/dist | head -10
+          cat node_modules/electron/path.txt
           node -e "const p=require('electron'); require('node:fs').accessSync(p); console.log('electron binary OK:', p)"
 
       # This spec drives the BUILT Electron app via Playwright's _electron API
