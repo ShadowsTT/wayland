@@ -430,17 +430,21 @@ jobs:
         run: bunx electron-vite build
 
       # The e2e spec launches the real Electron binary via _electron.launch().
-      # The restored node_modules cache (restore-keys prefix fallback) has
-      # electron's dist/ but is missing path.txt — which is what `require('electron')`
-      # reads — so the launch fails with "Electron failed to install correctly".
-      # electron's install.js skips re-download when dist/version matches, so it
-      # never rewrites path.txt. Force a clean reinstall (clear dist + path.txt),
-      # then verify require('electron') resolves so a bad install fails HERE, not
-      # mid-spec.
+      # The restored node_modules cache has electron without a usable binary
+      # (path.txt missing / dist incomplete), and bun's --frozen-lockfile install
+      # doesn't re-run electron's download script for the already-present package.
+      # Official remedy: delete node_modules/electron and reinstall so bun re-runs
+      # electron's (trusted) install script. Then run install.js explicitly as a
+      # belt-and-suspenders, and verify require('electron') resolves so a bad
+      # install fails HERE (with `set -x` diagnostics) instead of mid-spec.
       - name: Ensure Electron binary is installed
         run: |
-          rm -rf node_modules/electron/dist node_modules/electron/path.txt
-          node node_modules/electron/install.js
+          set -x
+          rm -rf node_modules/electron
+          bun install --frozen-lockfile
+          node node_modules/electron/install.js || true
+          ls -la node_modules/electron/dist 2>/dev/null | head -5 || echo "NO DIST"
+          cat node_modules/electron/path.txt 2>/dev/null || echo "NO path.txt"
           node -e "const p=require('electron'); require('node:fs').accessSync(p); console.log('electron binary OK:', p)"
 
       # This spec drives the BUILT Electron app via Playwright's _electron API
