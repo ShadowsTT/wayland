@@ -430,13 +430,18 @@ jobs:
         run: bunx electron-vite build
 
       # The e2e spec launches the real Electron binary via _electron.launch().
-      # Under bun with a cached node_modules + --frozen-lockfile, electron's own
-      # install script doesn't re-run, so node_modules/electron/path.txt points
-      # at a binary that was never downloaded ("Electron failed to install
-      # correctly"). Run electron's installer explicitly — idempotent, fast no-op
-      # when the binary is already present.
+      # The restored node_modules cache (restore-keys prefix fallback) has
+      # electron's dist/ but is missing path.txt — which is what `require('electron')`
+      # reads — so the launch fails with "Electron failed to install correctly".
+      # electron's install.js skips re-download when dist/version matches, so it
+      # never rewrites path.txt. Force a clean reinstall (clear dist + path.txt),
+      # then verify require('electron') resolves so a bad install fails HERE, not
+      # mid-spec.
       - name: Ensure Electron binary is installed
-        run: node node_modules/electron/install.js
+        run: |
+          rm -rf node_modules/electron/dist node_modules/electron/path.txt
+          node node_modules/electron/install.js
+          node -e "const p=require('electron'); require('node:fs').accessSync(p); console.log('electron binary OK:', p)"
 
       # This spec drives the BUILT Electron app via Playwright's _electron API
       # (electronApp.evaluate / page.evaluate); it never uses Playwright's bundled
