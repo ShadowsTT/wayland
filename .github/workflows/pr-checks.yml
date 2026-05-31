@@ -429,6 +429,15 @@ jobs:
       - name: Build (electron-vite, no packaging)
         run: bunx electron-vite build
 
+      # The e2e spec launches the real Electron binary via _electron.launch().
+      # Under bun with a cached node_modules + --frozen-lockfile, electron's own
+      # install script doesn't re-run, so node_modules/electron/path.txt points
+      # at a binary that was never downloaded ("Electron failed to install
+      # correctly"). Run electron's installer explicitly — idempotent, fast no-op
+      # when the binary is already present.
+      - name: Ensure Electron binary is installed
+        run: node node_modules/electron/install.js
+
       # This spec drives the BUILT Electron app via Playwright's _electron API
       # (electronApp.evaluate / page.evaluate); it never uses Playwright's bundled
       # chromium. `install --with-deps chromium` downloaded that unused ~170MB
