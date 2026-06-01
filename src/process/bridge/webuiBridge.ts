@@ -318,24 +318,38 @@ export function initWebuiBridge(): void {
   );
 
   // Direct IPC: Change username
-  // Gated by: rate limit.
-  // TODO(audit-phase1: NEW-CODE-REVIEW.md, THREAT-MODEL-CHECK.md): also gate
-  // with current-password verification + native confirmation, matching
-  // webui-direct-change-password. Requires extending the preload
-  // `webuiChangeUsername` signature and updating renderer callers, so it's
-  // tracked as a follow-up to keep this P0 patch surgical.
-  ipcMain.handle(
-    'webui-direct-change-username',
-    async (_event, { newUsername }: { newUsername: string }) => {
-      if (!enforceRateLimit('webui-direct-change-username')) {
-        return { success: false, msg: AUTH_ERROR_RATE_LIMITED };
-      }
-      return WebuiService.handleAsync(async () => {
-        const username = await WebuiService.changeUsername(newUsername);
-        return { success: true, data: { username } };
-      }, 'Direct IPC: Change username');
+  // Gated by: rate limit + input validation + native confirmation.
+  //
+  // A compromised renderer can invoke this channel freely, so the renderer is
+  // not a trusted boundary. The native confirmation dialog is the load-bearing
+  // protection: even an XSS'd renderer cannot rename the admin account without a
+  // real user clicking Confirm in a main-process dialog. We do not require the
+  // current password here because the existing preload signature
+  // (`webuiChangeUsername(newUsername)`) carries no password; adding password
+  // verification would need a cross-process signature change. The confirmation
+  // dialog closes the renderer-XSS vector on its own. See ownerActionNeeded.
+  ipcMain.handle('webui-direct-change-username', async (_event, payload: { newUsername?: unknown }) => {
+    if (!enforceRateLimit('webui-direct-change-username')) {
+      return { success: false, msg: AUTH_ERROR_RATE_LIMITED };
     }
-  );
+    const newUsername = payload?.newUsername;
+    if (typeof newUsername !== 'string' || newUsername.trim().length === 0) {
+      return { success: false, msg: 'USERNAME_REQUIRED' };
+    }
+    const confirmed = await requireConfirmation({
+      title: 'Change WebUI Username',
+      message: 'Change the WebUI admin username?',
+      detail: `The WebUI admin account will be renamed to "${newUsername.trim()}".`,
+      confirmLabel: 'Change Username',
+    });
+    if (!confirmed) {
+      return { success: false, msg: AUTH_ERROR_CONFIRMATION_DECLINED };
+    }
+    return WebuiService.handleAsync(async () => {
+      const username = await WebuiService.changeUsername(newUsername);
+      return { success: true, data: { username } };
+    }, 'Direct IPC: Change username');
+  });
 
   // Paired devices: list
   webui.listPairedDevices.provider(async () => {
