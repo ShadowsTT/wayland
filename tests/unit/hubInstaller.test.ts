@@ -1,3 +1,4 @@
+import { EventEmitter } from 'node:events';
 import path from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -6,6 +7,16 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 // ---------------------------------------------------------------------------
 
 const mockFetch = vi.fn();
+
+// The 10-byte payload every remote-download fixture serves (new ArrayBuffer(10)),
+// and the matching SHA-512 SRI. After the security hardening, a remote (non-bundled)
+// archive with a missing/empty integrity hash is a HARD FAILURE — so remote fixtures
+// must declare the real hash of their served bytes, and verifyIntegrity (which streams
+// the on-disk archive) must see those bytes. fs.writeFileSync is mocked to a no-op, so
+// createReadStream is stubbed to emit REMOTE_PAYLOAD for any read.
+const REMOTE_PAYLOAD = Buffer.from(new ArrayBuffer(10));
+const REMOTE_INTEGRITY =
+  'sha512-Gb08u2Kxk3lXoRyr0NOYYFgraSjnfQ4Ope5/Oy+MrLPeqOoJcmUa3DJF/RCSby8x6AN3GW5ObH7ivXQFHli8ug==';
 
 vi.mock('@/common/platform', () => ({
   getPlatformServices: () => ({
@@ -25,6 +36,16 @@ vi.mock('fs', async () => {
     renameSync: vi.fn(),
     writeFileSync: vi.fn(),
     readFileSync: vi.fn(() => '{}'),
+    // verifyIntegrity streams the downloaded archive off disk. writeFileSync is a
+    // no-op here, so emit the known 10-byte payload directly instead.
+    createReadStream: vi.fn(() => {
+      const stream = new EventEmitter();
+      queueMicrotask(() => {
+        stream.emit('data', REMOTE_PAYLOAD);
+        stream.emit('end');
+      });
+      return stream;
+    }),
   };
 });
 
@@ -40,6 +61,16 @@ vi.mock('child_process', () => ({
 }));
 
 vi.mock('@process/utils', () => ({ getDataPath: () => '/data' }));
+
+// Install is now gated behind a native main-process confirmation dialog
+// (requireConfirmation → BrowserWindow/dialog) that a compromised renderer or
+// remote token cannot spoof. Electron is unavailable under vitest, so mock the
+// gate directly: default to "user clicked Install" (true); individual tests
+// override mockRequireConfirmation to assert the decline path.
+const mockRequireConfirmation = vi.fn(async () => true);
+vi.mock('@process/bridge/webuiDirectAuth', () => ({
+  requireConfirmation: (...args: unknown[]) => mockRequireConfirmation(...args),
+}));
 
 vi.mock('@process/extensions/constants', () => ({
   EXTENSION_MANIFEST_FILE: 'aion-extension.json',
@@ -94,16 +125,16 @@ import { hubInstaller } from '../../src/process/extensions/hub/HubInstaller';
 
 const mockedExistsSync = vi.mocked(fs.existsSync);
 
-function makeExtInfo(name: string, bundled = false) {
+function makeExtInfo(name: string, bundled = false, integrity = '') {
+  // Bundled archives (resolved from the code-signed app bundle) tolerate an empty
+  // integrity hash; remote downloads HARD-FAIL on a missing hash post-hardening, so
+  // remote fixtures must pass REMOTE_INTEGRITY (the SHA-512 of the served payload).
   return {
     name,
     displayName: name,
     description: 'test',
     author: 'test',
-    // integrity left empty → verifyIntegrity logs "proceed unverified" warning and returns.
-    // Dedicated integrity-path tests live in a separate spec; these fixtures exercise
-    // acpAdapter detection and other post-install verification logic only.
-    dist: { tarball: `extensions/${name}.zip`, integrity: '', unpackedSize: 100 },
+    dist: { tarball: `extensions/${name}.zip`, integrity, unpackedSize: 100 },
     engines: { wayland: '>=1.0.0' },
     hubs: ['acpAdapters'],
     bundled,
@@ -113,6 +144,7 @@ function makeExtInfo(name: string, bundled = false) {
 describe('HubInstaller', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockRequireConfirmation.mockResolvedValue(true);
     mockedExistsSync.mockReturnValue(false);
     mockFetch.mockRejectedValue(new Error('no network'));
     mocks.getExtensionResult = undefined;
@@ -145,7 +177,7 @@ describe('HubInstaller', () => {
     });
 
     it('should download from remote when not bundled', async () => {
-      mocks.getExtensionResult = makeExtInfo('remote-ext', false);
+      mocks.getExtensionResult = makeExtInfo('remote-ext', false, REMOTE_INTEGRITY);
       mockedExistsSync.mockImplementation((p) => String(p).includes('aion-extension.json'));
 
       mockFetch.mockResolvedValueOnce({
@@ -160,7 +192,7 @@ describe('HubInstaller', () => {
     });
 
     it('should fall back to second mirror when first fails', async () => {
-      mocks.getExtensionResult = makeExtInfo('mirror-ext', false);
+      mocks.getExtensionResult = makeExtInfo('mirror-ext', false, REMOTE_INTEGRITY);
       mockedExistsSync.mockImplementation((p) => String(p).includes('aion-extension.json'));
 
       mockFetch.mockRejectedValueOnce(new Error('mirror1 down')).mockResolvedValueOnce({
@@ -182,7 +214,7 @@ describe('HubInstaller', () => {
     });
 
     it('should fail when manifest is missing after extraction', async () => {
-      mocks.getExtensionResult = makeExtInfo('bad-pkg', false);
+      mocks.getExtensionResult = makeExtInfo('bad-pkg', false, REMOTE_INTEGRITY);
       mockFetch.mockResolvedValueOnce({
         ok: true,
         arrayBuffer: async () => new ArrayBuffer(10),
@@ -190,6 +222,43 @@ describe('HubInstaller', () => {
       mockedExistsSync.mockReturnValue(false);
 
       await expect(hubInstaller.install('bad-pkg')).rejects.toThrow('aion-extension.json missing');
+    });
+
+    // SECURITY: install is a code-execution event gated behind a native main-process
+    // confirmation dialog the renderer/remote caller cannot spoof. Declining must
+    // abort BEFORE any download / extraction / hotReload runs.
+    it('should reject install when local-user confirmation is declined', async () => {
+      mocks.getExtensionResult = makeExtInfo('declined-ext', true);
+      mockRequireConfirmation.mockResolvedValueOnce(false);
+      mockedExistsSync.mockImplementation((p) => {
+        const s = String(p);
+        if (s.includes('declined-ext.zip') && s.includes('resources')) return true;
+        if (s.includes('aion-extension.json')) return true;
+        return false;
+      });
+
+      await expect(hubInstaller.install('declined-ext')).rejects.toThrow('cancelled by user');
+      expect(mockRequireConfirmation).toHaveBeenCalledTimes(1);
+      // No extraction / fetch / reinstall side effects ran past the gate.
+      expect(mockFetch).not.toHaveBeenCalled();
+      expect(mockMarkForReinstall).not.toHaveBeenCalled();
+      expect(mocks.setTransientCalls.at(-1)?.[1]).toBe('install_failed');
+    });
+
+    // SECURITY: a remote-downloaded archive with no declared integrity hash is a
+    // HARD FAILURE — a tampered mirror must not be able to ship an unverified
+    // payload by simply omitting the hash. (Bundled archives are covered by code
+    // signing and tolerate a missing hash; this asserts the remote path only.)
+    it('should reject a remote download with missing integrity hash', async () => {
+      mocks.getExtensionResult = makeExtInfo('unverified-ext', false, '');
+      mockedExistsSync.mockImplementation((p) => String(p).includes('aion-extension.json'));
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        arrayBuffer: async () => new ArrayBuffer(10),
+      });
+
+      await expect(hubInstaller.install('unverified-ext')).rejects.toThrow('refusing to install an unverified payload');
+      expect(mocks.setTransientCalls.at(-1)?.[1]).toBe('install_failed');
     });
   });
 
