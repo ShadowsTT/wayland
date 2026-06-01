@@ -5,7 +5,41 @@
  */
 
 import { randomBytes } from 'node:crypto';
+import { CIPHER_PREFIX, decryptString, encryptString } from '@process/secrets';
 import type { ConnectionTokenRecord } from './types';
+
+/**
+ * Encrypt a webhook secret for at-rest persistence (SEC-DATA-03).
+ *
+ * Empty secrets and already-encrypted values are returned untouched so the
+ * call is idempotent. Throws if OS credential encryption is unavailable
+ * (matching the secrets-module contract) rather than silently persisting
+ * plaintext — the caller's persist path will surface and log the error.
+ */
+function encryptSecret(secret: string): string {
+  if (!secret || secret.startsWith(CIPHER_PREFIX)) return secret;
+  return encryptString(secret);
+}
+
+/**
+ * Decrypt a persisted webhook secret back to plaintext (SEC-DATA-03).
+ *
+ * Values without the cipher prefix are legacy plaintext (written before this
+ * fix) and are returned unchanged for backward compatibility. A decrypt
+ * failure (e.g. corrupted ciphertext or a missing keystore) is tolerated by
+ * dropping the secret to empty so hydration of the remaining records still
+ * succeeds; the affected webhook will then fail verification rather than
+ * accept unverifiable events.
+ */
+function decryptSecret(secret: string): string {
+  if (!secret || !secret.startsWith(CIPHER_PREFIX)) return secret;
+  try {
+    return decryptString(secret);
+  } catch (err) {
+    console.error('[ConnectionTokenStore] Failed to decrypt webhook secret:', err);
+    return '';
+  }
+}
 
 /**
  * In-memory connection-token store.
@@ -86,20 +120,38 @@ export class ConnectionTokenStore {
   /**
    * Snapshot the full record set as a plain array for persistence.
    * Returns BOTH active and revoked records so audit trails survive restarts.
+   *
+   * SEC-DATA-03: the `secret` field is per-platform webhook verifier material
+   * (HMAC keys, MS Teams/Google-Chat verification tokens, etc.). The config
+   * store this is persisted into is only base64-encoded (NOT encrypted), so we
+   * encrypt the secret at the serialization boundary via Electron safeStorage
+   * (Keychain / DPAPI / libsecret). In-memory records stay plaintext so
+   * verifiers can use them without round-tripping the cipher.
    */
   serialize(): readonly ConnectionTokenRecord[] {
-    return Array.from(this.records.values());
+    return Array.from(this.records.values(), (record) => ({
+      ...record,
+      secret: encryptSecret(record.secret),
+    }));
   }
 
   /**
    * Replace the in-memory state with persisted records. Called once on
    * ChannelManager init to survive app restarts (without this every webhook
    * URL would become invalid on relaunch).
+   *
+   * SEC-DATA-03: secrets are persisted encrypted (see {@link serialize}), so we
+   * decrypt them back to plaintext on load. Legacy records written before this
+   * fix carry plaintext secrets without the cipher prefix and are passed
+   * through unchanged so existing webhook URLs keep working.
    */
   hydrate(records: readonly ConnectionTokenRecord[]): void {
     this.records.clear();
     for (const record of records) {
-      this.records.set(record.token, record);
+      this.records.set(record.token, {
+        ...record,
+        secret: decryptSecret(record.secret),
+      });
     }
   }
 }
