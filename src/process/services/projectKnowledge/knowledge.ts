@@ -7,6 +7,8 @@
 import fs from 'fs/promises';
 import path from 'path';
 import { WAYLAND_KNOWLEDGE_DIR } from './bootstrap';
+import { confinePath } from '@process/bridge/pathConfinement';
+import { resolveWithinApprovedDirectory } from '@process/bridge/userApprovedPaths';
 
 /**
  * Read, write, inject and manage a project's `.wayland/` knowledge.
@@ -297,6 +299,12 @@ const MAX_REFERENCE_FILE_BYTES = 25 * 1024 * 1024; // 25 MB
  * Sources are renderer-supplied (drag-drop file paths) so they are NOT trusted.
  * Reference files are later read back into chat prompts, so an arbitrary file
  * here is an arbitrary read-into-model exfil primitive (SEC-IPC-04). Defenses:
+ *   - PRIMARY GATE: each source must either confine to an authorized app root
+ *     (`confinePath`) OR sit inside a directory the user explicitly approved
+ *     through the native open dialog (`resolveWithinApprovedDirectory`). A plain
+ *     absolute path the renderer injects (e.g. `/etc/passwd`, ~/.aws/credentials)
+ *     is neither — it never reaches lstat/copyFile. Dialog-picked files remain
+ *     accepted because dialogBridge approves their parent directory in MAIN.
  *   - lstat (NOT stat) and refuse symlinks/junctions/reparse points on the
  *     source itself, so a symlink can never be dereferenced to capture its
  *     sensitive target (e.g. ~/.aws/credentials).
@@ -315,9 +323,21 @@ export async function addProjectReference(workspace: string, sourcePaths: string
 
   for (const src of sources) {
     try {
+      // PRIMARY GATE: resolve the source to a trusted path. Accept it only when
+      // it confines to an authorized app root, or when it lives inside a
+      // user-approved (native-dialog) directory. Anything else — including a
+      // plain absolute path to a sensitive regular file — is rejected here,
+      // before any lstat/copyFile touches it. Both gates return the resolved,
+      // realpath-collapsed path so the path validated is the path copied.
+      const trusted = (await confinePath(src)) ?? resolveWithinApprovedDirectory(src);
+      if (trusted === null) {
+        console.warn('[projectKnowledge] refusing out-of-root reference source:', src);
+        continue;
+      }
+
       // lstat does not follow symlinks: a symlinked source is rejected outright
       // rather than copying whatever it points at.
-      const stat = await fs.lstat(src);
+      const stat = await fs.lstat(trusted);
       if (stat.isSymbolicLink()) {
         console.warn('[projectKnowledge] refusing symlinked reference source:', src);
         continue;
@@ -327,8 +347,8 @@ export async function addProjectReference(workspace: string, sourcePaths: string
         console.warn(`[projectKnowledge] refusing oversized reference source (${stat.size} bytes):`, src);
         continue;
       }
-      const dest = await uniqueDest(dir, path.basename(src));
-      await fs.copyFile(src, dest);
+      const dest = await uniqueDest(dir, path.basename(trusted));
+      await fs.copyFile(trusted, dest);
     } catch (err) {
       console.warn('[projectKnowledge] failed to copy reference file:', src, err);
     }

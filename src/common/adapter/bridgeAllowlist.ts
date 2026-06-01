@@ -156,6 +156,13 @@ const REMOTE_DENIED_KEYS: ReadonlySet<string> = new Set([
   'fetch-remote-image',
   'add-custom-external-path',
   'remove-custom-external-path',
+  // fs raw-read / enumeration / archive / workspace-copy surface (arbitrary path access).
+  'get-file-metadata',
+  'get-file-by-dir',
+  'list-workspace-files',
+  'get-image-base64',
+  'create-zip-file',
+  'copy-files-to-workspace',
   // --- Skill / assistant mutation (delete/write/import) ---
   'delete-skill',
   'delete-assistant-rule',
@@ -177,6 +184,8 @@ const REMOTE_DENIED_KEYS: ReadonlySet<string> = new Set([
   'mcp.login-oauth',
   'mcp.logout-oauth',
   'mcp.set-byo-oauth-credentials',
+  // --- Project knowledge draft (reads arbitrary filePaths to feed the model) ---
+  'project.generate-knowledge-draft',
   // --- Storage destructive / disk operations ---
   'storage:changeDir',
   'storage:clearDir',

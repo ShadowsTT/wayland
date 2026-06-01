@@ -5,6 +5,7 @@
  */
 
 import fs from 'fs/promises';
+import { confinePath } from './pathConfinement';
 import { ipcBridge } from '@/common';
 import { projectServiceSingleton as projectService } from '@process/services/projectServiceSingleton';
 import {
@@ -27,17 +28,27 @@ const SUMMARY_KIND_LABEL = { context: 'project instructions', rules: 'project ru
 const DRAFT_FILE_CHAR_CAP = 8_000;
 const DRAFT_TOTAL_CHAR_CAP = 24_000;
 
-/** Read uploaded source files as text, truncated, for the draft prompt. Best-effort. */
-async function readSourceFiles(filePaths: string[]): Promise<string> {
+/**
+ * Read uploaded source files as text, truncated, for the draft prompt.
+ * Best-effort. Exported for confinement regression testing (RT-F2-01).
+ */
+export async function readSourceFiles(filePaths: string[]): Promise<string> {
   const parts: string[] = [];
   let budget = DRAFT_TOTAL_CHAR_CAP;
   for (const p of filePaths) {
     if (budget <= 0) break;
+    // Confine each renderer/remote-supplied path to the app's authorized roots
+    // before reading. Without this, an arbitrary absolute path (~/.ssh/id_rsa,
+    // ~/.aws/credentials, /etc/passwd) would be read and embedded in the draft
+    // prompt returned to the renderer — an exfiltration channel (RT-F2-01).
+    // Fail closed: a rejected path is skipped, never read raw.
+    const safePath = await confinePath(p);
+    if (safePath === null) continue;
     try {
-      const raw = await fs.readFile(p, 'utf-8');
+      const raw = await fs.readFile(safePath, 'utf-8');
       const slice = raw.slice(0, Math.min(DRAFT_FILE_CHAR_CAP, budget));
       budget -= slice.length;
-      const name = p.split(/[\\/]/).pop() || p;
+      const name = safePath.split(/[\\/]/).pop() || safePath;
       parts.push(`--- ${name} ---\n${slice}`);
     } catch {
       // Unreadable / binary file — skip silently.
