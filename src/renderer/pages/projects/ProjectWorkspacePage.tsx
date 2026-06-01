@@ -8,33 +8,56 @@ import { ipcBridge } from '@/common';
 import type { IProject } from '@/common/types/project';
 import type { TChatConversation } from '@/common/config/storage';
 import { Button, Message, Modal } from '@arco-design/web-react';
-import { BookOpen, ChevronLeft, Folder, FolderOpen, MessageSquare, MessageSquarePlus, Pencil } from 'lucide-react';
+import {
+  ChevronLeft,
+  FolderOpen,
+  MessageSquare,
+  MessageSquarePlus,
+  NotebookPen,
+  Paperclip,
+  Settings as SettingsIcon,
+} from 'lucide-react';
 import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams } from 'react-router-dom';
-import { useProjects } from './hooks/useProjects';
-import CreateProjectModal from './components/CreateProjectModal';
-import ProjectKnowledgePanel from './components/ProjectKnowledgePanel';
 import ChatWorkspace from '@/renderer/pages/conversation/Workspace';
+import ProjectSettingsDrawer, { type SettingsSection } from './components/ProjectSettingsDrawer';
+import ProjectReferencePanel from './components/ProjectReferencePanel';
+import ProjectMemoryPanel from './components/ProjectMemoryPanel';
 
-type ProjectTab = 'chats' | 'files' | 'knowledge';
+type ProjectTab = 'chats' | 'files' | 'reference' | 'memory';
+
+/** Strip seeded heading/blockquote boilerplate to decide if instructions are real. */
+const hasContent = (raw: string): boolean =>
+  raw
+    .split('\n')
+    .filter((l) => {
+      const t = l.trim();
+      return !t.startsWith('>') && !/^#\s/.test(t);
+    })
+    .join('')
+    .trim().length > 0;
 
 /**
- * Per-project workspace. The umbrella view: every chat under this project, plus
- * one obvious "New chat in this project" button that hands off to the normal
- * composer (full backend / model / assistant freedom) carrying the projectId.
- * No execution lock — multiple chats can run at once, so nothing here disables.
+ * Per-project workspace. The umbrella view: every chat under this project plus a
+ * cohesive set of tabs (Chats / Files / Reference / Memory). Instructions and
+ * Rules live in Project Settings (a right drawer) because they are injected into
+ * every chat — surfaced via a header "Setup" affordance, not buried. No
+ * execution lock: many chats can run at once, so nothing here disables.
  */
 const ProjectWorkspacePage: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { projectId } = useParams<{ projectId: string }>();
-  const { updateProject } = useProjects();
 
   const [project, setProject] = useState<IProject | null>(null);
   const [conversations, setConversations] = useState<TChatConversation[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<ProjectTab>('chats');
+
+  const [canGenerate, setCanGenerate] = useState(false);
+  const [setupReady, setSetupReady] = useState(false);
+  const [settingsSection, setSettingsSection] = useState<SettingsSection | null>(null);
 
   const load = useCallback(async () => {
     if (!projectId) return;
@@ -45,6 +68,13 @@ const ProjectWorkspacePage: React.FC = () => {
       ]);
       setProject(proj);
       setConversations(Array.isArray(convs) ? convs : []);
+      // Readiness + AI gating (best-effort; never blocks the page).
+      const [knowledge, hasModel] = await Promise.all([
+        ipcBridge.project.readKnowledge.invoke({ id: projectId }),
+        ipcBridge.project.hasUsableModel.invoke(),
+      ]);
+      setSetupReady(hasContent(knowledge.context || ''));
+      setCanGenerate(!!hasModel);
     } catch (err) {
       console.error('[ProjectWorkspacePage] load failed:', err);
     } finally {
@@ -58,24 +88,7 @@ const ProjectWorkspacePage: React.FC = () => {
     return () => unsub();
   }, [load]);
 
-  const [modalCtrl, modalNode] = CreateProjectModal.useModal({
-    project: project ?? undefined,
-    onSubmit: async (params) => {
-      if (!projectId) return;
-      try {
-        await updateProject(projectId, params);
-        Message.success(t('projects.toast.updated'));
-      } catch {
-        Message.error(t('projects.toast.saveFailed'));
-      }
-    },
-  });
-
   const startNewChat = () => {
-    // Hand off to the normal composer, scoped to this project. The composer keeps
-    // full backend / model / assistant freedom; useGuidSend stamps extra.projectId.
-    // We also pass the project name + workspace so the composer can root the chat
-    // in the project folder and show which project the chat belongs to.
     navigate('/guid', {
       state: { projectId, projectName: project?.name, projectWorkspace: project?.workspace },
     });
@@ -98,7 +111,15 @@ const ProjectWorkspacePage: React.FC = () => {
     });
   };
 
+  const openSettings = (section: SettingsSection) => setSettingsSection(section);
   const color = project?.iconColor || '#FF6A00';
+
+  const TABS: Array<{ key: ProjectTab; label: string; icon: React.ReactNode; count?: number }> = [
+    { key: 'chats', label: t('projects.workspace.tabChats'), icon: <MessageSquare size={15} />, count: conversations.length },
+    { key: 'files', label: t('projects.workspace.tabFiles'), icon: <FolderOpen size={15} /> },
+    { key: 'reference', label: t('projects.workspace.tabReference'), icon: <Paperclip size={15} /> },
+    { key: 'memory', label: t('projects.workspace.tabMemory'), icon: <NotebookPen size={15} /> },
+  ];
 
   return (
     <div className='flex flex-col h-full w-full overflow-hidden'>
@@ -112,7 +133,7 @@ const ProjectWorkspacePage: React.FC = () => {
           className='flex items-center justify-center w-36px h-36px rd-9px flex-shrink-0'
           style={{ background: `${color}1a`, color }}
         >
-          <Folder size={18} />
+          <FolderOpen size={18} />
         </div>
         <div className='flex flex-col gap-1px min-w-0 flex-1'>
           <div className='text-16px font-700 text-t-primary truncate'>
@@ -120,12 +141,30 @@ const ProjectWorkspacePage: React.FC = () => {
           </div>
           {project?.description && <div className='text-12px text-t-secondary truncate'>{project.description}</div>}
         </div>
-        <Button
-          type='text'
-          icon={<Pencil size={15} />}
-          onClick={() => modalCtrl.open({ project: project ?? undefined })}
-        >
-          {t('projects.workspace.edit')}
+
+        {/* Setup readiness pill — opens Settings on Instructions */}
+        {project && (
+          <button
+            type='button'
+            onClick={() => openSettings('context')}
+            className='flex items-center gap-7px px-12px py-7px rd-full bg-transparent cursor-pointer text-12.5px font-600 transition-colors'
+            style={{
+              border: '1px solid var(--color-border-2)',
+              color: setupReady ? 'var(--color-success-6)' : 'var(--color-text-1)',
+            }}
+          >
+            <span
+              className='block w-8px h-8px rd-full'
+              style={{
+                background: setupReady ? 'var(--color-success-6)' : 'var(--color-primary-6)',
+                boxShadow: `0 0 0 3px ${setupReady ? 'var(--color-success-light-1)' : 'var(--color-primary-light-1)'}`,
+              }}
+            />
+            {setupReady ? t('projects.workspace.setupDone') : t('projects.workspace.setupTodo')}
+          </button>
+        )}
+        <Button type='text' icon={<SettingsIcon size={15} />} onClick={() => openSettings('general')}>
+          {t('projects.workspace.settings')}
         </Button>
         <Button type='primary' onClick={startNewChat}>
           <span className='flex items-center gap-6px'>
@@ -135,23 +174,12 @@ const ProjectWorkspacePage: React.FC = () => {
         </Button>
       </div>
 
-      {/* Tab bar: Chats / Files / Knowledge */}
+      {/* Tab bar */}
       <div
         className='flex items-center gap-2px px-20px flex-shrink-0'
         style={{ borderBottom: '1px solid var(--color-border-2)' }}
       >
-        {(
-          [
-            {
-              key: 'chats',
-              label: t('projects.workspace.tabChats'),
-              icon: <MessageSquare size={15} />,
-              count: conversations.length,
-            },
-            { key: 'files', label: t('projects.workspace.tabFiles'), icon: <FolderOpen size={15} /> },
-            { key: 'knowledge', label: t('projects.workspace.tabKnowledge'), icon: <BookOpen size={15} /> },
-          ] as Array<{ key: ProjectTab; label: string; icon: React.ReactNode; count?: number }>
-        ).map((tab) => {
+        {TABS.map((tab) => {
           const active = activeTab === tab.key;
           return (
             <button
@@ -239,11 +267,7 @@ const ProjectWorkspacePage: React.FC = () => {
         {activeTab === 'files' &&
           (project?.workspace ? (
             <div className='h-full'>
-              <ChatWorkspace
-                workspace={project.workspace}
-                conversation_id={`project:${projectId}`}
-                messageApi={Message}
-              />
+              <ChatWorkspace workspace={project.workspace} conversation_id={`project:${projectId}`} messageApi={Message} />
             </div>
           ) : (
             <div className='flex flex-col items-center justify-center gap-12px h-full text-center px-20px'>
@@ -254,24 +278,43 @@ const ProjectWorkspacePage: React.FC = () => {
               <div className='text-12px text-t-secondary max-w-320px leading-relaxed'>
                 {t('projects.knowledge.noWorkspaceBody')}
               </div>
-              <Button type='outline' onClick={() => modalCtrl.open({ project: project ?? undefined })}>
+              <Button type='outline' onClick={() => openSettings('general')}>
                 {t('projects.knowledge.setWorkspace')}
               </Button>
             </div>
           ))}
 
-        {activeTab === 'knowledge' && (
+        {activeTab === 'reference' && (
           <div className='h-full overflow-auto px-24px py-18px'>
-            <ProjectKnowledgePanel
+            <ProjectReferencePanel
               projectId={projectId || ''}
               hasWorkspace={!!project?.workspace}
-              onSetWorkspace={() => modalCtrl.open({ project: project ?? undefined })}
+              onSetWorkspace={() => openSettings('general')}
+            />
+          </div>
+        )}
+
+        {activeTab === 'memory' && (
+          <div className='h-full overflow-auto px-24px py-18px'>
+            <ProjectMemoryPanel
+              projectId={projectId || ''}
+              hasWorkspace={!!project?.workspace}
+              onSetWorkspace={() => openSettings('general')}
             />
           </div>
         )}
       </div>
 
-      {modalNode}
+      {project && settingsSection && (
+        <ProjectSettingsDrawer
+          visible={!!settingsSection}
+          project={project}
+          initialSection={settingsSection}
+          canGenerate={canGenerate}
+          onClose={() => setSettingsSection(null)}
+          onSaved={() => void load()}
+        />
+      )}
     </div>
   );
 };

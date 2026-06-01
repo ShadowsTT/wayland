@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import fs from 'fs/promises';
 import { ipcBridge } from '@/common';
 import { projectServiceSingleton as projectService } from '@process/services/projectServiceSingleton';
 import {
@@ -14,11 +15,65 @@ import {
   removeProjectReference,
   readProjectSummaries,
   writeProjectSummary,
+  appendProjectDecision,
 } from '@process/services/projectKnowledge/knowledge';
-import { hasUsableModel, oneShotComplete } from '@process/services/completion/oneShot';
+import { hasUsableModel, oneShotComplete, pickBestModel } from '@process/services/completion/oneShot';
 
 /** Prompt the cheap model with a knowledge doc and ask for a single-sentence summary. */
 const SUMMARY_KIND_LABEL = { context: 'project instructions', rules: 'project rules', decisions: 'project decisions' };
+
+/** Per-file and total caps when ingesting uploaded/pasted source for a draft. */
+const DRAFT_FILE_CHAR_CAP = 8_000;
+const DRAFT_TOTAL_CHAR_CAP = 24_000;
+
+/** Read uploaded source files as text, truncated, for the draft prompt. Best-effort. */
+async function readSourceFiles(filePaths: string[]): Promise<string> {
+  const parts: string[] = [];
+  let budget = DRAFT_TOTAL_CHAR_CAP;
+  for (const p of filePaths) {
+    if (budget <= 0) break;
+    try {
+      const raw = await fs.readFile(p, 'utf-8');
+      const slice = raw.slice(0, Math.min(DRAFT_FILE_CHAR_CAP, budget));
+      budget -= slice.length;
+      const name = p.split(/[\\/]/).pop() || p;
+      parts.push(`--- ${name} ---\n${slice}`);
+    } catch {
+      // Unreadable / binary file — skip silently.
+    }
+  }
+  return parts.join('\n\n');
+}
+
+/** Build the best-practice drafting prompt for Instructions (context) or Rules. */
+function buildDraftPrompt(params: {
+  name?: string;
+  description?: string;
+  kind: 'context' | 'rules';
+  sourceText?: string;
+  sourceFiles?: string;
+  audience?: string;
+  constraints?: string;
+}): string {
+  const { name, description, kind, sourceText, sourceFiles, audience, constraints } = params;
+  const guidance =
+    kind === 'rules'
+      ? 'Write a tight set of hard rules and conventions as markdown bullet points: non-negotiables, formatting/tone constraints, and explicit never-dos. Keep it scannable. No long prose.'
+      : 'Write concise project instructions as markdown with short `##` sections: what this project is, who it is for, tone & voice, what every chat should always keep in mind, and a brief definition of done. Be concrete, not generic.';
+  const lines: string[] = [
+    `You are helping a user author the ${kind === 'rules' ? 'Rules & conventions' : 'Instructions'} document for a project.`,
+    'This document is injected into EVERY AI chat in the project, so it must be high-signal, concrete, and free of filler.',
+    '',
+  ];
+  if (name) lines.push(`Project name: ${name}`);
+  if (description) lines.push(`Project description: ${description}`);
+  if (audience) lines.push(`Audience: ${audience}`);
+  if (constraints) lines.push(`Must always keep in mind: ${constraints}`);
+  if (sourceText && sourceText.trim()) lines.push('', 'What the user said about the project:', sourceText.trim());
+  if (sourceFiles && sourceFiles.trim()) lines.push('', 'Reference material the user provided:', sourceFiles.trim());
+  lines.push('', guidance, '', 'Output ONLY the document as clean markdown. No preamble, no closing remarks, no code fences.');
+  return lines.join('\n');
+}
 
 /** Resolve a project's workspace dir, throwing a clear error if unset. */
 async function requireWorkspace(id: string): Promise<string> {
@@ -137,5 +192,33 @@ export function initProjectBridge(): void {
       const msg = err instanceof Error ? err.message : '';
       return { summary: '', error: msg === 'no-usable-model' ? 'no-model' : 'failed' };
     }
+  });
+
+  ipcBridge.project.generateKnowledgeDraft.provider(async ({ name, description, kind, sourceText, filePaths, audience, constraints }) => {
+    // High-stakes, rarely-run: use the best model the user has, not the cheap one.
+    // Never reject — return a structured error so the wizard never hangs.
+    try {
+      const model = await pickBestModel();
+      if (!model) return { draft: '', error: 'no-model' };
+      const sourceFiles = filePaths && filePaths.length > 0 ? await readSourceFiles(filePaths) : '';
+      const prompt = buildDraftPrompt({ name, description, kind, sourceText, sourceFiles, audience, constraints });
+      const raw = await oneShotComplete(prompt, { model, maxTokens: 1200 });
+      // Strip accidental wrapping code fences from a chatty model.
+      const draft = raw
+        .replace(/^```(?:markdown|md)?\s*\n?/i, '')
+        .replace(/\n?```\s*$/i, '')
+        .trim();
+      return { draft };
+    } catch (err) {
+      console.error('[projectBridge] generateKnowledgeDraft failed:', err);
+      const msg = err instanceof Error ? err.message : '';
+      return { draft: '', error: msg === 'no-usable-model' ? 'no-model' : 'failed' };
+    }
+  });
+
+  ipcBridge.project.appendDecision.provider(async ({ id, text }) => {
+    const workspace = await requireWorkspace(id);
+    const decisions = await appendProjectDecision(workspace, text);
+    return { decisions };
   });
 }

@@ -4,15 +4,17 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { ipcBridge } from '@/common';
 import type { IProject, ICreateProjectParams } from '@/common/types/project';
 import { Button, Message, Modal } from '@arco-design/web-react';
 import { FolderPlus, Plus } from 'lucide-react';
-import React, { useCallback } from 'react';
+import React, { useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { useProjects } from './hooks/useProjects';
 import ProjectCard from './components/ProjectCard';
 import CreateProjectModal from './components/CreateProjectModal';
+import NewProjectWizard from './components/NewProjectWizard';
 
 /**
  * Top-level Projects surface: a grid of project tiles plus one obvious "New
@@ -26,18 +28,23 @@ const ProjectsListPage: React.FC = () => {
   const { projects, counts, loading, createProject, updateProject, removeProject } = useProjects();
 
   const [editing, setEditing] = React.useState<IProject | undefined>(undefined);
+  const [wizardOpen, setWizardOpen] = React.useState(false);
+  const [canGenerate, setCanGenerate] = React.useState(false);
 
-  const handleSubmit = useCallback(
+  useEffect(() => {
+    ipcBridge.project.hasUsableModel
+      .invoke()
+      .then(setCanGenerate)
+      .catch(() => setCanGenerate(false));
+  }, []);
+
+  // Card edit uses the compact modal; project CREATION uses the guided wizard.
+  const handleEditSubmit = useCallback(
     async (params: ICreateProjectParams) => {
+      if (!editing) return;
       try {
-        if (editing) {
-          await updateProject(editing.id, params);
-          Message.success(t('projects.toast.updated'));
-        } else {
-          const created = await createProject(params);
-          Message.success(t('projects.toast.created'));
-          navigate(`/project/${created.id}`);
-        }
+        await updateProject(editing.id, params);
+        Message.success(t('projects.toast.updated'));
       } catch (err) {
         console.error('[ProjectsListPage] save failed:', err);
         Message.error(t('projects.toast.saveFailed'));
@@ -45,15 +52,29 @@ const ProjectsListPage: React.FC = () => {
         setEditing(undefined);
       }
     },
-    [editing, updateProject, createProject, navigate, t]
+    [editing, updateProject, t]
   );
 
-  const [modalCtrl, modalNode] = CreateProjectModal.useModal({ project: editing, onSubmit: handleSubmit });
+  const completeNewProject = useCallback(
+    async (params: ICreateProjectParams, instructions?: string) => {
+      const created = await createProject(params);
+      // Persist drafted instructions only when there is a workspace to hold them.
+      if (instructions && params.workspace) {
+        try {
+          await ipcBridge.project.writeKnowledge.invoke({ id: created.id, kind: 'context', content: instructions });
+        } catch (err) {
+          console.error('[ProjectsListPage] write instructions failed:', err);
+        }
+      }
+      Message.success(t('projects.toast.created'));
+      navigate(`/project/${created.id}`);
+    },
+    [createProject, navigate, t]
+  );
 
-  const openCreate = () => {
-    setEditing(undefined);
-    modalCtrl.open({ project: undefined });
-  };
+  const [modalCtrl, modalNode] = CreateProjectModal.useModal({ project: editing, onSubmit: handleEditSubmit });
+
+  const openCreate = () => setWizardOpen(true);
   const openEdit = (project: IProject) => {
     setEditing(project);
     modalCtrl.open({ project });
@@ -137,6 +158,12 @@ const ProjectsListPage: React.FC = () => {
       </div>
 
       {modalNode}
+      <NewProjectWizard
+        visible={wizardOpen}
+        canGenerate={canGenerate}
+        onClose={() => setWizardOpen(false)}
+        onComplete={completeNewProject}
+      />
     </div>
   );
 };

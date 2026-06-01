@@ -200,7 +200,10 @@ export async function readDirectoryRecursive(
     // the user-facing workspace tree. These are engine/tooling implementation
     // details (e.g. skill-symlink subdirs) or OS noise; they don't belong in
     // the file browser. Engine still reads them via its own filesystem access.
-    if (item.startsWith('.')) continue;
+    // EXCEPTION: `.wayland/` is a project's visible source-of-truth (instructions,
+    // rules, decisions, reference) — it is shown so users can see exactly what
+    // gets injected into every chat in the project.
+    if (item.startsWith('.') && item !== '.wayland') continue;
     const itemPath = path.join(dirPath, item);
     if (fileService && fileService.shouldIgnoreFile(itemPath)) continue;
 

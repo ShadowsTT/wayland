@@ -148,6 +148,29 @@ export async function writeProjectSummary(workspace: string, kind: KnowledgeKind
   await fs.writeFile(path.join(root, SUMMARY_FILE), JSON.stringify(current, null, 2), 'utf-8');
 }
 
+/**
+ * Append one decision to `.wayland/decisions.md` as a dated bullet and return
+ * the updated document. This is the manual "+ Add decision" path for the Memory
+ * tab; the decisions doc is also auto-injected into every chat in the project.
+ */
+export async function appendProjectDecision(workspace: string, text: string): Promise<string> {
+  if (!workspace || !workspace.trim()) throw new Error('Project has no workspace folder');
+  const trimmed = text.trim();
+  if (!trimmed) {
+    const current = await readProjectKnowledge(workspace);
+    return current.decisions;
+  }
+  const root = knowledgeRoot(workspace);
+  await fs.mkdir(root, { recursive: true });
+  const file = path.join(root, KNOWLEDGE_FILE.decisions);
+  const existing = await readIfExists(file);
+  const date = new Date().toISOString().slice(0, 10);
+  const bullet = `- ${date} — ${trimmed.replace(/\n+/g, ' ')}`;
+  const next = existing.trim() ? `${existing.replace(/\s+$/, '')}\n${bullet}\n` : `${bullet}\n`;
+  await fs.writeFile(file, next, 'utf-8');
+  return next;
+}
+
 /** List files dropped into the project's `.wayland/reference/` folder. */
 export async function listProjectReference(workspace: string): Promise<ReferenceFile[]> {
   if (!workspace || !workspace.trim()) return [];

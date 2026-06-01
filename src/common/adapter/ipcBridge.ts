@@ -2133,6 +2133,26 @@ export const project = {
   >('project.generate-summary'),
   /** True if the user has any configured model usable for cheap summaries. */
   hasUsableModel: buildProvider<boolean, void>('project.has-usable-model'),
+  /**
+   * Draft an Instructions (context) or Rules document with the best available
+   * model from the user's source description / pasted text / uploaded files plus
+   * a couple of wizard answers. Stateless (works before a project exists), so it
+   * takes name/description directly rather than a project id. Never rejects.
+   */
+  generateKnowledgeDraft: buildProvider<
+    { draft: string; error?: 'no-model' | 'failed' },
+    {
+      name?: string;
+      description?: string;
+      kind: 'context' | 'rules';
+      sourceText?: string;
+      filePaths?: string[];
+      audience?: string;
+      constraints?: string;
+    }
+  >('project.generate-knowledge-draft'),
+  /** Append one dated decision to .wayland/decisions.md; returns the updated doc. */
+  appendDecision: buildProvider<{ decisions: string }, { id: string; text: string }>('project.append-decision'),
   /** Fired whenever the project list or a project's membership changes. */
   changed: buildEmitter<void>('project.changed'),
 };

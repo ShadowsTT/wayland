@@ -86,12 +86,51 @@ const fastRank = (modelId: string): number => {
   return FAST_HINTS.length; // not a known-fast model — lowest preference
 };
 
+/** Name fragments that indicate a flagship / most-capable model, best first. */
+const BEST_HINTS = [
+  /opus/i,
+  /gpt-5\.\d/i,
+  /gpt-5/i,
+  /sonnet/i,
+  /gemini-[\d.]*-?pro/i,
+  /[-_]pro\b/i,
+  /gpt-4\.1/i,
+  /gpt-4o(?!-mini)/i,
+  /[-_]large\b/i,
+];
+
+const bestRank = (modelId: string): number => {
+  for (let i = 0; i < BEST_HINTS.length; i++) {
+    if (BEST_HINTS[i].test(modelId)) return i;
+  }
+  return BEST_HINTS.length; // not a known-flagship model
+};
+
 /** Pick the cheapest fast model the user has a usable key for, or null. */
 export async function pickCheapestFastModel(): Promise<PickedModel | null> {
   const providers = await getMergedModelProviders();
   const candidates = usableModels(providers);
   if (candidates.length === 0) return null;
   candidates.sort((a, b) => fastRank(a.modelId) - fastRank(b.modelId));
+  return candidates[0];
+}
+
+/**
+ * Pick the most capable model the user has a usable key for (for high-stakes,
+ * rarely-run drafting like the knowledge wizard). Prefers known flagships by
+ * name; when none match, de-prioritizes the obviously-cheap/fast models so a
+ * more capable default wins.
+ */
+export async function pickBestModel(): Promise<PickedModel | null> {
+  const providers = await getMergedModelProviders();
+  const candidates = usableModels(providers);
+  if (candidates.length === 0) return null;
+  candidates.sort((a, b) => {
+    const rb = bestRank(b.modelId);
+    const ra = bestRank(a.modelId);
+    if (ra !== rb) return ra - rb; // known flagship first
+    return fastRank(b.modelId) - fastRank(a.modelId); // tie: prefer the less-cheap (more capable) one
+  });
   return candidates[0];
 }
 
@@ -116,8 +155,11 @@ const joinUrl = (base: string, suffix: string): string => `${base.replace(/\/+$/
  * Make a single completion call. Routes by endpoint host so a Claude/Gemini
  * model served via an OpenAI-compatible proxy is still called the right way.
  */
-export async function oneShotComplete(prompt: string, opts?: { maxTokens?: number }): Promise<string> {
-  const picked = await pickCheapestFastModel();
+export async function oneShotComplete(
+  prompt: string,
+  opts?: { maxTokens?: number; model?: PickedModel }
+): Promise<string> {
+  const picked = opts?.model ?? (await pickCheapestFastModel());
   if (!picked) throw new Error('no-usable-model');
   const { provider, modelId } = picked;
   const endpoint = resolveEndpoint(provider);

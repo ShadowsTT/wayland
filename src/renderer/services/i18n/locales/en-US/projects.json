@@ -43,7 +43,12 @@
     "emptyTitle": "No chats in this project yet",
     "emptyBody": "Start a chat with any backend, model or assistant. It will live under this project, and you can run as many as you like at once.",
     "untitledChat": "Untitled chat",
-    "removeChat": "Remove"
+    "removeChat": "Remove",
+    "tabReference": "Reference",
+    "tabMemory": "Memory",
+    "setupDone": "Set up",
+    "setupTodo": "Finish setup",
+    "settings": "Settings"
   },
   "assign": {
     "title": "Add to project",
@@ -122,5 +127,101 @@
     "deleteFailed": "Could not delete the project.",
     "chatAdded": "Added to project",
     "chatRemoved": "Removed from project"
+  },
+  "settings": {
+    "title": "Project settings",
+    "general": "General",
+    "saved": "Settings saved",
+    "saveFailed": "Could not save settings.",
+    "readyDone": "Project set up",
+    "readyTodo": "Add instructions to finish setup",
+    "instructionsHint": "Injected into every chat in this project.",
+    "rulesHint": "Hard constraints every chat must follow.",
+    "helpWrite": "Help me write this",
+    "needWorkspace": "Set a workspace folder first to write instructions and rules."
+  },
+  "reference": {
+    "title": "Reference files",
+    "subtitle": "Material the AI can draw on — specs, brand docs, data. Available to every chat in this project.",
+    "dropTitle": "Drop files here",
+    "dropHint": "or click to browse · PDF, Markdown, CSV, images…"
+  },
+  "memory": {
+    "title": "Project memory",
+    "subtitle": "Decisions and lessons for this project. Shared with every chat so they don't get relitigated.",
+    "add": "Add decision",
+    "save": "Save",
+    "placeholder": "What was decided, and why?",
+    "addFailed": "Could not save the decision.",
+    "emptyTitle": "No decisions yet",
+    "emptyBody": "Record decisions as you make them. They ride into every chat in this project so nothing gets relitigated."
+  },
+  "wizard": {
+    "titleInstructions": "Instructions wizard",
+    "titleRules": "Rules wizard",
+    "subtitle": "Answer a couple of quick questions. I'll draft a best-practice document you can edit.",
+    "step": {
+      "source": "Source",
+      "questions": "Questions",
+      "draft": "Draft"
+    },
+    "source": {
+      "q": "Tell me about this project",
+      "hint": "A sentence or two, paste relevant text, or upload a file. The more I know, the better the draft.",
+      "placeholder": "e.g. A product launch funnel for the masterclass — broker outreach, the P&L model, and the replay funnel.",
+      "upload": "Upload file",
+      "uploadHint": "PDF, Markdown, text…"
+    },
+    "audience": {
+      "q": "Who is this project for?",
+      "customers": "Customers / buyers",
+      "team": "My team",
+      "me": "Just me",
+      "developers": "Developers",
+      "executives": "Executives",
+      "public": "The public"
+    },
+    "constraints": {
+      "q": "What should every chat always keep in mind?",
+      "onBrand": "Stay on-brand",
+      "concise": "Keep it concise",
+      "citeSources": "Cite sources",
+      "noHype": "No hype",
+      "matchStyle": "Match existing style",
+      "factsLocked": "Use locked facts/numbers",
+      "placeholder": "Anything else? e.g. 'Never recompute the locked P&L.'"
+    },
+    "draft": {
+      "q": "Here's a draft",
+      "modelNote": "Best available model",
+      "generating": "Drafting…",
+      "noModel": "Connect a model with an API key to draft with AI.",
+      "failed": "Could not generate a draft.",
+      "retry": "Try again"
+    },
+    "back": "Back",
+    "continue": "Continue",
+    "generate": "Generate draft",
+    "regenerate": "Regenerate",
+    "useDraft": "Use this draft"
+  },
+  "newWizard": {
+    "eyebrow": "New project",
+    "basicsTitle": "Name your project",
+    "basicsSub": "Two quick steps to a project that's ready to work. Skip anytime.",
+    "instructionsTitle": "Set your instructions",
+    "instructionsSub": "Optional — draft them with AI now, or add them later.",
+    "whatLabel": "What is it?",
+    "whatHint": "one line, helps the AI",
+    "workspaceOptional": "optional, add later",
+    "noModelTitle": "No model connected",
+    "noModelBody": "Connect a model later in Settings to draft instructions with AI. You can still write them by hand.",
+    "instructionsReady": "Instructions ready",
+    "redo": "Redo with the wizard",
+    "instructionsPrompt": "Most projects work better with a short instructions doc that every chat shares. Want help writing one?",
+    "draftInstructions": "Draft instructions with AI",
+    "orSkipBelow": "or skip below — you can add them anytime",
+    "skip": "Skip for now, just get going",
+    "create": "Create project"
   }
 }
