@@ -37,6 +37,7 @@
 
 import { randomUUID } from 'crypto';
 import type { TProviderWithModel } from '@/common/config/storage';
+import type { AgentBackend } from '@/common/types/acpTypes';
 import type { CreateConversationParams, IConversationService } from '../IConversationService';
 import type { UsageEventLogger } from '../usage/UsageEventLogger';
 import type { IWorkerTaskManager } from '@process/task/IWorkerTaskManager';
@@ -128,6 +129,21 @@ export async function dispatchAutonomousStep(
   const childType = parentConv.type as CreateConversationParams['type'];
   const childModel = await getDefaultModel();
 
+  // The model lives in backend-specific extras, but the worker selects which
+  // CLI to spawn from `extra.backend` (+ cliPath/agentName/sessionMode). If the
+  // child doesn't inherit these, its ACP session starts with
+  // `backend: undefined` and fails to connect ("Starting session with backend
+  // undefined") — the step never runs. Carry the parent's backend identity
+  // through. (FINDING-2.)
+  const parentExtra = (parentConv.extra ?? {}) as Record<string, unknown>;
+  const inheritedBackend =
+    typeof parentExtra.backend === 'string' ? (parentExtra.backend as AgentBackend) : undefined;
+  const inheritedCliPath = typeof parentExtra.cliPath === 'string' ? parentExtra.cliPath : undefined;
+  const inheritedAgentName =
+    typeof parentExtra.agentName === 'string' ? parentExtra.agentName : undefined;
+  const inheritedSessionMode =
+    typeof parentExtra.sessionMode === 'string' ? parentExtra.sessionMode : undefined;
+
   const dispatchId = randomUUID();
   const childName = `${parent.workflow_title} — Step ${stepN}`;
 
@@ -140,6 +156,10 @@ export async function dispatchAutonomousStep(
     source: 'wayland',
     extra: {
       workspace: '',
+      backend: inheritedBackend,
+      cliPath: inheritedCliPath,
+      agentName: inheritedAgentName,
+      sessionMode: inheritedSessionMode,
       autonomousDispatch: {
         parentWorkflowSessionId: parentSessionId,
         stepN,
@@ -151,21 +171,17 @@ export async function dispatchAutonomousStep(
   const child = await conversationService.createConversation(childParams);
   const childConversationId = child.id;
 
-  // 5. Build the agent for the child and send the focused directive as the
-  //    first message. The same path conversationBridge.sendMessage uses,
-  //    just without the IPC hop.
-  const directive = composeDirective(stepN, step.title, step.body_excerpt);
-  const task = await workerTaskManager.getOrBuildTask(childConversationId);
-  await task.sendMessage({
-    input: directive,
-    msg_id: randomUUID(),
-    conversation_id: childConversationId,
-    content: directive,
-    files: [],
-    agentContent: directive,
-  });
-
-  // 6. Persist the running state on the parent step.
+  // 5. Mark the parent step `running` BEFORE the (turn-blocking) send.
+  //    `AcpAgentManager.sendMessage` awaits the ENTIRE agent turn, not just the
+  //    send. If we recorded `running` afterwards (the original order):
+  //      (a) the rail never shows the running indicator during execution — the
+  //          step sits visibly `todo` for minutes, then jumps to done; and
+  //      (b) a worker that hangs mid-turn leaves the step `todo` with
+  //          `autonomous_run = null` — INVISIBLE to the 30-min stalled-step
+  //          watchdog (it only sweeps `running` steps), i.e. a permanently
+  //          stuck step that nothing recovers.
+  //    Recording `running` up-front fixes both and removes the running-vs-done
+  //    write race with the completion listener. (FINDING-2b.)
   await workflowSessionService.recordAutonomousDispatch(parentSessionId, stepN, dispatchId);
   await workflowSessionService.applyStepTransition(parentSessionId, {
     step_n: stepN,
@@ -174,6 +190,34 @@ export async function dispatchAutonomousStep(
     dispatch_id: dispatchId,
     timestamp: Date.now(),
   });
+
+  // 6. Build the agent for the child and send the focused directive as the
+  //    first message. The same path conversationBridge.sendMessage uses,
+  //    just without the IPC hop. On a send failure, fail the step fast
+  //    (errored) instead of leaving it `running` for the watchdog to sweep
+  //    30 min later.
+  const directive = composeDirective(stepN, step.title, step.body_excerpt);
+  const task = await workerTaskManager.getOrBuildTask(childConversationId);
+  try {
+    await task.sendMessage({
+      input: directive,
+      msg_id: randomUUID(),
+      conversation_id: childConversationId,
+      content: directive,
+      files: [],
+      agentContent: directive,
+    });
+  } catch (err) {
+    await workflowSessionService.recordAutonomousCompletion(parentSessionId, stepN, false);
+    await workflowSessionService.applyStepTransition(parentSessionId, {
+      step_n: stepN,
+      status: 'errored',
+      source: 'worker',
+      dispatch_id: dispatchId,
+      timestamp: Date.now(),
+    });
+    throw err;
+  }
 
   // 7. Telemetry.
   await telemetry.record({
