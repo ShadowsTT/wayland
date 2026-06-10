@@ -10,6 +10,7 @@ import { horizontalListSortingStrategy, SortableContext, useSortable } from '@dn
 import { CSS } from '@dnd-kit/utilities';
 import { Bot, PictureInPicture2, Plus, X } from 'lucide-react';
 import { ipcBridge } from '@/common';
+import type { TChatConversation } from '@/common/config/storage';
 import { isElectronDesktop } from '@/renderer/utils/platform';
 import { CUSTOM_AVATAR_IMAGE_MAP } from '@/renderer/pages/guid/constants';
 import { getAgentLogo } from '@/renderer/utils/model/agentLogo';
@@ -20,7 +21,7 @@ import { Dropdown, Menu, Message, Tag } from '@arco-design/web-react';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import { useConversationTabs } from '../hooks/ConversationTabsContext';
+import { useConversationTabs, type ConversationTab } from '../hooks/ConversationTabsContext';
 import { useConversationAgents } from '../hooks/useConversationAgents';
 import { applyDefaultConversationName } from '../utils/newConversationName';
 import { buildCliAgentParams, buildPresetAssistantParams } from '../utils/createConversationParams';
@@ -167,10 +168,13 @@ const ConversationTabs: React.FC = () => {
   const tabsContainerRef = useRef<HTMLDivElement>(null);
   const [tabFadeState, setTabFadeState] = useState<TabFadeState>({ left: false, right: false });
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
-  // #27 phase 2: conversation ids currently open in a pop-out window. Their tab
-  // stays in the bar as a dimmed, non-navigable placeholder until the pop-out
-  // closes (restored via the conversation.popoutClosed emitter below).
+  // #27 phase 2: tear-off model. Popping a chat out DETACHES it - its tab is
+  // removed from this window so the chat lives only in its pop-out window (no
+  // confusing duplicate). The detached tab is stashed here so docking back (or
+  // closing the window) re-adds it without a re-fetch. `poppedOutIds` is retained
+  // for the dimmed-placeholder path but is no longer populated under tear-off.
   const [poppedOutIds, setPoppedOutIds] = useState<Set<string>>(() => new Set());
+  const detachedTabsRef = useRef<Map<string, ConversationTab>>(new Map());
   const canPopout = isElectronDesktop();
 
   // PointerSensor with an 8px activation distance so a plain click still switches/closes a tab
@@ -238,27 +242,34 @@ const ConversationTabs: React.FC = () => {
     [switchTab, navigate]
   );
 
-  // Pop a tab out into its own OS window (or focus the existing one). Optimistic:
-  // mark popped immediately; the main-process dedupe is idempotent.
-  const handlePopoutTab = useCallback((tabId: string) => {
-    cleanupSiderTooltips();
-    setPoppedOutIds((prev) => {
-      if (prev.has(tabId)) return prev;
-      const next = new Set(prev);
-      next.add(tabId);
-      return next;
-    });
-    void ipcBridge.conversation.popout.invoke({ conversation_id: tabId }).catch((error) => {
-      console.error('[Popout] Failed to open pop-out window:', error);
-      // Roll back the placeholder if the window could not be opened.
-      setPoppedOutIds((prev) => {
-        if (!prev.has(tabId)) return prev;
-        const next = new Set(prev);
-        next.delete(tabId);
-        return next;
-      });
-    });
-  }, []);
+  // Pop a tab out into its own OS window and DETACH it from this window (tear-off
+  // model): the chat now lives only in the pop-out, so there is no duplicate
+  // tab+window. Stash the tab so docking back restores it. If the window cannot
+  // open, nothing is detached.
+  const handlePopoutTab = useCallback(
+    (tabId: string) => {
+      cleanupSiderTooltips();
+      const tab = openTabs.find((tt) => tt.id === tabId);
+      if (tab) detachedTabsRef.current.set(tabId, tab);
+      void ipcBridge.conversation.popout
+        .invoke({ conversation_id: tabId })
+        .then(() => {
+          // Detach: drop the tab from this window. If it was the active one,
+          // move this window to the next remaining tab (or home) so it is not
+          // still showing the conversation that just left.
+          const remaining = openTabs.filter((tt) => tt.id !== tabId);
+          closeTab(tabId);
+          if (tabId === activeTabId) {
+            void navigate(remaining.length > 0 ? `/conversation/${remaining[remaining.length - 1].id}` : '/guid');
+          }
+        })
+        .catch((error) => {
+          console.error('[Popout] Failed to open pop-out window:', error);
+          detachedTabsRef.current.delete(tabId);
+        });
+    },
+    [openTabs, activeTabId, closeTab, navigate]
+  );
 
   // Dock a popped-out tab back into the main window (close its pop-out). The
   // conversation.popoutClosed emitter clears the placeholder.
@@ -273,6 +284,20 @@ const ConversationTabs: React.FC = () => {
   useEffect(() => {
     if (!canPopout) return;
     return ipcBridge.conversation.popoutClosed.on(({ conversation_id }) => {
+      // Tear-off restore: dock-back or window-close re-adds the detached tab to
+      // this window and focuses it. Reconstruct the minimal conversation shape
+      // openTab needs from the stashed tab (no refetch).
+      const tab = detachedTabsRef.current.get(conversation_id);
+      if (tab) {
+        detachedTabsRef.current.delete(conversation_id);
+        openTab({
+          id: tab.id,
+          name: tab.name,
+          type: tab.type,
+          extra: { workspace: tab.workspace },
+        } as TChatConversation);
+        void navigate(`/conversation/${conversation_id}`);
+      }
       setPoppedOutIds((prev) => {
         if (!prev.has(conversation_id)) return prev;
         const next = new Set(prev);
@@ -280,7 +305,7 @@ const ConversationTabs: React.FC = () => {
         return next;
       });
     });
-  }, [canPopout]);
+  }, [canPopout, openTab, navigate]);
 
   // Close tab
   const handleCloseTab = useCallback(
