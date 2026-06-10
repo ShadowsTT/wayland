@@ -121,6 +121,14 @@ export const conversation = {
     'conversation.response.search.workspace'
   ),
   reloadContext: buildProvider<IBridgeResponse, { conversation_id: string }>('conversation.reload-context'),
+  // Pop-out windows (#27 phase 2): open a conversation in its own OS window for
+  // multi-monitor work. Dedupes per conversation (focuses an existing pop-out);
+  // dockBack closes the pop-out and restores the main-window tab. popoutClosed
+  // is broadcast to ALL windows so the main window can un-dim the placeholder
+  // tab when a pop-out closes by any path (dock-back, OS close, app quit).
+  popout: buildProvider<{ ok: boolean; alreadyOpen: boolean }, { conversation_id: string }>('conversation.popout'),
+  dockBack: buildProvider<{ ok: boolean }, { conversation_id: string }>('conversation.dock-back'),
+  popoutClosed: buildEmitter<{ conversation_id: string }>('conversation.popout-closed'),
   setConfig: buildProvider<
     IBridgeResponse,
     {

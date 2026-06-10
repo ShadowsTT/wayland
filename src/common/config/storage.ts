@@ -349,6 +349,14 @@ export interface IConfigStorageRefer {
   // Ambient Mode: persisted bubble window position (displayId used for multi-monitor recovery)
   'ambient.bubblePosition'?: { x: number; y: number; displayId: number };
   /**
+   * Pop-out chat window bounds (#27 phase 2). A single shared bounds record
+   * reused for every pop-out so the user's last sizing/placement (e.g. parked on
+   * a second monitor) is honored on the next pop-out. Ephemeral per the owner
+   * decision - this persists only the geometry, never the window-to-conversation
+   * mapping (pop-outs are not restored on relaunch).
+   */
+  'conversation.popoutBounds'?: { x: number; y: number; width: number; height: number; displayId: number };
+  /**
    * User-defined slash commands (issue #28). Each entry expands a prompt
    * template into the composer and surfaces in the slash menu alongside
    * agent-provided commands. Shape mirrors `UserSlashCommand` in
