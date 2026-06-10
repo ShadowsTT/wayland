@@ -70,5 +70,6 @@
   },
   "copyLastOutput": {
     "empty": "Ще немає відповіді для копіювання"
-  }
+  },
+  "slash.customBadge": "Custom"
 }

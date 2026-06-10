@@ -68,5 +68,6 @@
     "yesAlwaysAllowTool": "Ja, Tool \"{{toolName}}\" vom Server \"{{serverName}}\" immer erlauben",
     "yesAlwaysAllowServer": "Ja, alle Tools vom Server \"{{serverName}}\" immer erlauben",
     "no": "Nein (Esc)"
-  }
+  },
+  "slash.customBadge": "Custom"
 }

@@ -11,6 +11,7 @@ import { useInputFocusRing } from '@/renderer/hooks/chat/useInputFocusRing';
 import SlashCommandMenu, { type SlashCommandMenuItem } from '@/renderer/components/chat/SlashCommandMenu';
 import { useBtwCommand } from '@/renderer/components/chat/BtwOverlay/useBtwCommand';
 import { useSlashCommandController } from '@/renderer/hooks/chat/useSlashCommandController';
+import { useUserSlashCommands } from '@/renderer/hooks/chat/useUserSlashCommands';
 import { useLayoutContext } from '@/renderer/hooks/context/LayoutContext';
 import { useConversationContextSafe } from '@/renderer/hooks/context/ConversationContext';
 import { usePreviewContext } from '@/renderer/pages/conversation/Preview';
@@ -425,10 +426,42 @@ const SendBox: React.FC<{
     return commands;
   }, [conversationContext?.conversationId, enableBtw, onSlashBuiltinCommand, t]);
 
+  const { commands: userSlashCommands } = useUserSlashCommands();
+
+  // User-defined commands mapped into the shared SlashCommandItem shape with a
+  // "Custom" badge so they're distinguishable from agent/builtin commands.
+  const userSlashCommandItems = useMemo<SlashCommandItem[]>(
+    () =>
+      userSlashCommands.map((command) => ({
+        name: command.name,
+        description: command.description,
+        kind: 'template',
+        source: 'user',
+        hint: t('messages.slash.customBadge', { defaultValue: 'Custom' }),
+      })),
+    [userSlashCommands, t]
+  );
+
+  // Template bodies keyed by command name, for expansion on select.
+  const userTemplateByName = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const command of userSlashCommands) {
+      map.set(command.name, command.template);
+    }
+    return map;
+  }, [userSlashCommands]);
+
   const mergedSlashCommands = useMemo(() => {
     const map = new Map<string, SlashCommandItem>();
     for (const command of builtinSlashCommands) {
       map.set(command.name, command);
+    }
+    // User commands take precedence over agent commands of the same name (the
+    // user explicitly authored them) but never over builtins.
+    for (const command of userSlashCommandItems) {
+      if (!map.has(command.name)) {
+        map.set(command.name, command);
+      }
     }
     for (const command of slashCommands) {
       if (!map.has(command.name)) {
@@ -436,7 +469,7 @@ const SendBox: React.FC<{
       }
     }
     return Array.from(map.values());
-  }, [builtinSlashCommands, slashCommands]);
+  }, [builtinSlashCommands, userSlashCommandItems, slashCommands]);
 
   const slashController = useSlashCommandController({
     input,
@@ -464,6 +497,13 @@ const SendBox: React.FC<{
     },
     onSelectTemplate: (name) => {
       setInput(`/${name} `);
+    },
+    onSelectUserCommand: (name) => {
+      // v1 UX: expand the template body into the composer with any `{arg}` /
+      // `{{arg}}` placeholders left in place for the user to fill before
+      // sending. No interactive arg-collection step in v1 (see issue #28).
+      const template = userTemplateByName.get(name);
+      setInput(template ?? `/${name} `);
     },
   });
 
