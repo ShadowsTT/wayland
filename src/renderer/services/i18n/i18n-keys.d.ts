@@ -195,6 +195,8 @@ export type I18nKey =
   | 'common.cancel'
   | 'common.clear'
   | 'common.close'
+  | 'common.cmdk.actions.docs'
+  | 'common.cmdk.groups.actions'
   | 'common.cmdk.groups.bestMatch'
   | 'common.cmdk.groups.builtins'
   | 'common.cmdk.groups.prompts'
