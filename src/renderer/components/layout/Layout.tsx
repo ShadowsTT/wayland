@@ -365,6 +365,15 @@ const Layout: React.FC<{
     setCollapsed(true);
   }, [isMobile]);
 
+  // Close the mobile overlay sider on navigation, so tapping a conversation or
+  // nav item dismisses the drawer instead of leaving it covering the new route
+  // (the biggest "feels native" win for the mobile sidebar).
+  useEffect(() => {
+    if (isMobile && !collapsedRef.current) {
+      setCollapsed(true);
+    }
+  }, [location.pathname]);
+
   // Responsive rail: on a narrowed desktop window (between the mobile overlay
   // breakpoint and NARROW_RAIL_MAX_WIDTH) auto-collapse to the icon rail, and
   // expand back when widened. The mobile path (above) owns sub-768 behavior.
@@ -516,7 +525,7 @@ const Layout: React.FC<{
         left: 0,
         zIndex: 100,
         transform: collapsed ? 'translateX(-100%)' : 'translateX(0)',
-        transition: 'none',
+        transition: 'transform 0.28s cubic-bezier(0.2, 0.8, 0.3, 1)',
         pointerEvents: collapsed ? ('none' as const) : ('auto' as const),
       }
     : {
