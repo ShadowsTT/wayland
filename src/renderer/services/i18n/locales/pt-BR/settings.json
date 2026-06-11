@@ -1721,6 +1721,8 @@
       "xaiOffline": "Não foi possível acessar a xAI. Verifique sua conexão e tente novamente.",
       "xaiCancelled": "Login com o X cancelado.",
       "xaiFailed": "Falha no login com o X. Tente novamente.",
+      "xaiConnected": "Signed in with X",
+      "xaiReconnect": "Reconnect",
       "chatgpt": "Sign in with ChatGPT",
       "chatgptNote": "Signs in with your ChatGPT subscription via the same path the Codex CLI uses. OpenAI may change or restrict this.",
       "chatgptSuccess": "Signed in with your ChatGPT subscription.",

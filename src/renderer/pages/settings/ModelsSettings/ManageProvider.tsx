@@ -8,6 +8,7 @@ import { useModelRegistry } from '@renderer/hooks/useModelRegistry';
 import FluxRouterMark from '@renderer/components/icons/FluxRouterMark';
 import { providerMeta } from './providerCatalog';
 import { allVisibleEnabled, mergeCatalogRows, rowsToFlip } from './components/bulkToggle';
+import XGrokButton from './components/XGrokButton';
 import styles from './ManageProvider.module.css';
 
 type Props = {
@@ -266,6 +267,13 @@ const ManageProvider: React.FC<Props> = ({ provider, onBack, onDisconnected }) =
   // exists, instead of disabling the button.
   const isCloudProvider = provider.connectedVia === 'cloud-credentials';
 
+  // xAI (Grok) connects through the native "Sign in with X" OAuth, so its
+  // reconnect path is that flow - not just the API-key Re-key dialog. Surface
+  // the X sign-in here alongside Re-key (especially useful in the error state,
+  // where a revoked / expired token needs re-auth). `XGrokButton` shows its own
+  // connected / reconnect affordance and the OAuth waiting + paste-fallback UI.
+  const isXai = provider.providerId === 'xai';
+
   // ---- Header status -----------------------------------------------------
   const viaSuffix = VIA_KEY[provider.connectedVia];
   const viaLabel = viaSuffix ? t(`settings.modelsPage.row.via.${viaSuffix}`) : provider.connectedVia;
@@ -392,6 +400,12 @@ const ManageProvider: React.FC<Props> = ({ provider, onBack, onDisconnected }) =
           count: models.length,
         })}
       </div>
+
+      {isXai && (
+        <div className='mt-12px'>
+          <XGrokButton />
+        </div>
+      )}
 
       <div className={styles.secLabel}>{t('settings.modelsPage.manage.sectionLabel')}</div>
       <div className={styles.secExplain}>{t('settings.modelsPage.manage.sectionExplain')}</div>

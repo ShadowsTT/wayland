@@ -1,8 +1,10 @@
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { Button, Input, Message, Spin } from '@arco-design/web-react';
+import { Check } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { ipcBridge } from '@/common';
 import type { XaiOAuthResult } from '@/common/types/onboarding';
+import { useModelRegistry } from '@renderer/hooks/useModelRegistry';
 
 /** Inline X (formerly Twitter) wordmark. The monochrome glyph adapts to theme. */
 const XMark: React.FC = () => (
@@ -37,6 +39,14 @@ const PASTE_FALLBACK_DELAY_MS = 12_000;
  */
 const XGrokButton: React.FC = () => {
   const { t } = useTranslation();
+  // The Models tree wraps this in a `ModelRegistryProvider`, so `providers` is
+  // the shared snapshot that re-renders live on every `modelRegistry.listChanged`
+  // event - the connected-state row flips the moment xAI connects / disconnects.
+  const { providers } = useModelRegistry();
+  const isXaiConnected = useMemo(
+    () => providers.some((p) => p.providerId === 'xai' && p.state === 'connected'),
+    [providers]
+  );
   const [loading, setLoading] = useState(false);
   const [awaitingCode, setAwaitingCode] = useState(false);
   const [showPaste, setShowPaste] = useState(false);
@@ -120,11 +130,28 @@ const XGrokButton: React.FC = () => {
     reset();
   }, [reset]);
 
+  // When xAI is already connected and no sign-in flow is in progress, show a
+  // quiet "Signed in with X" row instead of the plain CTA so users stop
+  // re-clicking it. A small text Reconnect re-runs the same OAuth flow.
+  const showConnected = isXaiConnected && !awaitingCode;
+
   return (
     <div className='w-full flex flex-col gap-8px'>
-      <Button long loading={loading && !awaitingCode} disabled={loading} icon={<XMark />} onClick={handleClick}>
-        {t('settings.modelsPage.connect.xai')}
-      </Button>
+      {showConnected ? (
+        <div className='w-full flex items-center gap-8px min-h-40px px-14px py-6px rd-2px bg-[var(--color-fill-2)] border border-[var(--color-border-2)] text-14px text-[var(--color-text-2)]'>
+          <XMark />
+          <span className='whitespace-nowrap'>{t('settings.modelsPage.connect.xaiConnected')}</span>
+          <Check size={15} className='shrink-0 text-[var(--color-success-6,#00b42a)]' aria-hidden='true' />
+          <div className='flex-1' />
+          <Button type='text' size='mini' onClick={handleClick}>
+            {t('settings.modelsPage.connect.xaiReconnect')}
+          </Button>
+        </div>
+      ) : (
+        <Button long loading={loading && !awaitingCode} disabled={loading} icon={<XMark />} onClick={handleClick}>
+          {t('settings.modelsPage.connect.xai')}
+        </Button>
+      )}
       {awaitingCode && (
         <div className='flex flex-col gap-8px p-10px rd-8px bg-[var(--color-fill-2)] border border-[var(--color-border-2)]'>
           <div className='flex items-center gap-8px text-12px leading-18px text-[var(--color-text-2)]'>
