@@ -273,6 +273,9 @@ const ManageProvider: React.FC<Props> = ({ provider, onBack, onDisconnected }) =
   // where a revoked / expired token needs re-auth). `XGrokButton` shows its own
   // connected / reconnect affordance and the OAuth waiting + paste-fallback UI.
   const isXai = provider.providerId === 'xai';
+  // Flux is a router (tiers across many models), not a vendor catalog, so its
+  // models-section explainer is Flux-specific rather than the shared copy.
+  const isFlux = provider.providerId === 'flux-router';
 
   // ---- Header status -----------------------------------------------------
   const viaSuffix = VIA_KEY[provider.connectedVia];
@@ -408,7 +411,9 @@ const ManageProvider: React.FC<Props> = ({ provider, onBack, onDisconnected }) =
       )}
 
       <div className={styles.secLabel}>{t('settings.modelsPage.manage.sectionLabel')}</div>
-      <div className={styles.secExplain}>{t('settings.modelsPage.manage.sectionExplain')}</div>
+      <div className={styles.secExplain}>
+        {t(isFlux ? 'settings.modelsPage.manage.sectionExplainFlux' : 'settings.modelsPage.manage.sectionExplain')}
+      </div>
 
       <div className={styles.card}>
         <Input.Search
