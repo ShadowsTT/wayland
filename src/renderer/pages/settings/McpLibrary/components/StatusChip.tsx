@@ -6,6 +6,7 @@
 
 import React from 'react';
 import classNames from 'classnames';
+import { useTranslation } from 'react-i18next';
 import { Check, LogIn, RefreshCw } from 'lucide-react';
 import type { UIStatus } from '../status';
 import styles from '../McpLibrary.module.css';
@@ -24,11 +25,12 @@ const ICON_SIZE = 11;
  * (an i18n wave swaps the literals later).
  */
 const StatusChip: React.FC<StatusChipProps> = ({ status, className }) => {
+  const { t } = useTranslation();
   if (status === 'running') {
     return (
       <span className={classNames(styles.statusChip, styles.statusChipOk, className)}>
         <Check size={ICON_SIZE} />
-        Connected
+        {t('mcpLibrary.status.connected', 'Connected')}
       </span>
     );
   }
@@ -36,7 +38,7 @@ const StatusChip: React.FC<StatusChipProps> = ({ status, className }) => {
     return (
       <span className={classNames(styles.statusChip, styles.statusChipWarn, className)}>
         <LogIn size={ICON_SIZE} />
-        Sign in
+        {t('mcpLibrary.status.signIn', 'Sign in')}
       </span>
     );
   }
@@ -44,7 +46,7 @@ const StatusChip: React.FC<StatusChipProps> = ({ status, className }) => {
     return (
       <span className={classNames(styles.statusChip, styles.statusChipErr, className)}>
         <RefreshCw size={ICON_SIZE} />
-        Reconnect
+        {t('mcpLibrary.status.reconnect', 'Reconnect')}
       </span>
     );
   }
