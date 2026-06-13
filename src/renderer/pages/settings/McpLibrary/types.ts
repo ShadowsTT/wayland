@@ -61,6 +61,13 @@ export interface WaylandExtension {
     method: AuthMethod;
     providerName?: string;
     providerSignupUrl?: string;
+    /**
+     * HTTP header the api-key token is sent in for a hosted (remote) server.
+     * Defaults to `Authorization` (value `Bearer <token>`). Override for
+     * vendors that use a custom header - e.g. New Relic's `Api-Key`, Readwise's
+     * `X-Access-Token` (where the raw token is sent without the `Bearer` prefix).
+     */
+    header?: string;
     scopes?: { name: string; plainLanguage: string }[];
     /**
      * Vendor hint for the BYO-credentials flow. When the OAuth server does

@@ -66,7 +66,13 @@ function entryToServerData(
       : {};
   if (remote && entry['x-wayland'].auth?.method === 'api-key') {
     const token = Object.values(envValues).find((v) => typeof v === 'string' && v.trim().length > 0);
-    if (token) remoteHeaders.Authorization = `Bearer ${token.trim()}`;
+    if (token) {
+      // Most hosted api-key servers want `Authorization: Bearer <token>`, but
+      // some use a custom header with the raw token (New Relic `Api-Key`,
+      // Readwise `X-Access-Token`). Honour the per-entry override.
+      const headerName = entry['x-wayland'].auth.header?.trim() || 'Authorization';
+      remoteHeaders[headerName] = headerName === 'Authorization' ? `Bearer ${token.trim()}` : token.trim();
+    }
   }
   const transport: IMcpServerTransport = remote
     ? {
