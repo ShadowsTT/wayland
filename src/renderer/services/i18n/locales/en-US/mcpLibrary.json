@@ -57,6 +57,7 @@
   "browse": {
     "searchPlaceholder": "Search MCPs…",
     "emptyFilter": "No connectors match your search and filters.",
+    "availAll": "All",
     "availInstalled": "Installed",
     "availAvailable": "Available",
     "availAttention": "Needs attention",
@@ -64,6 +65,15 @@
     "cardInstalled": "Installed",
     "cardSignIn": "Sign in",
     "cardFix": "Needs attention"
+  },
+  "card": {
+    "enable": "Enable",
+    "disable": "Disable",
+    "configure": "Configure",
+    "remove": "Remove",
+    "removeTitle": "Remove connector?",
+    "removeBody": "This removes {{name}} and its config from your agents. You can re-add it any time.",
+    "toggleAria": "Enable or disable {{name}}"
   },
   "byo": {
     "title": "Connect {{vendor}} - paste OAuth credentials",

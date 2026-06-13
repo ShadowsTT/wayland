@@ -14,10 +14,11 @@ import type { IMcpServer } from '@/common/config/storage';
 import AddMcpServerModal from '@renderer/pages/settings/components/AddMcpServerModal';
 import { RecommendedGrid } from './components/RecommendedGrid';
 import { CategorySection } from './components/CategorySection';
-import { TierFilter } from './components/TierFilter';
 import { McpLibraryTabs } from './components/McpLibraryTabs';
+import { McpCardActionsProvider, type McpCardActions } from './components/McpCardActions';
 import { deriveStatus, needsAttention, type UIStatus } from './status';
-import type { Tier, CatalogIndexEntry } from './types';
+import type { CatalogIndexEntry } from './types';
+import { Modal } from '@arco-design/web-react';
 
 type Availability = 'all' | 'installed' | 'available' | 'attention';
 
@@ -70,7 +71,6 @@ export function BrowsePage() {
     return map;
   }, [mcpServers, oauthStatus]);
 
-  const [tier, setTier] = useState<Tier | 'all'>('all');
   const [avail, setAvail] = useState<Availability>('all');
   const [search, setSearch] = useState('');
 
@@ -97,20 +97,12 @@ export function BrowsePage() {
     const q = search.trim().toLowerCase();
     return library.entries.filter(
       (e) =>
-        (tier === 'all' || e.tier === tier) &&
         matchesAvail(e.id) &&
         (q === '' ||
           e.name.toLowerCase().includes(q) ||
           e.shortDescription.toLowerCase().includes(q)),
     );
-  }, [library.entries, tier, search, matchesAvail]);
-
-  const counts = {
-    all: library.entries.length,
-    core: library.byTier.core.length,
-    worker: library.byTier.worker.length,
-    builder: library.byTier.builder.length,
-  };
+  }, [library.entries, search, matchesAvail]);
 
   const availCounts = useMemo(() => {
     let installed = 0;
@@ -174,7 +166,7 @@ export function BrowsePage() {
   const renderCategories = useMemo(() => {
     const extra = Object.keys(filteredByCategory)
       .filter((c) => !categoryOrder.includes(c))
-      .sort();
+      .toSorted();
     return [...categoryOrder, ...extra];
     // categoryOrder is a module-stable literal; safe to omit from deps.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -182,6 +174,39 @@ export function BrowsePage() {
 
   const onSelect = (id: string) =>
     navigate(`/settings/mcp-library/${encodeURIComponent(id)}`);
+
+  // Installed server per catalog id, so a card can offer its quick on/off
+  // toggle + right-click lifecycle menu.
+  const serverByLibraryId = useMemo(() => {
+    const map = new Map<string, IMcpServer>();
+    for (const s of mcpServers) {
+      if (s.libraryEntryId) map.set(s.libraryEntryId, s);
+    }
+    return map;
+  }, [mcpServers]);
+
+  const cardActions = useMemo<McpCardActions>(
+    () => ({
+      serverFor: (libraryEntryId) => serverByLibraryId.get(libraryEntryId),
+      onToggle: (serverId, enabled) => void crud.handleToggleMcpServer(serverId, enabled),
+      onConfigure: onSelect,
+      onRemove: (serverId) => {
+        const target = mcpServers.find((s) => s.id === serverId);
+        Modal.confirm({
+          title: t('mcpLibrary.card.removeTitle', 'Remove connector?'),
+          content: t('mcpLibrary.card.removeBody', 'This removes {{name}} and its config from your agents. You can re-add it any time.', {
+            name: target?.name ?? 'this connector',
+          }),
+          okButtonProps: { status: 'danger' },
+          okText: t('mcpLibrary.card.remove', 'Remove'),
+          onOk: () => void crud.handleDeleteMcpServer(serverId),
+        });
+      },
+    }),
+    // onSelect is a stable navigate wrapper; crud/mcpServers/t cover the rest.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [serverByLibraryId, crud, mcpServers, t],
+  );
 
   return (
     <div className="mcp-library-page">
@@ -207,16 +232,17 @@ export function BrowsePage() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
-        <TierFilter active={tier} counts={counts} onChange={setTier} />
         <div className="mcp-avail-filter">
           {(
             [
+              { key: 'all', label: t('mcpLibrary.browse.availAll', 'All') },
               { key: 'installed', label: t('mcpLibrary.browse.availInstalled', 'Installed') },
-              { key: 'available', label: t('mcpLibrary.browse.availAvailable', 'Available') },
               { key: 'attention', label: t('mcpLibrary.browse.availAttention', 'Needs attention') },
-            ] as { key: Exclude<Availability, 'all'>; label: string }[]
+            ] as { key: Availability; label: string }[]
           ).map((opt) => {
             const count = availCounts[opt.key];
+            // Hide the attention chip entirely when nothing needs attention and
+            // it isn't the active filter - no point showing "Needs attention 0".
             if (opt.key === 'attention' && count === 0 && avail !== 'attention') return null;
             const active = avail === opt.key;
             return (
@@ -224,7 +250,7 @@ export function BrowsePage() {
                 key={opt.key}
                 className={`mcp-chip ${active ? 'is-active' : ''} ${opt.key === 'attention' && count > 0 ? 'mcp-chip-attention' : ''}`}
                 aria-pressed={active}
-                onClick={() => setAvail(active ? 'all' : opt.key)}
+                onClick={() => setAvail(opt.key)}
               >
                 {opt.label} <span className="mcp-chip-count">{count}</span>
               </button>
@@ -233,31 +259,33 @@ export function BrowsePage() {
         </div>
       </div>
 
-      {search === '' && tier === 'all' && avail === 'all' && (
-        <RecommendedGrid
-          entries={library.recommended}
-          installedIds={installedIds}
-          statusByLibraryId={statusByLibraryId}
-          onSelect={onSelect}
-        />
-      )}
-
-      {filtered.length === 0 ? (
-        <div className="mcp-empty">
-          {t('mcpLibrary.browse.emptyFilter', 'No connectors match your search and filters.')}
-        </div>
-      ) : (
-        renderCategories.map((cat) => (
-          <CategorySection
-            key={cat}
-            category={cat}
-            entries={filteredByCategory[cat] ?? []}
+      <McpCardActionsProvider value={cardActions}>
+        {search === '' && avail === 'all' && (
+          <RecommendedGrid
+            entries={library.recommended}
             installedIds={installedIds}
             statusByLibraryId={statusByLibraryId}
             onSelect={onSelect}
           />
-        ))
-      )}
+        )}
+
+        {filtered.length === 0 ? (
+          <div className="mcp-empty">
+            {t('mcpLibrary.browse.emptyFilter', 'No connectors match your search and filters.')}
+          </div>
+        ) : (
+          renderCategories.map((cat) => (
+            <CategorySection
+              key={cat}
+              category={cat}
+              entries={filteredByCategory[cat] ?? []}
+              installedIds={installedIds}
+              statusByLibraryId={statusByLibraryId}
+              onSelect={onSelect}
+            />
+          ))
+        )}
+      </McpCardActionsProvider>
 
       <AddMcpServerModal
         visible={showAddModal}

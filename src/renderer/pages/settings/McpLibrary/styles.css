@@ -308,10 +308,19 @@
 .mcp-card.is-wayland-built:hover {
   border-color: var(--mcp-brand);
 }
+.mcp-card-toggle {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 2;
+  display: inline-flex;
+}
 .mcp-card-top {
   display: flex;
   align-items: flex-start;
   gap: 12px;
+  /* leave room for the absolutely-positioned on/off switch */
+  padding-right: 44px;
 }
 .mcp-card-logo {
   width: 40px;
