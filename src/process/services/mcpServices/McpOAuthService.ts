@@ -75,6 +75,9 @@ const originalFetchProtectedResourceMetadata =
 // so the comparison passes. Only applies when advertised is a genuine prefix -
 // any other mismatch still throws.
 const originalDiscoverOAuthConfig = OAuthUtils.discoverOAuthConfig.bind(OAuthUtils);
+const originalDiscoverOAuthFromWWWAuthenticate =
+  OAuthUtils.discoverOAuthFromWWWAuthenticate.bind(OAuthUtils);
+
 function isSameOriginPrefix(advertised: string, requested: string): boolean {
   try {
     const a = new URL(advertised);
@@ -87,36 +90,74 @@ function isSameOriginPrefix(advertised: string, requested: string): boolean {
     return false;
   }
 }
-(
-  OAuthUtils as unknown as {
-    discoverOAuthConfig: (serverUrl: string) => Promise<unknown>;
-  }
-).discoverOAuthConfig = async (serverUrl: string) => {
+
+// Shared recovery for the RFC 9728 §7.3 strict-equality resource check. When a
+// server advertises a protected-resource that is a same-origin PREFIX of the
+// URL we connect to - connect to https://host/mcp, but the OAuth boundary is
+// advertised as the bare origin https://host (Linear, Higgsfield, ...) - the
+// upstream throws ResourceMismatchError. On that specific mismatch we re-run
+// with a temporary buildResourceParameter override that returns the advertised
+// form so the strict compare passes; any other mismatch still throws.
+//
+// This must wrap BOTH discovery entry points:
+//   - discoverOAuthConfig            -> the login() pre-probe
+//   - discoverOAuthFromWWWAuthenticate -> used INSIDE authenticate() when the
+//     first request comes back 401 + WWW-Authenticate
+// Higgsfield reaches the second path, so patching only the first (the original
+// Linear-only fix) left the bare-origin OAuth servers failing with
+// "Protected resource <origin> does not match expected <origin>/mcp".
+async function withSameOriginPrefixRecovery<T>(
+  serverUrl: string | undefined,
+  run: () => Promise<T>,
+): Promise<T> {
   try {
-    return await originalDiscoverOAuthConfig(serverUrl);
+    return await run();
   } catch (err) {
     const advertised =
       err && typeof err === 'object' && 'message' in err
         ? String((err as { message: string }).message).match(/Protected resource (\S+)/)?.[1]
         : undefined;
-    const isMismatch =
-      err instanceof Error && err.name === 'ResourceMismatchError' && !!advertised;
-    if (!isMismatch || !isSameOriginPrefix(advertised!, serverUrl)) {
+    const recoverable =
+      err instanceof Error &&
+      err.name === 'ResourceMismatchError' &&
+      !!advertised &&
+      !!serverUrl &&
+      isSameOriginPrefix(advertised, serverUrl);
+    if (!recoverable) {
       throw err;
     }
-    // Temporarily override buildResourceParameter to return the advertised
-    // (prefix) form so the strict compare inside discoverOAuthConfig passes.
+    // Force the advertised (prefix/origin) form so the strict compare passes,
+    // then restore so other servers keep their own canonical resource.
     const saved = OAuthUtils.buildResourceParameter;
     const advForced = canonicalizeRootResource(advertised!);
     (OAuthUtils as unknown as { buildResourceParameter: (u: string) => string }).buildResourceParameter =
       () => advForced;
     try {
-      return await originalDiscoverOAuthConfig(serverUrl);
+      return await run();
     } finally {
       (OAuthUtils as unknown as { buildResourceParameter: typeof saved }).buildResourceParameter = saved;
     }
   }
-};
+}
+
+(
+  OAuthUtils as unknown as {
+    discoverOAuthConfig: (serverUrl: string) => Promise<unknown>;
+  }
+).discoverOAuthConfig = (serverUrl: string) =>
+  withSameOriginPrefixRecovery(serverUrl, () => originalDiscoverOAuthConfig(serverUrl));
+
+(
+  OAuthUtils as unknown as {
+    discoverOAuthFromWWWAuthenticate: (
+      wwwAuthenticate: string,
+      mcpServerUrl?: string,
+    ) => Promise<unknown>;
+  }
+).discoverOAuthFromWWWAuthenticate = (wwwAuthenticate: string, mcpServerUrl?: string) =>
+  withSameOriginPrefixRecovery(mcpServerUrl, () =>
+    originalDiscoverOAuthFromWWWAuthenticate(wwwAuthenticate, mcpServerUrl),
+  );
 
 // Pin the OAuth callback server port. Upstream picks a random OS-assigned port
 // unless OAUTH_CALLBACK_PORT is set, which is fine for DCR flows (the freshly-
