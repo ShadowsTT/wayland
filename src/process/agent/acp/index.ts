@@ -38,7 +38,7 @@ import { AcpConnection } from './AcpConnection';
 import { AcpApprovalStore, createAcpApprovalKey } from './ApprovalStore';
 import { CLAUDE_YOLO_SESSION_MODE, CODEBUDDY_YOLO_SESSION_MODE, QWEN_YOLO_SESSION_MODE } from './constants';
 import { buildAcpModelInfo } from './modelInfo';
-import { buildBuiltinAcpSessionMcpServers, buildTeamMcpServer, type AcpSessionMcpServer } from './mcpSessionConfig';
+import { buildAcpSessionMcpServers, buildTeamMcpServer, type AcpSessionMcpServer } from './mcpSessionConfig';
 import { getClaudeModelSlot } from './utils';
 import { getTeamGuideStdioConfig } from '@process/team/mcp/guide/teamGuideSingleton';
 import { shouldInjectTeamGuideMcp } from '@process/team/prompts/teamGuideCapability.ts';
@@ -1649,7 +1649,7 @@ export class AcpAgent {
       if (Array.isArray(mcpConfig) && mcpConfig.length > 0) {
         const mcpCaps = this.connection.getAgentCapabilities()?.mcpCapabilities;
         if (mcpCaps) {
-          servers.push(...buildBuiltinAcpSessionMcpServers(mcpConfig as IMcpServer[], mcpCaps));
+          servers.push(...buildAcpSessionMcpServers(mcpConfig as IMcpServer[], mcpCaps));
         }
       }
 
