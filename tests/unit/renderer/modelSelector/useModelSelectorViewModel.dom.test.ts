@@ -69,9 +69,9 @@ describe('useModelSelectorViewModel', () => {
 
     const { result } = renderHook(() => useModelSelectorViewModel('wcore'));
 
-    // Flux makes `empty` false immediately; wait for the async curated load to
-    // land before asserting on provider zones.
-    await waitFor(() => expect(result.current.zones.length).toBeGreaterThan(0));
+    // Flux makes `empty` false and surfaces the Flux routing zone immediately;
+    // wait for the async curated load to add the pinned/provider zones.
+    await waitFor(() => expect(result.current.zones.some((z) => z.id === 'pinned')).toBe(true));
 
     expect(result.current.fluxHero?.id).toBe('flux-auto');
     expect(result.current.zones.find((z) => z.id === 'pinned')?.rows.map((r) => r.key)).toContain(
@@ -80,6 +80,33 @@ describe('useModelSelectorViewModel', () => {
     const recommended = result.current.zones.find((z) => z.id.startsWith('recommended'));
     expect(recommended?.rows.some((r) => r.id === 'claude-opus-4-8')).toBe(true);
     expect(result.current.empty).toBe(false);
+  });
+
+  it('surfaces the non-auto Flux routing tiers as a top zone when connected', async () => {
+    mockCuratedForAgent.mockResolvedValue([opus]);
+    mockUseFluxConnected.mockReturnValue(true);
+
+    const { result } = renderHook(() => useModelSelectorViewModel('wcore'));
+
+    await waitFor(() => expect(result.current.zones.some((z) => z.id === 'flux')).toBe(true));
+
+    const flux = result.current.zones.find((z) => z.id === 'flux');
+    expect(flux).toBeDefined();
+    // Auto is the hero; the zone carries reasoning/standard/fast, in picker order.
+    expect(flux?.rows.map((r) => r.id)).toEqual(['flux-reasoning', 'flux-standard', 'flux-fast']);
+    // It is the first zone (under the hero), ahead of provider zones.
+    expect(result.current.zones[0]?.id).toBe('flux');
+  });
+
+  it('omits the Flux routing zone when Flux is disconnected', async () => {
+    mockCuratedForAgent.mockResolvedValue([opus]);
+    mockUseFluxConnected.mockReturnValue(false);
+
+    const { result } = renderHook(() => useModelSelectorViewModel('wcore'));
+
+    await waitFor(() => expect(result.current.zones.length).toBeGreaterThan(0));
+    expect(result.current.zones.some((z) => z.id === 'flux')).toBe(false);
+    expect(result.current.fluxHero).toBeUndefined();
   });
 
   it('is empty when no provider connected and flux disconnected', async () => {

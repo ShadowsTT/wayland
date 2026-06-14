@@ -9,6 +9,7 @@ import { Check, ChevronRight, Pin, Plus, Search, Settings, Sparkles } from 'luci
 import React, { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { iconColors } from '@/renderer/styles/colors';
+import { providerLabel } from '@renderer/components/onboarding/providerLabel';
 import EffortSubRow from './EffortSubRow';
 import styles from './ModelSelectorFlyout.module.css';
 import type { ModelRow, ModelSelectorProps, ModelZone } from './modelSelectorTypes';
@@ -43,7 +44,13 @@ const ModelSelectorFlyout: React.FC<ModelSelectorProps> = ({
   // only while searching. Deduped by key so a model in both pinned and
   // recommended shows once.
   const flatRows = useMemo(() => {
-    const all = [...vm.zones.flatMap((z) => z.rows), ...vm.moreZones.flatMap((z) => z.rows)];
+    // Include the Flux Auto hero so a search for "flux"/"auto" finds it and the
+    // enabled count reflects it (the hero renders outside the zone list).
+    const all = [
+      ...(vm.fluxHero ? [vm.fluxHero] : []),
+      ...vm.zones.flatMap((z) => z.rows),
+      ...vm.moreZones.flatMap((z) => z.rows),
+    ];
     const seen = new Set<string>();
     const out: ModelRow[] = [];
     for (const r of all) {
@@ -52,7 +59,7 @@ const ModelSelectorFlyout: React.FC<ModelSelectorProps> = ({
       out.push(r);
     }
     return out;
-  }, [vm.zones, vm.moreZones]);
+  }, [vm.fluxHero, vm.zones, vm.moreZones]);
 
   const results = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -82,6 +89,7 @@ const ModelSelectorFlyout: React.FC<ModelSelectorProps> = ({
   }, [results]);
 
   const enabledCount = useMemo(() => flatRows.filter((r) => r.available).length, [flatRows]);
+  const moreCount = useMemo(() => vm.moreZones.reduce((n, z) => n + z.rows.length, 0), [vm.moreZones]);
 
   const renderRow = (row: ModelRow) => {
     if (!row.available) {
@@ -276,7 +284,7 @@ const ModelSelectorFlyout: React.FC<ModelSelectorProps> = ({
               groupedResults.map((g) => (
                 <div key={g.providerId}>
                   <div className={styles.sectionLabel}>
-                    {g.providerId}
+                    {providerLabel(g.providerId)}
                     <span className={styles.grpPill}>
                       {t('conversation.modelSelector.modelCount', {
                         defaultValue: '{{count}} models',
@@ -297,25 +305,35 @@ const ModelSelectorFlyout: React.FC<ModelSelectorProps> = ({
           <div>
             {vm.zones.map((zone) => (
               <div key={zone.id}>
-                {zoneLabelEls(zone, zone.id.startsWith('recommended'))}
+                {zoneLabelEls(zone, zone.id.startsWith('recommended') || zone.id === 'flux')}
                 {zone.rows.map(renderRow)}
               </div>
             ))}
 
             {vm.moreZones.length > 0 && (
               <>
-                <button
-                  type='button'
+                <div
                   className={styles.moreToggle}
+                  role='button'
+                  tabIndex={0}
                   aria-expanded={moreOpen}
                   onClick={() => setMoreOpen((v) => !v)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') setMoreOpen((v) => !v);
+                  }}
                 >
                   <Plus size={16} strokeWidth={1.8} />
                   {t('conversation.modelSelector.moreModels', { defaultValue: 'More models' })}
+                  <span className={styles.grpPill}>
+                    {t('conversation.modelSelector.modelCount', {
+                      defaultValue: '{{count}} models',
+                      count: moreCount,
+                    })}
+                  </span>
                   <span className={`${styles.moreChev} ${moreOpen ? styles.moreChevOpen : ''}`}>
                     <ChevronRight size={14} strokeWidth={2} />
                   </span>
-                </button>
+                </div>
                 {moreOpen &&
                   vm.moreZones.map((zone) => (
                     <div key={zone.id}>

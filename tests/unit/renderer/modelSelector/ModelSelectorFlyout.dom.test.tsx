@@ -102,6 +102,15 @@ describe('ModelSelectorFlyout', () => {
     expect(screen.getByText('Opus 4.8')).toBeInTheDocument();
   });
 
+  it('finds the Flux hero in search (it lives outside the zone list)', () => {
+    render(<ModelSelectorFlyout vm={baseVm} onSelect={noop} onTogglePin={noop} onManage={noop} />);
+    fireEvent.change(screen.getByPlaceholderText('Search models…'), { target: { value: 'flux' } });
+    // Previously the hero was excluded from the searchable set → "0 results".
+    expect(screen.getByText('1 result')).toBeInTheDocument();
+    // "Flux Auto" now appears as the always-visible hero AND the search hit.
+    expect(screen.getAllByText('Flux Auto').length).toBeGreaterThanOrEqual(2);
+  });
+
   it('shows a no-match empty state when search yields nothing', () => {
     render(<ModelSelectorFlyout vm={baseVm} onSelect={noop} onTogglePin={noop} onManage={noop} />);
     fireEvent.change(screen.getByPlaceholderText('Search models…'), { target: { value: 'zzzzz' } });

@@ -6,7 +6,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import type { CuratedModel, ProviderId } from '@process/providers/types';
-import { FLUX_AUTO_MODEL, FLUX_MODEL_DISPLAY, isFluxModelId } from '@/common/config/flux';
+import { FLUX_AUTO_MODEL, FLUX_MODEL_DISPLAY, FLUX_MODEL_IDS, isFluxModelId, type FluxModelId } from '@/common/config/flux';
 import { useModelRegistry } from '@renderer/hooks/useModelRegistry';
 import { useFluxConnected } from '@renderer/hooks/useFluxConnected';
 import { usePinnedModels } from '@renderer/hooks/usage/usePinnedModels';
@@ -37,15 +37,18 @@ function curatedRow(m: CuratedModel, pinned: Set<string>): ModelRow {
   };
 }
 
-/** Synthesize the Flux Auto hero row (no catalog entry required). */
-function fluxHeroRow(pinned: Set<string>): ModelRow {
-  const key = `flux-router:${FLUX_AUTO_MODEL}`;
+/**
+ * Synthesize a Flux routing-tier row (no catalog entry required - the tiers are
+ * always selectable when Flux is connected via `injectFluxVirtualModels`).
+ */
+function fluxTierRow(id: FluxModelId, pinned: Set<string>): ModelRow {
+  const key = `flux-router:${id}`;
   return {
     key,
-    id: FLUX_AUTO_MODEL,
+    id,
     providerId: 'flux-router',
-    label: FLUX_MODEL_DISPLAY[FLUX_AUTO_MODEL],
-    descriptor: fluxTierDescriptor(FLUX_AUTO_MODEL),
+    label: FLUX_MODEL_DISPLAY[id],
+    descriptor: fluxTierDescriptor(id),
     pinned: pinned.has(key),
     available: true,
     isFlux: true,
@@ -117,7 +120,7 @@ export function useModelSelectorViewModel(backend: string, activeModelKey?: stri
       };
     }
 
-    const fluxHero = fluxConnected ? fluxHeroRow(pinned) : undefined;
+    const fluxHero = fluxConnected ? fluxTierRow(FLUX_AUTO_MODEL, pinned) : undefined;
 
     // Pinned zone: pinned models that exist in this backend's curated set.
     const pinnedRows = base.filter((m) => pinned.has(modelKey(m))).map((m) => curatedRow(m, pinned));
@@ -155,6 +158,13 @@ export function useModelSelectorViewModel(backend: string, activeModelKey?: stri
     const recommendedZones = groupByProvider(recommendedRows, 'recommended');
 
     const zones: ModelZone[] = [];
+    // Flux routing tiers (reasoning/standard/fast) sit right under the Flux Auto
+    // hero as the primary picks - they are the product, not buried in the tail.
+    // Auto is the hero, so the zone carries the other three (picker order).
+    if (fluxConnected) {
+      const tierRows = FLUX_MODEL_IDS.filter((id) => id !== FLUX_AUTO_MODEL).map((id) => fluxTierRow(id, pinned));
+      zones.push({ id: 'flux', label: 'Flux routing', rows: tierRows });
+    }
     if (pinnedRows.length > 0) zones.push({ id: 'pinned', label: 'Pinned', rows: pinnedRows });
     if (recentRows.length > 0) zones.push({ id: 'recent', label: 'Recently used', rows: recentRows });
     zones.push(...recommendedZones);
