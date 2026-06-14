@@ -8,6 +8,24 @@
   gap: 8px;
 }
 
+/* Our panel brings its own surfaces; strip the Arco dropdown popup chrome. */
+:global(.composer-add-popup .arco-dropdown),
+:global(.composer-add-popup.arco-dropdown) {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+}
+
+/* "+" trigger button rotation when the menu is open */
+.plusOpen :global(.arco-btn) {
+  transform: rotate(45deg);
+  transition: transform 0.16s ease;
+}
+.plusBtn :global(.arco-btn) {
+  transition: transform 0.16s ease;
+}
+
 /* Left list pane */
 .menu {
   background: var(--color-bg-4);
