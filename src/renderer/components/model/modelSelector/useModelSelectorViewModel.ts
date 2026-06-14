@@ -105,8 +105,11 @@ export function useModelSelectorViewModel(backend: string, activeModelKey?: stri
   }, [backend, curatedForAgent, registryVersion]);
 
   return useMemo<ModelSelectorViewModel>(() => {
-    // Real catalog models only (flux virtual ids never belong in a provider zone).
-    const base = curated.filter((m) => !isFluxModelId(m.id));
+    // Only models the user can actually pick: a real catalog model whose vendor
+    // is connected AND whose per-model toggle is on (`enabled`). Disabled /
+    // disconnected-vendor models are HIDDEN, not greyed - never show a model you
+    // cannot choose. Flux virtual ids are handled separately (the hero + zone).
+    const base = curated.filter((m) => !isFluxModelId(m.id) && m.enabled);
     const empty = base.length === 0 && !fluxConnected;
 
     if (empty) {

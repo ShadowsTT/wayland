@@ -98,6 +98,22 @@ describe('useModelSelectorViewModel', () => {
     expect(result.current.zones[0]?.id).toBe('flux');
   });
 
+  it('hides disabled models entirely (never shows an unchoosable row)', async () => {
+    const disabledSonnet = model({ id: 'claude-sonnet-4-5', displayName: 'Sonnet 4.5', enabled: false });
+    mockCuratedForAgent.mockResolvedValue([opus, disabledSonnet]);
+    mockUseFluxConnected.mockReturnValue(true);
+
+    const { result } = renderHook(() => useModelSelectorViewModel('wcore'));
+
+    await waitFor(() => expect(result.current.zones.some((z) => z.id.startsWith('recommended'))).toBe(true));
+
+    const allRows = [...result.current.zones, ...result.current.moreZones].flatMap((z) => z.rows);
+    expect(allRows.some((r) => r.id === 'claude-opus-4-8')).toBe(true);
+    expect(allRows.some((r) => r.id === 'claude-sonnet-4-5')).toBe(false);
+    // Every surfaced row is selectable.
+    expect(allRows.every((r) => r.available)).toBe(true);
+  });
+
   it('omits the Flux routing zone when Flux is disconnected', async () => {
     mockCuratedForAgent.mockResolvedValue([opus]);
     mockUseFluxConnected.mockReturnValue(false);
