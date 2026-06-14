@@ -16,7 +16,12 @@ import { BaseApprovalStore, type IApprovalKey } from '@/common/chat/approval';
 import { ToolConfirmationOutcome } from '../agent/gemini/cli/tools/tools';
 import { WCoreAgent, type StdioMcpOption } from '@process/agent/wcore';
 import type { WCoreCapabilities } from '@process/agent/wcore/protocol';
-import { buildSystemInstructionsWithSkillsIndex } from './agentUtils';
+import {
+  buildSystemInstructionsWithSkillsIndex,
+  buildTurnSkillContext,
+  consumePendingSessionSkills,
+  mergeLoadedSkillsExtra,
+} from './agentUtils';
 import { getDatabase } from '@process/services/database';
 import { ProviderRepository } from '@process/providers/storage/ProviderRepository';
 import { isProviderKeyAuthFailure } from '@process/providers/detection/authFailure';
@@ -343,8 +348,31 @@ export class WCoreManager extends BaseAgentManager<WCoreManagerData, string> {
     await this.agentReady;
     this._messageSentAt = Date.now();
     mainLog('[WCoreManager]', `message sent: msg_id=${data.msg_id}`);
+
+    // Per-turn skill context, unified with the ACP backend so WCore chats also
+    // get (a) skills the user added to this conversation from the composer
+    // (injected once) and (b) the smart per-turn match advert + clear-winner
+    // auto-load. This - not the always-on index - is how the lean default
+    // surfaces the right skill on demand without bulk-injecting the library.
+    let contentToSend = data.content;
+    try {
+      const pending = await consumePendingSessionSkills(this.conversation_id);
+      if (pending) {
+        contentToSend = `${pending}\n\n${contentToSend}`;
+      }
+      const turnSkill = await buildTurnSkillContext(data.content);
+      if (turnSkill.advert) {
+        contentToSend = `${turnSkill.advert}\n\n${contentToSend}`;
+      }
+      if (turnSkill.autoLoaded.length > 0) {
+        await mergeLoadedSkillsExtra(this.conversation_id, turnSkill.autoLoaded);
+      }
+    } catch (error) {
+      mainWarn('[WCoreManager]', 'per-turn skill context failed', error);
+    }
+
     if (this.agent) {
-      await this.agent.send(data.content, data.msg_id, data.files);
+      await this.agent.send(contentToSend, data.msg_id, data.files);
     }
   }
 
