@@ -3947,5 +3947,733 @@
         "timeBucket": "afternoon"
       }
     ]
+  },
+  {
+    "id": "email-lifecycle-crew",
+    "name": "Email & Lifecycle Crew",
+    "description": "Team launcher - pick me to auto-assemble an email lifecycle crew (Channels + Copy + Analyst + Research) and ship written flows plus a weekly broadcast calendar.",
+    "avatar": "icons/email-lifecycle-crew.svg",
+    "presetAgentType": "gemini",
+    "contextFile": "assistants/launchers/email-lifecycle-crew.md",
+    "prompts": [
+      "Map and write my core email flows (welcome, nurture, cart, win-back).",
+      "Build me next week's broadcast calendar with copy and segments.",
+      "My list is dead - turn it into a revenue channel."
+    ],
+    "category": "write",
+    "kind": "team",
+    "teammates": [
+      "beacon",
+      "copy",
+      "lens",
+      "research"
+    ],
+    "standing": false
+  },
+  {
+    "id": "paid-ads-war-room",
+    "name": "Paid Ads War Room",
+    "description": "Team launcher - pick me to auto-assemble a paid-ads crew (Offer + Copy + Analyst + Channels) and ship a launch-ready campaign kit plus a kill/keep/scale call.",
+    "avatar": "icons/paid-ads-war-room.svg",
+    "presetAgentType": "gemini",
+    "contextFile": "assistants/launchers/paid-ads-war-room.md",
+    "prompts": [
+      "Turn my product + budget into a launch-ready ad campaign.",
+      "Give me 8-12 ad variations across distinct angles.",
+      "Tell me which ads to kill, keep, or scale."
+    ],
+    "category": "sell",
+    "kind": "team",
+    "teammates": [
+      "forge",
+      "copy",
+      "lens",
+      "beacon"
+    ],
+    "standing": false
+  },
+  {
+    "id": "seo-content-engine",
+    "name": "SEO Content Engine Room",
+    "description": "Team launcher - pick me to auto-assemble an SEO content crew (Research + Build + Analyst + Quality Gate) and ship a keyword cluster calendar plus a publish-ready optimized draft.",
+    "avatar": "icons/seo-content-engine.svg",
+    "presetAgentType": "gemini",
+    "contextFile": "assistants/launchers/seo-content-engine.md",
+    "prompts": [
+      "Turn this seed topic into a keyword cluster content calendar.",
+      "Write me a publish-ready optimized article for one cluster.",
+      "I publish randomly and rank for nothing - fix my content engine."
+    ],
+    "category": "write",
+    "kind": "team",
+    "teammates": [
+      "research",
+      "spark",
+      "lens",
+      "verdict"
+    ],
+    "standing": false
+  },
+  {
+    "id": "lead-gen-outbound",
+    "name": "Lead-Gen Outbound Squad",
+    "description": "Team launcher - pick me to auto-assemble an outbound crew (Sales + Research + Copy + Support) and ship an ICP, a prospect list, and a personalized multi-touch sequence.",
+    "avatar": "icons/lead-gen-outbound.svg",
+    "presetAgentType": "gemini",
+    "contextFile": "assistants/launchers/lead-gen-outbound.md",
+    "prompts": [
+      "Build me a booked-call pipeline: ICP, list, and sequence.",
+      "Write a personalized multi-touch outbound sequence for my offer.",
+      "My pipeline is feast-or-famine - assemble the squad."
+    ],
+    "category": "sell",
+    "kind": "team",
+    "teammates": [
+      "sales",
+      "research",
+      "copy",
+      "mend"
+    ],
+    "standing": false
+  },
+  {
+    "id": "local-seo-reviews",
+    "name": "Local SEO & Reviews Desk",
+    "description": "Team launcher - pick me to auto-assemble a local-visibility crew (Research + Copy + Analyst + Support) and ship an optimized Google profile, 'near me' pages, and a review engine.",
+    "avatar": "icons/local-seo-reviews.svg",
+    "presetAgentType": "gemini",
+    "contextFile": "assistants/launchers/local-seo-reviews.md",
+    "prompts": [
+      "Get my location business into the map pack.",
+      "Build my 'near me' service pages and a review-request cadence.",
+      "Optimize my Google Business Profile and fix my citations."
+    ],
+    "category": "sell",
+    "kind": "team",
+    "teammates": [
+      "research",
+      "copy",
+      "lens",
+      "mend"
+    ],
+    "standing": false
+  },
+  {
+    "id": "review-article-factory",
+    "name": "Review Article Factory",
+    "description": "Team launcher - pick me to auto-assemble a review crew (Research + Copy + Quality Gate + Counsel) and ship a publish-ready, hands-on-style product review with links and disclosure placed.",
+    "avatar": "icons/review-article-factory.svg",
+    "presetAgentType": "gemini",
+    "contextFile": "assistants/launchers/review-article-factory.md",
+    "prompts": [
+      "Write me a publish-ready hands-on review of this product.",
+      "Stitch specs, pros/cons, pricing, and a verdict into a review.",
+      "Build a review with affiliate links and a compliant disclosure."
+    ],
+    "category": "write",
+    "kind": "team",
+    "teammates": [
+      "research",
+      "copy",
+      "verdict",
+      "sentry"
+    ],
+    "standing": false
+  },
+  {
+    "id": "offer-vetting-desk",
+    "name": "Offer Vetting Desk",
+    "description": "Team launcher - pick me to auto-assemble an offer-vetting crew (Research + Numbers + Offer + Quality Gate) and ship a scored go/no-go shortlist of affiliate programs.",
+    "avatar": "icons/offer-vetting-desk.svg",
+    "presetAgentType": "gemini",
+    "contextFile": "assistants/launchers/offer-vetting-desk.md",
+    "prompts": [
+      "Score these affiliate programs before I build content around them.",
+      "Rank programs by commission, EPC, cookie window, and payout terms.",
+      "Tell me which offers to back and which to skip."
+    ],
+    "category": "research",
+    "kind": "team",
+    "teammates": [
+      "research",
+      "coin",
+      "forge",
+      "verdict"
+    ],
+    "standing": false
+  },
+  {
+    "id": "comparison-roundup-builder",
+    "name": "Comparison & Roundup Builder",
+    "description": "Team launcher - pick me to auto-assemble a roundup crew (Research + Copy + Quality Gate + Code) and ship a 'best X for Y' / 'A vs B' money page with schema.",
+    "avatar": "icons/comparison-roundup-builder.svg",
+    "presetAgentType": "gemini",
+    "contextFile": "assistants/launchers/comparison-roundup-builder.md",
+    "prompts": [
+      "Build me a 'best X for Y' roundup page.",
+      "Make an 'A vs B' comparison page with a feature/price matrix.",
+      "Build a converting comparison page with table schema markup."
+    ],
+    "category": "write",
+    "kind": "team",
+    "teammates": [
+      "research",
+      "copy",
+      "verdict",
+      "smith"
+    ],
+    "standing": false
+  },
+  {
+    "id": "link-disclosure-custodian",
+    "name": "Link & Disclosure Custodian",
+    "description": "Team launcher - pick me to auto-assemble a compliance crew (Analyst + Counsel + Quality Gate + Code) and ship a site-wide dead-link and disclosure fix list.",
+    "avatar": "icons/link-disclosure-custodian.svg",
+    "presetAgentType": "gemini",
+    "contextFile": "assistants/launchers/link-disclosure-custodian.md",
+    "prompts": [
+      "Sweep my site for dead and mis-tagged affiliate links.",
+      "Find every page missing a disclosure or with a ToS-risk phrase.",
+      "Give me a fix list before a payout drops."
+    ],
+    "category": "run",
+    "kind": "team",
+    "teammates": [
+      "lens",
+      "sentry",
+      "verdict",
+      "smith"
+    ],
+    "standing": false
+  },
+  {
+    "id": "content-refresh-crew",
+    "name": "Content Refresh Crew",
+    "description": "Team launcher - pick me to auto-assemble a refresh crew (Analyst + Research + Copy + Quality Gate) and ship a prioritized refresh queue with rewritten sections.",
+    "avatar": "icons/content-refresh-crew.svg",
+    "presetAgentType": "gemini",
+    "contextFile": "assistants/launchers/content-refresh-crew.md",
+    "prompts": [
+      "Find my decaying posts and dead products before traffic craters.",
+      "Build a prioritized content-refresh queue with reasons.",
+      "Rewrite my slipping posts with current products and prices."
+    ],
+    "category": "write",
+    "kind": "team",
+    "teammates": [
+      "lens",
+      "research",
+      "copy",
+      "verdict"
+    ],
+    "standing": false
+  },
+  {
+    "id": "promo-calendar-war-room",
+    "name": "Promo Calendar War-Room",
+    "description": "Team launcher - pick me to auto-assemble a promo crew (Channels + Research + Copy + Ops) and ship a dated promo calendar with deal copy and a swap-back checklist.",
+    "avatar": "icons/promo-calendar-war-room.svg",
+    "presetAgentType": "gemini",
+    "contextFile": "assistants/launchers/promo-calendar-war-room.md",
+    "prompts": [
+      "Stage my seasonal and launch revenue peaks with assets.",
+      "Build a Black Friday / Prime Day promo calendar with swap dates.",
+      "Draft my deal-page copy and a revert checklist."
+    ],
+    "category": "sell",
+    "kind": "team",
+    "teammates": [
+      "beacon",
+      "research",
+      "copy",
+      "patch"
+    ],
+    "standing": false
+  },
+  {
+    "id": "listing-forge",
+    "name": "Listing Forge",
+    "description": "Team launcher - pick me to auto-assemble a listing crew (Storefront + Research + Copy + Quality Gate) and ship a platform-ready Shopify/Amazon/Etsy listing.",
+    "avatar": "icons/listing-forge.svg",
+    "presetAgentType": "gemini",
+    "contextFile": "assistants/launchers/listing-forge.md",
+    "prompts": [
+      "Turn this product into a complete platform-ready listing.",
+      "Write keyword-optimized title, bullets, description, and alt-text.",
+      "Build my Amazon listing with backend search terms and compliance check."
+    ],
+    "category": "sell",
+    "kind": "team",
+    "teammates": [
+      "vault",
+      "research",
+      "copy",
+      "verdict"
+    ],
+    "standing": false
+  },
+  {
+    "id": "back-office-crew",
+    "name": "Back-Office Crew",
+    "description": "Team launcher - pick me to auto-assemble a store-ops crew (Support + Ops + Analyst + Numbers) and ship a triaged daily action list from inbox and inventory.",
+    "avatar": "icons/back-office-crew.svg",
+    "presetAgentType": "gemini",
+    "contextFile": "assistants/launchers/back-office-crew.md",
+    "prompts": [
+      "Triage my support inbox and draft on-brand replies.",
+      "Watch my inventory and surface reorder points and SLA breaches.",
+      "Turn my chaotic morning into a daily action list."
+    ],
+    "category": "run",
+    "kind": "team",
+    "teammates": [
+      "mend",
+      "patch",
+      "lens",
+      "coin"
+    ],
+    "standing": false
+  },
+  {
+    "id": "winning-product-war-room",
+    "name": "Winning Product War Room",
+    "description": "Team launcher - pick me to auto-assemble a product-validation crew (Research + Analyst + Numbers + Quality Gate) and ship a one-page go/no-go dossier before sourcing.",
+    "avatar": "icons/winning-product-war-room.svg",
+    "presetAgentType": "gemini",
+    "contextFile": "assistants/launchers/winning-product-war-room.md",
+    "prompts": [
+      "Validate this product before I spend a dollar sourcing it.",
+      "Score demand, saturation, margins, and suppliers for this product.",
+      "Give me a go/no-go with specific failure reasons."
+    ],
+    "category": "research",
+    "kind": "team",
+    "teammates": [
+      "research",
+      "lens",
+      "coin",
+      "verdict"
+    ],
+    "standing": false
+  },
+  {
+    "id": "review-engine",
+    "name": "Review Engine",
+    "description": "Team launcher - pick me to auto-assemble a reviews crew (Support + Copy + Analyst + Quality Gate) and ship review replies, a solicitation sequence, and a fix digest.",
+    "avatar": "icons/review-engine.svg",
+    "presetAgentType": "gemini",
+    "contextFile": "assistants/launchers/review-engine.md",
+    "prompts": [
+      "Draft brand-voice replies to all my new reviews.",
+      "Build a post-purchase review-request sequence.",
+      "Mine my reviews for the product fixes that matter."
+    ],
+    "category": "run",
+    "kind": "team",
+    "teammates": [
+      "mend",
+      "copy",
+      "lens",
+      "verdict"
+    ],
+    "standing": false
+  },
+  {
+    "id": "ad-account-mechanic",
+    "name": "Ad Account Mechanic",
+    "description": "Team launcher - pick me to auto-assemble an ad-ops crew (Analyst + Copy + Offer + Channels) and ship a weekly kill/scale call plus fresh creative.",
+    "avatar": "icons/ad-account-mechanic.svg",
+    "presetAgentType": "gemini",
+    "contextFile": "assistants/launchers/ad-account-mechanic.md",
+    "prompts": [
+      "Give me a kill/scale/hold call per campaign with reasons.",
+      "Write me the next 5 ad angles plus paste-ready copy.",
+      "Build my weekly ad ops packet with a budget plan and scripts."
+    ],
+    "category": "sell",
+    "kind": "team",
+    "teammates": [
+      "lens",
+      "copy",
+      "forge",
+      "beacon"
+    ],
+    "standing": false
+  },
+  {
+    "id": "repurpose-engine",
+    "name": "Repurpose Engine",
+    "description": "Team launcher - pick me to auto-assemble a repurposing crew (Copy + Research + Channels + Humanizer) and ship a week of platform-native posts from one recording.",
+    "avatar": "icons/repurpose-engine.svg",
+    "presetAgentType": "gemini",
+    "contextFile": "assistants/launchers/repurpose-engine.md",
+    "prompts": [
+      "Turn this podcast/livestream into a week of posts.",
+      "Give me 8-12 clip specs with timestamps and captions.",
+      "Repurpose one recording into Reels, Shorts, LinkedIn, and a carousel."
+    ],
+    "category": "write",
+    "kind": "team",
+    "teammates": [
+      "copy",
+      "research",
+      "beacon",
+      "humanizer"
+    ],
+    "standing": false
+  },
+  {
+    "id": "hook-lab",
+    "name": "Hook Lab",
+    "description": "Team launcher - pick me to auto-assemble a hooks crew (Copy + Research + Quality Gate + Brand) and ship 15-20 ranked, ready-to-film hooks per video.",
+    "avatar": "icons/hook-lab.svg",
+    "presetAgentType": "gemini",
+    "contextFile": "assistants/launchers/hook-lab.md",
+    "prompts": [
+      "Give me 15-20 ranked hooks for this video.",
+      "Write hooks with spoken line, first-frame text, and a retention note.",
+      "My videos die in the first 2 seconds - fix my hooks."
+    ],
+    "category": "write",
+    "kind": "team",
+    "teammates": [
+      "copy",
+      "research",
+      "verdict",
+      "mira"
+    ],
+    "standing": false
+  },
+  {
+    "id": "reply-desk",
+    "name": "Reply Desk",
+    "description": "Team launcher - pick me to auto-assemble an engagement crew (Support + Copy + Sales + Research) and ship a send-ready reply queue plus flagged warm leads.",
+    "avatar": "icons/reply-desk.svg",
+    "presetAgentType": "gemini",
+    "contextFile": "assistants/launchers/reply-desk.md",
+    "prompts": [
+      "Clear my comment and DM backlog into a send-ready queue.",
+      "Flag the warm DM leads and draft move-to-offer replies.",
+      "Turn my audience questions into fresh content ideas."
+    ],
+    "category": "run",
+    "kind": "team",
+    "teammates": [
+      "mend",
+      "copy",
+      "sales",
+      "research"
+    ],
+    "standing": false
+  },
+  {
+    "id": "caption-carousel-studio",
+    "name": "Caption & Carousel Studio",
+    "description": "Team launcher - pick me to auto-assemble a static-post crew (Copy + Brand + Sales + Research) and ship carousel slides, a caption, a fitted CTA, and discovery terms.",
+    "avatar": "icons/caption-carousel-studio.svg",
+    "presetAgentType": "gemini",
+    "contextFile": "assistants/launchers/caption-carousel-studio.md",
+    "prompts": [
+      "Turn this idea into a full carousel with caption and CTA.",
+      "Write slide-by-slide carousel copy in my voice.",
+      "Give me a post-matched CTA and fitted hashtags."
+    ],
+    "category": "write",
+    "kind": "team",
+    "teammates": [
+      "copy",
+      "mira",
+      "sales",
+      "research"
+    ],
+    "standing": false
+  },
+  {
+    "id": "trend-desk",
+    "name": "Trend Desk",
+    "description": "Team launcher - pick me to auto-assemble a trends crew (Research + Brand + Copy + Quality Gate) and ship a same-day shoot brief on trends worth jumping on.",
+    "avatar": "icons/trend-desk.svg",
+    "presetAgentType": "gemini",
+    "contextFile": "assistants/launchers/trend-desk.md",
+    "prompts": [
+      "Find the trends worth jumping on right now for my brand.",
+      "Give me a shoot-it-today brief: sound, format, hook, my spin.",
+      "Filter the trend noise into on-brand, same-day ideas."
+    ],
+    "category": "research",
+    "kind": "team",
+    "teammates": [
+      "research",
+      "mira",
+      "copy",
+      "verdict"
+    ],
+    "standing": false
+  },
+  {
+    "id": "validation-cell",
+    "name": "Validation Cell",
+    "description": "Team launcher - pick me to auto-assemble a validation crew (Validator + Research + Copy + Analyst) and ship a smoke-test with a build/kill/pivot verdict.",
+    "avatar": "icons/validation-cell.svg",
+    "presetAgentType": "gemini",
+    "contextFile": "assistants/launchers/validation-cell.md",
+    "prompts": [
+      "Smoke-test this idea before I build it.",
+      "Build me a test landing page, survey, and outreach scripts.",
+      "Give me a go/kill/pivot call from signups and replies."
+    ],
+    "category": "research",
+    "kind": "team",
+    "teammates": [
+      "probe",
+      "research",
+      "copy",
+      "lens"
+    ],
+    "standing": false
+  },
+  {
+    "id": "lead-magnet-forge",
+    "name": "Lead Magnet Forge",
+    "description": "Team launcher - pick me to auto-assemble an opt-in crew (Research + Brand + Copy + Channels) and ship a branded lead magnet with landing copy and a delivery email.",
+    "avatar": "icons/lead-magnet-forge.svg",
+    "presetAgentType": "gemini",
+    "contextFile": "assistants/launchers/lead-magnet-forge.md",
+    "prompts": [
+      "Build me a branded lead magnet plus its opt-in and delivery email.",
+      "Turn my audience pain into a downloadable opt-in asset.",
+      "Make a checklist/template lead magnet ready to wire in."
+    ],
+    "category": "write",
+    "kind": "team",
+    "teammates": [
+      "research",
+      "mira",
+      "copy",
+      "beacon"
+    ],
+    "standing": false
+  },
+  {
+    "id": "template-factory",
+    "name": "Template Factory",
+    "description": "Team launcher - pick me to auto-assemble a template crew (Build + Copy + Brand + Sales) and ship a ready-to-sell template package with listing copy.",
+    "avatar": "icons/template-factory.svg",
+    "presetAgentType": "gemini",
+    "contextFile": "assistants/launchers/template-factory.md",
+    "prompts": [
+      "Turn this idea into a ready-to-sell template package.",
+      "Build a template with sample data, instructions, and listing copy.",
+      "Help me ship one high-margin template a week instead of a month."
+    ],
+    "category": "build",
+    "kind": "team",
+    "teammates": [
+      "spark",
+      "copy",
+      "mira",
+      "sales"
+    ],
+    "standing": false
+  },
+  {
+    "id": "lesson-scripting-crew",
+    "name": "Lesson Scripting Crew",
+    "description": "Team launcher - pick me to auto-assemble a scripting crew (Build + Copy + Coach + Humanizer) and ship a camera-ready script per lesson timed to length.",
+    "avatar": "icons/lesson-scripting-crew.svg",
+    "presetAgentType": "gemini",
+    "contextFile": "assistants/launchers/lesson-scripting-crew.md",
+    "prompts": [
+      "Turn each lesson objective into a camera-ready script.",
+      "Script my lesson with a cold-open hook and on-screen cues.",
+      "Stop my lessons rambling - structure them concept-to-application."
+    ],
+    "category": "build",
+    "kind": "team",
+    "teammates": [
+      "spark",
+      "copy",
+      "helm",
+      "humanizer"
+    ],
+    "standing": false
+  },
+  {
+    "id": "student-support-desk",
+    "name": "Student Support Desk",
+    "description": "Team launcher - pick me to auto-assemble a student-support crew (Support + Research + Ops + Coach) and ship clustered replies, macros, and help docs.",
+    "avatar": "icons/student-support-desk.svg",
+    "presetAgentType": "gemini",
+    "contextFile": "assistants/launchers/student-support-desk.md",
+    "prompts": [
+      "Cluster my repeat student questions and draft on-brand replies.",
+      "Turn recurring questions into permanent help docs.",
+      "Triage escalations: refund, bug, personal - and build macros."
+    ],
+    "category": "run",
+    "kind": "team",
+    "teammates": [
+      "mend",
+      "research",
+      "patch",
+      "helm"
+    ],
+    "standing": false
+  },
+  {
+    "id": "cohort-ops-control-tower",
+    "name": "Cohort Ops Control Tower",
+    "description": "Team launcher - pick me to auto-assemble a cohort-ops crew (Ops + Channels + Copy + Analyst) and ship the schedule, comms, reminders, and at-risk flags.",
+    "avatar": "icons/cohort-ops-control-tower.svg",
+    "presetAgentType": "gemini",
+    "contextFile": "assistants/launchers/cohort-ops-control-tower.md",
+    "prompts": [
+      "Run the operational drumbeat of my live cohort.",
+      "Build my session schedule, weekly emails, and reminder nudges.",
+      "Track attendance and flag students going quiet."
+    ],
+    "category": "run",
+    "kind": "team",
+    "teammates": [
+      "patch",
+      "beacon",
+      "copy",
+      "lens"
+    ],
+    "standing": false
+  },
+  {
+    "id": "daily-briefing",
+    "name": "Daily Briefing",
+    "description": "Team launcher - pick me to auto-assemble a chief-of-staff crew (Coach + Numbers + Counsel + Sales) and turn a 40-loop brain-dump into the one thing that matters today.",
+    "avatar": "icons/daily-briefing.svg",
+    "presetAgentType": "gemini",
+    "contextFile": "assistants/launchers/daily-briefing.md",
+    "prompts": [
+      "Turn my brain-dump into today's one priority plus an ignore list.",
+      "What's the single revenue-or-retention move I can't let slip today?",
+      "Cut through my 40 open loops into a ranked daily plan."
+    ],
+    "category": "office",
+    "kind": "team",
+    "teammates": [
+      "helm",
+      "coin",
+      "sentry",
+      "sales"
+    ],
+    "standing": false
+  },
+  {
+    "id": "war-room",
+    "name": "War Room",
+    "description": "Team launcher - pick me to convene a virtual C-suite (Operator + CFO + Growth + Skeptic + Customer Voice) and return a GO / NO-GO / GO-IF verdict on a decision.",
+    "avatar": "icons/war-room.svg",
+    "presetAgentType": "gemini",
+    "contextFile": "assistants/launchers/war-room.md",
+    "prompts": [
+      "Pressure-test this decision: GO / NO-GO / GO-IF.",
+      "Should I launch / price / spend on this? Run the war room.",
+      "Find the flaw in my big bet before it gets expensive."
+    ],
+    "category": "office",
+    "kind": "team",
+    "teammates": [
+      "helm",
+      "coin",
+      "beacon",
+      "sentry",
+      "sales"
+    ],
+    "standing": false
+  },
+  {
+    "id": "pre-mortem-room",
+    "name": "Pre-Mortem Room",
+    "description": "Team launcher - pick me to convene an adversarial launch audit (Saboteur + Skeptical Buyer + Channel Realist + Failure Historian + Fix Writer) and return a ranked kill-list.",
+    "avatar": "icons/pre-mortem-room.svg",
+    "presetAgentType": "gemini",
+    "contextFile": "assistants/launchers/pre-mortem-room.md",
+    "prompts": [
+      "Red-team my launch into a ranked kill-list before I spend.",
+      "What are the 3 things most likely to flop this launch?",
+      "Turn each failure mode into a mitigation in my launch checklist."
+    ],
+    "category": "build",
+    "kind": "team",
+    "teammates": [
+      "sentry",
+      "sales",
+      "beacon",
+      "research",
+      "copy"
+    ],
+    "standing": false
+  },
+  {
+    "id": "fine-print-guard",
+    "name": "Fine-Print Guard",
+    "description": "Team launcher - pick me to convene a contract-audit crew (Adversarial Counterparty + Payment-Risk + Lock-In/IP + Redline Writer) and return a clause threat map with redlines.",
+    "avatar": "icons/fine-print-guard.svg",
+    "presetAgentType": "gemini",
+    "contextFile": "assistants/launchers/fine-print-guard.md",
+    "prompts": [
+      "Map the dangerous clauses in this contract and redline them.",
+      "Find the clause that lets them not pay, lock me in, or own my work.",
+      "Audit this deal from my side and hand me ready-to-send redlines."
+    ],
+    "category": "office",
+    "kind": "team",
+    "teammates": [
+      "sentry",
+      "coin",
+      "sales",
+      "copy"
+    ],
+    "standing": false
+  },
+  {
+    "id": "pricing-tribunal",
+    "name": "Pricing Tribunal",
+    "description": "Team launcher - pick me to convene an adversarial pricing review (Discount Hunter + Churn Forecaster + Anchor Breaker + Value-Gap Prosecutor + Packaging Engineer) and return a rewritten offer.",
+    "avatar": "icons/pricing-tribunal.svg",
+    "presetAgentType": "gemini",
+    "contextFile": "assistants/launchers/pricing-tribunal.md",
+    "prompts": [
+      "Tell me where I'm under or overpriced and rewrite the offer.",
+      "Run an adversarial pricing review with churn and discount risks.",
+      "Give me specific price points and a tier structure to test."
+    ],
+    "category": "sell",
+    "kind": "team",
+    "teammates": [
+      "forge",
+      "coin",
+      "sales",
+      "mira"
+    ],
+    "standing": false
+  },
+  {
+    "id": "cold-pitch-bench",
+    "name": "Cold-Pitch Bench",
+    "description": "Team launcher - pick me to assemble a framework crew (Closer + Researcher + Skeptic + Buyer Voice) and ship a non-generic, send-ready outbound sequence for one prospect.",
+    "avatar": "icons/cold-pitch-bench.svg",
+    "presetAgentType": "gemini",
+    "contextFile": "assistants/launchers/cold-pitch-bench.md",
+    "prompts": [
+      "Turn this one prospect into a send-ready outbound sequence.",
+      "Write a non-generic cold opener with a real personalization hook.",
+      "Tell me the one reason this pitch lands or dies."
+    ],
+    "category": "sell",
+    "kind": "team",
+    "teammates": [
+      "sales",
+      "research",
+      "sentry",
+      "copy"
+    ],
+    "standing": false
   }
 ]
