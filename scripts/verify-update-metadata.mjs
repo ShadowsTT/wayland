@@ -113,7 +113,12 @@ function main() {
       const realSha = sha512Base64(artifact);
       const realSize = readFileSync(artifact).length;
       const shaOk = realSha === f.sha512;
-      const sizeOk = realSize === f.size;
+      // sha512 is the authoritative, cryptographic integrity check. `size` is
+      // supplementary AND optional in the manifest: electron-builder omits it
+      // for the Windows `latest.yml` .exe entries, so a missing size (NaN) must
+      // NOT fail verification — a matching sha512 already proves byte-identity.
+      // Only compare size when the manifest actually specifies one.
+      const sizeOk = Number.isNaN(f.size) || realSize === f.size;
       if (shaOk && sizeOk) {
         console.log(`    PASS  ${f.url}`);
       } else {
