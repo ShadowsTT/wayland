@@ -26,10 +26,12 @@ describe('hasSpecificModelCapability — Flux Router vs FLUX image models (issue
 
   it.each(ROUTER_TIERS)('keeps Flux Router chat tier %s in the primary picker', (model) => {
     // A primary-eligible model is one the `excludeFromPrimary` rule does NOT
-    // match. `getAvailableModels` filters a model out when this returns `true`,
-    // so it must be `undefined` (no match) for the Router tiers — the bug was a
-    // `true` match on the bare `flux` token.
-    expect(hasSpecificModelCapability(fluxProvider, model, 'excludeFromPrimary')).toBeUndefined();
+    // match. `getAvailableModels` keeps a model when this is anything other than
+    // `true` (its filter is `excluded !== true`), so the Router tiers must be
+    // not-`true` — the bug was a `true` match on the bare `flux` token. The flux
+    // alias guard returns `false` (explicitly not excluded); the regex path
+    // would return `undefined`. Both keep the tier, so pin the real contract.
+    expect(hasSpecificModelCapability(fluxProvider, model, 'excludeFromPrimary')).not.toBe(true);
   });
 
   it.each(ROUTER_TIERS)('does not classify Flux Router chat tier %s as image generation', (model) => {
