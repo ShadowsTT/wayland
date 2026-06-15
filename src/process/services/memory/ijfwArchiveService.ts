@@ -28,8 +28,46 @@ import type {
   IndexStats,
 } from '@/common/types/memory';
 
-// Memory files to read per project root.
-const MEMORY_FILES = ['knowledge.md', 'journal.md', 'handoff.md', 'plan.md', 'brief.md', 'project-journal.md'] as const;
+// Depth of subdirectory recursion when scanning a project's .ijfw/memory dir.
+// IJFW writes durable entries both at the memory-dir root (e.g. knowledge.md,
+// journal.md, dev-scan files) AND under one level of subdirectories (e.g.
+// `global/preferences.md`). We scan the root plus its immediate subdirs so
+// those nested files are not silently dropped. We do NOT recurse deeper to
+// avoid walking unrelated trees (e.g. gate-receipts/).
+const MEMORY_SCAN_MAX_DEPTH = 1;
+
+/**
+ * Recursively collect `*.md` files under a project's `.ijfw/memory` dir,
+ * bounded by {@link MEMORY_SCAN_MAX_DEPTH}.
+ *
+ * Historical bug (GitHub #110): the reader used a hardcoded filename allowlist
+ * (`knowledge.md`, `journal.md`, …). Real IJFW installs write durable memory to
+ * arbitrarily-named files (`devscan-<hash>.md`) and to nested dirs
+ * (`global/preferences.md`), so the archive/wiki UI showed "your memory is
+ * empty" even though parseable frontmatter entries existed on disk. We now scan
+ * every markdown file; flat files with no frontmatter blocks (e.g.
+ * `project-journal.md`) naturally yield zero entries and are skipped downstream.
+ */
+async function collectMemoryFiles(dir: string, depth = 0): Promise<string[]> {
+  let dirents: fs.Dirent[];
+  try {
+    dirents = await fs.promises.readdir(dir, { withFileTypes: true });
+  } catch {
+    return [];
+  }
+  const files: string[] = [];
+  for (const dirent of dirents) {
+    const full = path.join(dir, dirent.name);
+    if (dirent.isDirectory()) {
+      if (depth < MEMORY_SCAN_MAX_DEPTH) {
+        files.push(...(await collectMemoryFiles(full, depth + 1)));
+      }
+    } else if (dirent.isFile() && dirent.name.endsWith('.md')) {
+      files.push(full);
+    }
+  }
+  return files;
+}
 
 type WatcherFactory = (
   filePath: string,
@@ -335,25 +373,30 @@ class IjfwArchiveService {
     const projectSummaries: ProjectSummary[] = [];
     const wikiCounts = new Map<string, number>();
 
-    for (const { path: pPath, lastSeen } of projectPaths) {
-      const memDir = path.join(pPath, '.ijfw', 'memory');
+    // Scan every project's memory dir up front, in parallel, so the per-project
+    // index loop below stays synchronous (no await-in-loop). Each project's
+    // entry is `[markdownFilePaths, wikiFileCount]`.
+    const scans = await Promise.all(
+      projectPaths.map(async ({ path: pPath }) => {
+        const memDir = path.join(pPath, '.ijfw', 'memory');
+        const [memoryFiles, wikiCount] = await Promise.all([collectMemoryFiles(memDir), countWikiFiles(pPath)]);
+        return { memoryFiles, wikiCount };
+      })
+    );
+
+    for (let p = 0; p < projectPaths.length; p++) {
+      const { path: pPath, lastSeen } = projectPaths[p];
+      const { memoryFiles, wikiCount } = scans[p];
       const projectName = path.basename(pPath);
       const projectEntries: MemoryEntry[] = [];
 
-      for (const fileName of MEMORY_FILES) {
-        const filePath = path.join(memDir, fileName);
-        try {
-          await fs.promises.access(filePath);
-        } catch {
-          continue;
-        }
+      for (const filePath of memoryFiles) {
         const parsed = parseEntriesFromFile(filePath, pPath, projectName);
         projectEntries.push(...parsed);
         this.watchFile(filePath);
       }
 
       allEntries.push(...projectEntries);
-      const wikiCount = await countWikiFiles(pPath);
       wikiCounts.set(projectName, wikiCount);
 
       const maxStored = projectEntries.reduce((m, e) => Math.max(m, e.storedAt), lastSeen);
