@@ -118,6 +118,14 @@ export const conversation = {
   confirmMessage: buildProvider<IBridgeResponse, IConfirmMessageParams>('conversation.confirm.message'), // Generic confirm message
   responseStream: buildEmitter<IResponseMessage>('chat.response.stream'), // Receive messages (unified interface)
   turnCompleted: buildEmitter<IConversationTurnCompletedEvent>('conversation.turn.completed'),
+  /**
+   * The runaway circuit-breaker (Phase 2) stopped a turn that was looping
+   * (re-reading the same content / a command failing repeatedly). Carries the
+   * conversation + reason so the renderer can explain why it stopped.
+   */
+  runawayHalted: buildEmitter<import('@process/services/runaway/RunawayMonitor').RunawayHalted>(
+    'conversation.runaway-halted'
+  ),
   listChanged: buildEmitter<IConversationListChangedEvent>('conversation.list-changed'),
   getWorkspace: buildProvider<
     IDirOrFile[],

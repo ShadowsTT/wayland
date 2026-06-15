@@ -38,6 +38,7 @@ import { cronBusyGuard } from '@process/services/cron/CronBusyGuard';
 import { skillSuggestWatcher } from '@process/services/cron/SkillSuggestWatcher';
 import { getCostRecorder } from '@process/services/cost/CostRecorder';
 import { getBudgetController } from '@process/services/cost/BudgetController';
+import { RunawayMonitor } from '@process/services/runaway/RunawayMonitor';
 
 // ---------------------------------------------------------------------------
 // Truncation-heuristic constants (HC-4 - see audit at
@@ -147,6 +148,9 @@ export class WCoreManager extends BaseAgentManager<WCoreManagerData, string> {
   private thinkingContent: string = '';
   private thinkingDbFlushTimer: ReturnType<typeof setTimeout> | null = null;
   private readonly streamDbFlushIntervalMs: number = 120;
+
+  /** Runaway-loop detector (circuit-breaker Phase 2). Reset each turn. */
+  private readonly runawayMonitor = new RunawayMonitor();
 
   // Stream text DB write buffer
   private readonly bufferedStreamTexts = new Map<
@@ -357,6 +361,8 @@ export class WCoreManager extends BaseAgentManager<WCoreManagerData, string> {
       });
       return;
     }
+    // Fresh turn: clear the runaway-loop counters so detection is per-turn.
+    this.runawayMonitor.resetTurn();
 
     const message: TMessage = {
       id: data.msg_id,
@@ -694,6 +700,40 @@ export class WCoreManager extends BaseAgentManager<WCoreManagerData, string> {
     });
   }
 
+  /**
+   * Feed completed tool results to the runaway detector (circuit-breaker P2).
+   * On a trip (same content re-read N times, or a command failing N times in a
+   * row), gracefully stop the looping turn - agent.stop() sends a 'stop' command
+   * so the session stays alive and the user can continue - and tell the renderer
+   * why, so the user is not silently burning tokens in a loop.
+   */
+  private checkRunaway(message: IMessageToolGroup): void {
+    const items = Array.isArray(message.content) ? message.content : [];
+    for (const item of items) {
+      if (item.status !== 'Success' && item.status !== 'Error') continue;
+      const rd = item.resultDisplay;
+      const outputText = typeof rd === 'string' ? rd : ((rd as { fileDiff?: string } | undefined)?.fileDiff ?? '');
+      const trip = this.runawayMonitor.observe({
+        name: item.name ?? '',
+        success: item.status === 'Success',
+        outputText,
+      });
+      if (trip) {
+        mainWarn(
+          '[WCoreManager]',
+          `runaway detected (${trip.kind} x${trip.count}); halting turn for ${this.conversation_id}`
+        );
+        void this.stop();
+        ipcBridge.conversation.runawayHalted.emit({
+          conversationId: this.conversation_id,
+          kind: trip.kind,
+          count: trip.count,
+        });
+        return;
+      }
+    }
+  }
+
   private handleProcessExit(code: number | null, activeMsgId: string): void {
     mainError('[WCoreManager]', `wcore process exited unexpectedly (code=${code}) during active turn ${activeMsgId}`);
 
@@ -973,6 +1013,7 @@ export class WCoreManager extends BaseAgentManager<WCoreManagerData, string> {
 
           if (tMessage.type === 'tool_group') {
             this.handleConformationMessage(tMessage);
+            this.checkRunaway(tMessage);
           }
         }
       }
