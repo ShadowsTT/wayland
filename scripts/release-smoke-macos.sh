@@ -131,6 +131,25 @@ done
 
 [[ -n "$WORKDIR" ]] && rm -rf "$WORKDIR"
 
+# Update-feed integrity. A dmg can be perfectly notarized yet ship a stale
+# latest*.yml hash — the bytes change when the dmg is stapled AFTER the manifest
+# is written — and electron-updater then rejects every in-app update with
+# "checksum mismatch" (#109, 0.9.8). The Gatekeeper checks above do NOT catch
+# that, so verify the manifests against the real artifacts here and make a
+# mismatch a hard release failure too. Only meaningful against a real tag.
+if [[ -n "$TAG" ]]; then
+  echo
+  echo "================================================================"
+  echo "Update-feed manifest integrity ($TAG)"
+  echo "================================================================"
+  if node "$(dirname "$0")/verify-update-metadata.mjs" --tag "$TAG"; then
+    echo "  RESULT: ✅ PASS — every latest*.yml matches its artifacts."
+  else
+    echo "  RESULT: ❌ FAIL — update manifest does not match the published artifacts."
+    overall_fail=1
+  fi
+fi
+
 echo
 if [[ $overall_fail -ne 0 ]]; then
   echo "########################################################"
