@@ -14,7 +14,7 @@ import {
 import type { SpeechToTextConfig, SpeechToTextProvider } from '@/common/types/speech';
 import type { TextToSpeechConfig, TextToSpeechProvider } from '@/common/types/ttsTypes';
 import { voiceAsset } from '@/common/adapter/ipcBridge';
-import { isImageModelName } from '@/common/config/imageModels';
+import { isImageModelName, imageModelDisplayLabel } from '@/common/config/imageModels';
 import type { VoiceAsset } from '@/common/types/voiceAsset';
 import {
   Divider,
@@ -912,7 +912,7 @@ const ToolsModalContent: React.FC = () => {
                       <WaylandSelect.OptGroup label={platform.name} key={platform.id}>
                         {model.map((modelName) => (
                           <WaylandSelect.Option key={platform.id + modelName} value={platform.id + '|' + modelName}>
-                            {modelName}
+                            {imageModelDisplayLabel(modelName)}
                           </WaylandSelect.Option>
                         ))}
                       </WaylandSelect.OptGroup>

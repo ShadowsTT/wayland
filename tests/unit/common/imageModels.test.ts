@@ -4,7 +4,13 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 import { describe, it, expect } from 'vitest';
-import { isImageModelName, curatedImageModelsForProvider } from '@/common/config/imageModels';
+import {
+  isImageModelName,
+  curatedImageModelsForProvider,
+  imageModelDisplayLabel,
+  FLUX_IMAGE_ARMS,
+  FLUX_DEFAULT_IMAGE_ARM,
+} from '@/common/config/imageModels';
 
 describe('isImageModelName', () => {
   it('matches OpenAI Images family', () => {
@@ -69,5 +75,41 @@ describe('curatedImageModelsForProvider', () => {
   it('returns an empty floor for unknown providers', () => {
     expect(curatedImageModelsForProvider({ platform: 'mystery', baseUrl: 'https://example.com' })).toEqual([]);
     expect(curatedImageModelsForProvider({})).toEqual([]);
+  });
+
+  it('returns the Flux arm floor by host, before the OpenAI rule, for a flux-host openai row', () => {
+    // A connected Flux provider is mirrored with platform 'openai' + a Flux
+    // baseUrl. It must get the Flux arms, NOT the OpenAI floor.
+    expect(
+      curatedImageModelsForProvider({ platform: 'openai', baseUrl: 'https://api.fluxrouter.ai/v1' })
+    ).toEqual([...FLUX_IMAGE_ARMS]);
+  });
+
+  it('returns the Flux arm floor by the flux-router platform id', () => {
+    expect(curatedImageModelsForProvider({ platform: 'flux-router' })).toEqual([...FLUX_IMAGE_ARMS]);
+  });
+
+  it('every Flux arm id reads as an image model so the picker keeps them', () => {
+    for (const arm of FLUX_IMAGE_ARMS) {
+      expect(isImageModelName(arm)).toBe(true);
+    }
+  });
+
+  it('defaults to gpt-image-high and includes it in the arm list', () => {
+    expect(FLUX_DEFAULT_IMAGE_ARM).toBe('gpt-image-high');
+    expect(FLUX_IMAGE_ARMS).toContain(FLUX_DEFAULT_IMAGE_ARM);
+  });
+});
+
+describe('imageModelDisplayLabel', () => {
+  it('gives Flux arms friendly names', () => {
+    expect(imageModelDisplayLabel('gpt-image-high')).toBe('GPT Image (High)');
+    expect(imageModelDisplayLabel('nano-banana-pro-2k')).toBe('Nano Banana Pro 2K');
+    expect(imageModelDisplayLabel('flux-image-together-flux')).toBe('Together FLUX (Fastest)');
+  });
+
+  it('falls back to the raw id for non-Flux models', () => {
+    expect(imageModelDisplayLabel('gpt-image-1.5')).toBe('gpt-image-1.5');
+    expect(imageModelDisplayLabel('gemini-3-pro-image-preview')).toBe('gemini-3-pro-image-preview');
   });
 });

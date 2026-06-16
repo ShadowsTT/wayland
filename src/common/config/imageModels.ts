@@ -65,7 +65,53 @@ type CuratedRule = {
  * Host rules are checked before platform rules so an `openai-compatible`
  * provider pointed at OpenRouter / OpenAI gets the right family.
  */
+/**
+ * FluxRouter image arms (the exact `model` values its `/v1/images/generations`
+ * endpoint accepts - capabilities contract §3.3). Display order, best-first.
+ * `gpt-image-high` leads because it's the connected-Flux default. Every id
+ * passes {@link isImageModelName}, so the picker surfaces them.
+ */
+export const FLUX_IMAGE_ARMS = [
+  'gpt-image-high',
+  'nano-banana-pro-4k',
+  'nano-banana-pro-2k',
+  'gpt-image-high-xl',
+  'nano-banana',
+  'gpt-image-med',
+  'flux-image-together-flux',
+] as const;
+
+/** The arm Flux defaults to when it becomes the connected image backend. */
+export const FLUX_DEFAULT_IMAGE_ARM = 'gpt-image-high';
+
+/** Friendly, scannable labels for the Flux arms (proper-noun model names, not chrome). */
+const FLUX_IMAGE_ARM_LABELS: Record<string, string> = {
+  'gpt-image-high': 'GPT Image (High)',
+  'gpt-image-high-xl': 'GPT Image (High XL)',
+  'gpt-image-med': 'GPT Image (Medium)',
+  'nano-banana': 'Nano Banana',
+  'nano-banana-pro-2k': 'Nano Banana Pro 2K',
+  'nano-banana-pro-4k': 'Nano Banana Pro 4K',
+  'flux-image-together-flux': 'Together FLUX (Fastest)',
+};
+
+/**
+ * A scannable display label for an image-model id. Flux arm ids get a friendly
+ * name; everything else renders its raw id (unchanged from how the picker
+ * already shows model ids).
+ */
+export function imageModelDisplayLabel(modelName: string): string {
+  return FLUX_IMAGE_ARM_LABELS[modelName] ?? modelName;
+}
+
 const CURATED_IMAGE_MODEL_RULES: CuratedRule[] = [
+  {
+    // FluxRouter. Checked first: a Flux row may carry platform 'openai' /
+    // 'openai-compatible' with a Flux baseUrl, which would otherwise match the
+    // OpenAI rule below. Flux serves its own arm ids, not the OpenAI floor.
+    test: (p, host) => host.includes('fluxrouter.ai') || p === 'flux-router',
+    models: [...FLUX_IMAGE_ARMS],
+  },
   {
     // OpenRouter (proxies every vendor; ids are vendor-prefixed).
     test: (_p, host) => host.includes('openrouter.ai'),

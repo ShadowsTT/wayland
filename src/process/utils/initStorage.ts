@@ -17,6 +17,7 @@ import type {
   IConfigStorageRefer,
   IEnvStorageRefer,
   IMcpServer,
+  IProvider,
   TChatConversation,
   TProviderWithModel,
 } from '@/common/config/storage';
@@ -33,6 +34,8 @@ import {
 } from './utils';
 import { writeFileAtomic } from './atomicWrite';
 import { getOsUserName } from './osUserName';
+import { resolveFluxImageDefault } from './fluxImageDefault';
+import { readConnectedFluxKey } from '../connectors/fluxKey';
 import { getDatabase } from '../services/database/export';
 import type { AcpBackendConfig } from '@/common/types/acpTypes';
 import { migrateFromElectronConfig, importConfigFromFile } from './configMigration';
@@ -737,6 +740,27 @@ const ensureBuiltinMcpServers = async (): Promise<void> => {
       return env;
     };
 
+    // Default the image MCP to Flux when Flux is connected and the user hasn't
+    // chosen an image model. Seeds only (never clobbers an explicit choice), so
+    // a connected-Flux user gets working image generation with zero setup.
+    let imageConfig = oldConfig;
+    let seededImageConfig = false;
+    if (!oldConfig || !oldConfig.useModel) {
+      try {
+        const fluxKey = await readConnectedFluxKey();
+        const providers = (await configFile.get('model.config').catch((): IProvider[] => [])) || [];
+        const seed = resolveFluxImageDefault({ current: oldConfig, providers, fluxKey });
+        if (seed) {
+          imageConfig = seed;
+          seededImageConfig = true;
+          await configFile.set('tools.imageGenerationModel', seed);
+          console.log('[Wayland] Defaulted image generation to Flux (connected, no model chosen)');
+        }
+      } catch (seedError) {
+        console.error('[Wayland] Flux image-default seeding failed (non-fatal):', seedError);
+      }
+    }
+
     const buildOriginalJson = (scriptPathValue: string, env: Record<string, string>) =>
       JSON.stringify(
         {
@@ -763,24 +787,29 @@ const ensureBuiltinMcpServers = async (): Promise<void> => {
         ((existing.transport.args || [])[0] !== scriptPath || needsNameMigration);
 
       const needsMigration = shouldEnable && !existing.enabled;
+      // When we just seeded a Flux image default, push its env onto the
+      // already-existing built-in server so the MCP picks up WAYLAND_IMG_* on
+      // this boot (the env is otherwise only built when the server is created).
+      const needsSeedEnv = seededImageConfig && existing.transport.type === 'stdio';
+      const needsEnvUpdate = needsMigration || needsSeedEnv;
 
-      if (needsNameMigration || needsPathUpdate || needsMigration) {
+      if (needsNameMigration || needsPathUpdate || needsEnvUpdate) {
         let updatedTransport: IMcpServer['transport'] = existing.transport;
 
         if (existing.transport.type === 'stdio') {
-          const mergedEnv = needsMigration
-            ? { ...existing.transport.env, ...buildEnvFromConfig(oldConfig) }
+          const mergedEnv = needsEnvUpdate
+            ? { ...existing.transport.env, ...buildEnvFromConfig(imageConfig) }
             : existing.transport.env;
           updatedTransport = {
             ...existing.transport,
             ...(needsPathUpdate && { args: [scriptPath] }),
-            ...(needsMigration && { env: mergedEnv }),
+            ...(needsEnvUpdate && { env: mergedEnv }),
           };
         }
 
         const newOriginalJson =
-          needsPathUpdate && updatedTransport.type === 'stdio'
-            ? buildOriginalJson(scriptPath, updatedTransport.env ?? {})
+          (needsPathUpdate || needsEnvUpdate) && updatedTransport.type === 'stdio'
+            ? buildOriginalJson(updatedTransport.args?.[0] ?? scriptPath, updatedTransport.env ?? {})
             : existing.originalJson;
 
         mcpServers[existingIdx] = {
@@ -795,7 +824,7 @@ const ensureBuiltinMcpServers = async (): Promise<void> => {
       }
     } else {
       // Create new built-in image gen server
-      const env = buildEnvFromConfig(oldConfig);
+      const env = buildEnvFromConfig(imageConfig);
       const newServer: IMcpServer = {
         id: BUILTIN_IMAGE_GEN_ID,
         name: BUILTIN_IMAGE_GEN_NAME,
