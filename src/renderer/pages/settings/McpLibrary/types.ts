@@ -76,6 +76,15 @@ export interface WaylandExtension {
      * `X-Access-Token` (where the raw token is sent without the `Bearer` prefix).
      */
     header?: string;
+    /**
+     * URL query parameter the api-key token is appended to for a hosted
+     * (remote) server that authenticates via the URL rather than a header -
+     * e.g. Exa's `https://mcp.exa.ai/mcp?exaApiKey=<token>`. Mutually exclusive
+     * with `header`: when set, the token is injected into the remote URL and no
+     * Authorization header is sent (header auth is silently ignored by these
+     * servers, which is why the stdio fallback appeared to "not save the key").
+     */
+    queryParam?: string;
     scopes?: { name: string; plainLanguage: string }[];
     /**
      * Vendor hint for the BYO-credentials flow. When the OAuth server does
