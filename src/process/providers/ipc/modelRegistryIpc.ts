@@ -958,11 +958,20 @@ export function createModelRegistryHandlers(deps: ModelRegistryDeps): ModelRegis
             const { models } = await assembler.assemble([source], registry);
             return curator.curate(models);
           }
-          // Non-enumerable CLI - fall back to the underlying provider's curated
-          // set when that provider is connected, else nothing.
+          // Non-enumerable CLI (e.g. Claude Code). When the underlying provider
+          // is connected with its own API key, use the persisted, override-aware
+          // catalog. When it is NOT connected - the common case for a CLI-login
+          // user (a Claude Pro/Max subscription, no Anthropic API key) - the
+          // picker used to come back EMPTY (#125). Synthesize the underlying
+          // provider's model families straight from the models.dev registry (the
+          // same keyless path cloud providers use), so Claude shows real models.
           const underlying = CLI_UNDERLYING_PROVIDER[cliKey];
-          if (!repo.getRegistryProvider(underlying)) return [];
-          return applyOverrides(underlying, curator.curate(repo.getRegistryCatalog(underlying)));
+          if (repo.getRegistryProvider(underlying)) {
+            return applyOverrides(underlying, curator.curate(repo.getRegistryCatalog(underlying)));
+          }
+          const registry = await modelsDevClient.getRegistry().catch(() => ({}) as ModelsDevRegistry);
+          const { models } = await assembler.assemble([new CloudRegistrySource(underlying, registry)], registry);
+          return curator.curate(models);
         }
 
         return [];

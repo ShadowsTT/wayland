@@ -54,7 +54,7 @@ describe('CloudRegistrySource - google-auth Gemini catalog (zero-models regressi
     } as never;
     const src = new CloudRegistrySource('google-gemini' as never, registry);
     const models = await src.listModels();
-    expect(models.map((m) => m.id).sort()).toEqual(['gemini-2.5-pro', 'gemini-flash-latest']);
+    expect(models.map((m) => m.id).toSorted()).toEqual(['gemini-2.5-pro', 'gemini-flash-latest']);
   });
 });
 import type { CatalogModel, ProviderId } from '@process/providers/types';
@@ -440,7 +440,25 @@ describe('modelRegistry IPC - testConnection', () => {
     expect(repo.getRegistryProvider('openai')?.state).toBe('connected');
   });
 
-  it('marks the provider in error state on a failed test', async () => {
+  it('marks the provider in error state on a hard-failed test', async () => {
+    const { deps, repo } = makeFakes({ testResult: { ok: false, error: 'invalid-key' } });
+    repo.upsertRegistryProvider({
+      providerId: 'openai',
+      connectedVia: 'api-key',
+      state: 'connected',
+      creds: { key: 'sk-stored' },
+    });
+    const h = createModelRegistryHandlers(deps);
+
+    const result = await h.testConnection({ providerId: 'openai' });
+
+    expect(result).toEqual({ ok: false, error: 'invalid-key' });
+    expect(repo.getRegistryProvider('openai')?.state).toBe('error');
+  });
+
+  it('keeps the provider connected on a no-credit test result (#100)', async () => {
+    // A no-credit key still authenticates - it must NOT flip the provider to
+    // error (it sits connected-but-switched-off), consistent with connect (#100).
     const { deps, repo } = makeFakes({ testResult: { ok: false, error: 'no-credit' } });
     repo.upsertRegistryProvider({
       providerId: 'openai',
@@ -453,7 +471,7 @@ describe('modelRegistry IPC - testConnection', () => {
     const result = await h.testConnection({ providerId: 'openai' });
 
     expect(result).toEqual({ ok: false, error: 'no-credit' });
-    expect(repo.getRegistryProvider('openai')?.state).toBe('error');
+    expect(repo.getRegistryProvider('openai')?.state).toBe('connected');
   });
 
   it('returns unrecognized when the provider is not connected', async () => {
@@ -612,12 +630,34 @@ describe('modelRegistry IPC - curatedForAgent', () => {
     expect(ids).toContain('gpt-4o');
   });
 
-  it('claude stays vendor-locked: only its underlying provider, else empty', async () => {
+  it('claude stays vendor-locked: never unions sibling providers', async () => {
     const { deps } = twoProviderRepo();
     const h = createModelRegistryHandlers(deps);
-    // anthropic is not connected in this repo, so claude returns nothing
-    // (it must NOT union openai/flux-router).
+    // anthropic is not connected and the (mock) models.dev registry is empty, so
+    // claude returns nothing here - and critically must NOT union openai /
+    // flux-router. The populated-registry fallback is covered below (#125).
     expect(await h.curatedForAgent({ agentKey: 'claude' })).toEqual([]);
+  });
+
+  it('claude (#125): synthesizes the anthropic family from models.dev when no API key is connected', async () => {
+    const { deps, getRegistry } = twoProviderRepo();
+    // A Claude Pro/Max CLI user has no Anthropic API key, so anthropic is not a
+    // connected provider. The picker must still show models, sourced from the
+    // models.dev registry - and only anthropic models, never openai/flux.
+    getRegistry.mockResolvedValue({
+      anthropic: {
+        id: 'anthropic',
+        name: 'Anthropic',
+        env: [],
+        models: {
+          'claude-opus-4-8': { id: 'claude-opus-4-8', name: 'Claude Opus 4.8' },
+        },
+      },
+    });
+    const h = createModelRegistryHandlers(deps);
+    const curated = await h.curatedForAgent({ agentKey: 'claude' });
+    expect(curated.map((m) => m.id)).toContain('claude-opus-4-8');
+    expect(curated.every((m) => m.providerId === 'anthropic')).toBe(true);
   });
 });
 
@@ -1468,11 +1508,11 @@ describe('connect - baseUrl persistence (Fix B2)', () => {
   });
 });
 
-describe('resolveSpawnSecretsFromRepo - keyless local provider (Ollama)', () => {
-  function handle(over: Partial<SpawnHandle> = {}): SpawnHandle {
-    return { providerId: 'ollama-local', modelId: 'llama3:latest', ...over };
-  }
+function spawnHandle(over: Partial<SpawnHandle> = {}): SpawnHandle {
+  return { providerId: 'ollama-local', modelId: 'llama3:latest', ...over };
+}
 
+describe('resolveSpawnSecretsFromRepo - keyless local provider (Ollama)', () => {
   it('resolves a payload (empty apiKey + local baseUrl) for ollama-local with no key', () => {
     const repo = new FakeRepo();
     repo.upsertRegistryProvider({
@@ -1482,7 +1522,7 @@ describe('resolveSpawnSecretsFromRepo - keyless local provider (Ollama)', () => 
       creds: { key: '', baseUrl: 'http://127.0.0.1:11434/v1' },
     });
 
-    const secrets = resolveSpawnSecretsFromRepo(repo as never, handle());
+    const secrets = resolveSpawnSecretsFromRepo(repo as never, spawnHandle());
     // Finding 2: a keyless local provider carries NO credential - represented as
     // `apiKey: undefined`, NOT `''`, so the spawn merge can never inherit a
     // stale legacy key.
@@ -1498,7 +1538,7 @@ describe('resolveSpawnSecretsFromRepo - keyless local provider (Ollama)', () => 
       creds: { key: '', baseUrl: 'http://localhost:1234/v1' },
     });
 
-    const secrets = resolveSpawnSecretsFromRepo(repo as never, handle({ providerId: 'openai-compatible' }));
+    const secrets = resolveSpawnSecretsFromRepo(repo as never, spawnHandle({ providerId: 'openai-compatible' }));
     // Finding 2: keyless local resolves to `apiKey: undefined` (no credential).
     expect(secrets).toEqual({ apiKey: undefined, baseUrl: 'http://localhost:1234/v1' });
   });
@@ -1514,7 +1554,7 @@ describe('resolveSpawnSecretsFromRepo - keyless local provider (Ollama)', () => 
 
     // openai resolves to the cloud base url; an empty key there stays
     // undecryptable, so the spawn resolver returns null.
-    expect(resolveSpawnSecretsFromRepo(repo as never, handle({ providerId: 'openai' }))).toBeNull();
+    expect(resolveSpawnSecretsFromRepo(repo as never, spawnHandle({ providerId: 'openai' }))).toBeNull();
   });
 
   it('returns the real key for a cloud provider that HAS a key', () => {
@@ -1526,7 +1566,7 @@ describe('resolveSpawnSecretsFromRepo - keyless local provider (Ollama)', () => 
       creds: { key: 'sk-real' },
     });
 
-    const secrets = resolveSpawnSecretsFromRepo(repo as never, handle({ providerId: 'openai' }));
+    const secrets = resolveSpawnSecretsFromRepo(repo as never, spawnHandle({ providerId: 'openai' }));
     expect(secrets?.apiKey).toBe('sk-real');
     expect(secrets?.baseUrl).toBe('https://api.openai.com/v1');
   });
