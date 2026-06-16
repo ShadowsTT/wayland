@@ -195,6 +195,19 @@ export const normalizeStoredAssistant = (assistant: AssistantListItem): Assistan
 };
 
 /**
+ * True when an assistant should be offered as a Team leader / teammate.
+ *
+ * Specialists (native waylandteams + vendored agent-profiles carry
+ * `_kind === 'specialist'`) and user-created custom assistants both qualify;
+ * team launchers (`_kind === 'team'`) and the 31 generic built-in presets do
+ * not. The `!isBuiltin` clause is what surfaces custom Specialists (#115) -
+ * including ones saved before they were stamped with `kind: 'specialist'`, which
+ * carry no `_kind` at all.
+ */
+export const isSelectableSpecialist = (assistant: AssistantListItem): boolean =>
+  assistant._kind === 'specialist' || (assistant._kind !== 'team' && !assistant.isBuiltin);
+
+/**
  * Check if an assistant originates from an extension or another bundle-vendored
  * source (waylandteams via the resolver, FoundrySkills via the agent-profile
  * merge). All of these are read-only, ship their context inline on the record,

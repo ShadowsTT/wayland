@@ -35,6 +35,7 @@ import { useAssistantList } from '@/renderer/hooks/assistant';
 import { useAvailableBackends } from '@/renderer/hooks/assistant/useAvailableBackends';
 import { useAuth } from '@/renderer/hooks/context/AuthContext';
 import type { AssistantListItem } from '@/renderer/pages/settings/AssistantSettings/types';
+import { isSelectableSpecialist } from '@/renderer/pages/settings/AssistantSettings/assistantUtils';
 import type { TTeam, TeamAgent } from '@/common/types/teamTypes';
 import type {
   SuggestRosterResult,
@@ -68,11 +69,9 @@ const TeamLauncherPage: React.FC = () => {
 
   const isBuildMyOwn = !teamId;
 
-  // Lookup tables.
-  const specialists = useMemo(
-    () => assistants.filter((a) => a._kind === 'specialist'),
-    [assistants]
-  );
+  // Lookup tables. Custom user-created Specialists must be selectable too (#115),
+  // not only the native/vendored ones tagged `_kind === 'specialist'`.
+  const specialists = useMemo(() => assistants.filter(isSelectableSpecialist), [assistants]);
 
   const specialistsById = useMemo(() => {
     const map = new Map<string, AssistantListItem>();

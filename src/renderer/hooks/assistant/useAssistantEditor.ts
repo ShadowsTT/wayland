@@ -288,6 +288,10 @@ export const useAssistantEditor = ({
           avatar: editAvatar,
           isPreset: true,
           isBuiltin: false,
+          // A user-created assistant is a single-role Specialist. Stamping `kind`
+          // makes it classify as one everywhere (library + Teams pickers, #115)
+          // via the kind-wins path, instead of relying on a category heuristic.
+          kind: 'specialist',
           presetAgentType: editAgent,
           enabled: true,
           enabledSkills: selectedSkills,
