@@ -505,7 +505,19 @@ describe('isFluxImagesProvider', () => {
     );
   });
 
-  it('does NOT match OpenAI, OpenRouter, or an empty baseUrl', () => {
+  it('matches the real bridged Flux row by model id (openai-compatible + empty baseUrl + flux-image)', () => {
+    // The connected Flux provider reaches the MCP subprocess as
+    // platform 'openai-compatible' with an empty baseUrl; only the model id
+    // identifies it.
+    expect(
+      isFluxImagesProvider(makeProvider({ platform: 'openai-compatible', baseUrl: '', useModel: 'flux-image' }))
+    ).toBe(true);
+    expect(
+      isFluxImagesProvider(makeProvider({ platform: 'openai-compatible', baseUrl: '', useModel: 'nano-banana-pro-2k' }))
+    ).toBe(true);
+  });
+
+  it('does NOT match OpenAI native, OpenRouter, or an empty baseUrl with a non-Flux model', () => {
     expect(isFluxImagesProvider(makeProvider({ baseUrl: 'https://api.openai.com/v1', useModel: 'gpt-image-1' }))).toBe(
       false
     );

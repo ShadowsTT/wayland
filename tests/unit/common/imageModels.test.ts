@@ -110,9 +110,28 @@ describe('isFluxProviderRow', () => {
     expect(isFluxProviderRow({ platform: 'flux-router' })).toBe(true);
   });
 
-  it('does not match OpenAI or other providers', () => {
+  it('matches the real bridged Flux row (openai-compatible + empty baseUrl) via the registry tag', () => {
+    expect(
+      isFluxProviderRow({ platform: 'openai-compatible', baseUrl: '', __waylandModelRegistryBridge: 'v2:flux-router' })
+    ).toBe(true);
+  });
+
+  it('does not match OpenAI, a non-flux bridge tag, or empty providers', () => {
     expect(isFluxProviderRow({ platform: 'openai', baseUrl: 'https://api.openai.com/v1' })).toBe(false);
+    expect(
+      isFluxProviderRow({ platform: 'openai-compatible', baseUrl: '', __waylandModelRegistryBridge: 'v2:google-gemini' })
+    ).toBe(false);
     expect(isFluxProviderRow({})).toBe(false);
+  });
+
+  it('curated floor returns the Flux arms for the real bridged Flux row', () => {
+    expect(
+      curatedImageModelsForProvider({
+        platform: 'openai-compatible',
+        baseUrl: '',
+        __waylandModelRegistryBridge: 'v2:flux-router',
+      })
+    ).toEqual([...FLUX_IMAGE_ARMS]);
   });
 });
 

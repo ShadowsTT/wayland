@@ -116,13 +116,6 @@ export function imageModelDisplayLabel(modelName: string): string {
 
 const CURATED_IMAGE_MODEL_RULES: CuratedRule[] = [
   {
-    // FluxRouter. Checked first: a Flux row may carry platform 'openai' /
-    // 'openai-compatible' with a Flux baseUrl, which would otherwise match the
-    // OpenAI rule below. Flux serves its own arm ids, not the OpenAI floor.
-    test: (p, host) => host.includes('fluxrouter.ai') || p === 'flux-router',
-    models: [...FLUX_IMAGE_ARMS],
-  },
-  {
     // OpenRouter (proxies every vendor; ids are vendor-prefixed).
     test: (_p, host) => host.includes('openrouter.ai'),
     models: ['google/gemini-3-pro-image-preview', 'google/gemini-2.5-flash-image', 'openai/gpt-image-1.5'],
@@ -154,18 +147,41 @@ function hostOf(baseUrl: string | undefined): string {
   }
 }
 
+/** The legacy mirror tags registry-managed rows `v2:<registryProviderId>`. */
+const BRIDGE_TAG_KEY = '__waylandModelRegistryBridge';
+
 /**
- * The curated image-model floor for a connected provider. Empty when no rule
- * matches (an unknown provider relies on its own `model[]` / the catalog).
+ * True when a provider row is FluxRouter. The connected Flux provider is
+ * mirrored into the legacy config as `platform: 'openai-compatible'` with an
+ * EMPTY baseUrl, so host/platform alone do not identify it - the reliable
+ * signal is the registry bridge tag (`v2:flux-router`). Also matches the
+ * canonical platform id / Flux host for non-bridged or direct rows.
  */
-export function curatedImageModelsForProvider(provider: { platform?: string; baseUrl?: string }): string[] {
+export function isFluxProviderRow(provider: {
+  platform?: string;
+  baseUrl?: string;
+  [BRIDGE_TAG_KEY]?: unknown;
+}): boolean {
+  if ((provider.platform || '') === 'flux-router') return true;
+  if (hostOf(provider.baseUrl).includes('fluxrouter.ai')) return true;
+  const tag = provider[BRIDGE_TAG_KEY];
+  return typeof tag === 'string' && tag.endsWith(':flux-router');
+}
+
+/**
+ * The curated image-model floor for a connected provider. Flux is checked first
+ * (its arms are not in models.dev, and its legacy row is ambiguously
+ * `openai-compatible`); everything else falls to the per-family rules. Empty
+ * when nothing matches (the provider relies on its own `model[]` / the catalog).
+ */
+export function curatedImageModelsForProvider(provider: {
+  platform?: string;
+  baseUrl?: string;
+  [BRIDGE_TAG_KEY]?: unknown;
+}): string[] {
+  if (isFluxProviderRow(provider)) return [...FLUX_IMAGE_ARMS];
   const platform = (provider.platform || '').toLowerCase();
   const host = hostOf(provider.baseUrl);
   const rule = CURATED_IMAGE_MODEL_RULES.find((r) => r.test(platform, host));
   return rule ? [...rule.models] : [];
-}
-
-/** True when a provider row is FluxRouter (by host or platform id). */
-export function isFluxProviderRow(provider: { platform?: string; baseUrl?: string }): boolean {
-  return (provider.platform || '') === 'flux-router' || hostOf(provider.baseUrl).includes('fluxrouter.ai');
 }

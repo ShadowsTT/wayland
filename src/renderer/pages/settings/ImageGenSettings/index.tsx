@@ -5,12 +5,17 @@
  */
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Divider, Form, Switch, Tooltip, Message, Button } from '@arco-design/web-react';
-import { HelpCircle, Wand2, Plug, RefreshCw, ArrowRight } from 'lucide-react';
+import { Divider, Form, Switch, Message, Button } from '@arco-design/web-react';
+import { Wand2, Plug, RefreshCw, ArrowRight } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { ConfigStorage, BUILTIN_IMAGE_GEN_ID, type IConfigStorageRefer, type IMcpServer } from '@/common/config/storage';
-import { isImageModelName } from '@/common/config/imageModels';
+import {
+  isImageModelName,
+  imageModelDisplayLabel,
+  isFluxProviderRow,
+  FLUX_RECOMMENDED_IMAGE_ID,
+} from '@/common/config/imageModels';
 import useConfigModelListWithImage from '@renderer/hooks/agent/useConfigModelListWithImage';
 import {
   useMcpServers,
@@ -47,11 +52,13 @@ const ImageGenSettings: React.FC = () => {
     ? (agentInstallStatus[builtinImageGenServer.name] ?? [])
     : [];
 
-  // Filter providers to only those with image-capable models
+  // Providers with image-capable models, Flux floated to the top so its
+  // recommended "Flux Image" default leads the picker.
   const imageModelList = useMemo(() => {
-    return (modelListWithImage || [])
+    const list = (modelListWithImage || [])
       .filter((p) => p.model.some(isImageModelName))
       .map((p) => Object.assign({}, p, { model: p.model.filter(isImageModelName) }));
+    return list.toSorted((a, b) => Number(isFluxProviderRow(b)) - Number(isFluxProviderRow(a)));
   }, [modelListWithImage]);
 
   // Load persisted model selection on mount
@@ -236,41 +243,43 @@ const ImageGenSettings: React.FC = () => {
                   <WaylandSelect.OptGroup label={platform.name} key={platform.id}>
                     {model.map((modelName) => (
                       <WaylandSelect.Option key={platform.id + modelName} value={`${platform.id}|${modelName}`}>
-                        {modelName}
+                        <span className='inline-flex items-center gap-6px'>
+                          {imageModelDisplayLabel(modelName)}
+                          {modelName === FLUX_RECOMMENDED_IMAGE_ID && (
+                            <span className='text-9px font-700 leading-none tracking-[0.05em] uppercase text-[rgb(var(--primary-6))] bg-[rgb(var(--primary-6)/0.12)] rd-5px px-6px py-2px'>
+                              {t('settings.imageGenRecommended', 'Recommended')}
+                            </span>
+                          )}
+                        </span>
                       </WaylandSelect.Option>
                     ))}
                   </WaylandSelect.OptGroup>
                 ))}
               </WaylandSelect>
             ) : (
-              <div className='flex items-center gap-8px text-t-secondary text-13px'>
-                <span>{t('settings.imageGenPage.noModels')}</span>
-                <Tooltip
-                  content={
-                    <span>
-                      {t('settings.needHelpTooltip')}{' '}
-                      <a
-                        href='https://github.com/FerroxLabs/wayland/wiki/Wayland-Image-Generation-Tool-Model-Configuration-Guide'
-                        target='_blank'
-                        rel='noopener noreferrer'
-                        className='text-[rgb(var(--primary-6))] underline'
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        {t('settings.configGuide')}
-                      </a>
-                    </span>
-                  }
+              // No image-capable model connected (nothing installed, no key, or
+              // only a CLI like Claude Code): recommend Flux, mirroring the
+              // models panel's Flux hero.
+              <div className='rounded-12px bg-[var(--color-fill-2)] p-12px flex flex-col sm:flex-row sm:items-center sm:justify-between gap-12px max-w-[420px]'>
+                <div className='min-w-0'>
+                  <div className='text-13px font-medium text-t-primary'>
+                    {t('settings.imageGenNoModelTitle', 'No image model connected')}
+                  </div>
+                  <div className='text-12px text-t-secondary'>
+                    {t(
+                      'settings.imageGenNoModelBody',
+                      'Connect Flux Router to generate images. One key, every model, and it picks the right one for each request.'
+                    )}
+                  </div>
+                </div>
+                <Button
+                  type='primary'
+                  size='small'
+                  className='w-full sm:w-auto shrink-0'
+                  onClick={() => navigate('/settings/models')}
                 >
-                  <a
-                    href='https://github.com/FerroxLabs/wayland/wiki/Wayland-Image-Generation-Tool-Model-Configuration-Guide'
-                    target='_blank'
-                    rel='noopener noreferrer'
-                    className='text-[rgb(var(--primary-6))] cursor-pointer'
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <HelpCircle size={14} />
-                  </a>
-                </Tooltip>
+                  {t('settings.imageGenNoModelCta', 'Connect Flux')}
+                </Button>
               </div>
             )}
           </Form.Item>

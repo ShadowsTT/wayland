@@ -21,7 +21,7 @@ import type { TProviderWithModel } from '@/common/config/storage';
 import type { UnifiedChatCompletionResponse } from '@/common/api/RotatingApiClient';
 import { getProviderAuthType } from '@/common/utils/platformAuthType';
 import { FLUX_PROVIDER_ID } from '@/common/config/flux';
-import { FLUX_RECOMMENDED_IMAGE_ID } from '@/common/config/imageModels';
+import { FLUX_RECOMMENDED_IMAGE_ID, FLUX_IMAGE_ARMS } from '@/common/config/imageModels';
 import { IMAGE_EXTENSIONS, MIME_TYPE_MAP, MIME_TO_EXT_MAP, DEFAULT_IMAGE_EXTENSION } from '@/common/config/constants';
 
 // Copyright 2026 Ferrox Labs
@@ -383,12 +383,17 @@ const FLUX_IMAGE_HOST = 'api.fluxrouter.ai';
  * True when the provider is FluxRouter. Flux serves images on a dedicated
  * `POST /v1/images/generations` endpoint (OpenAI-Images-shaped), NOT on
  * chat/completions, and its host is never `api.openai.com` so it fails
- * `isOpenAINativeImageModel`. Detect it by host (the legacy mirror may carry
- * `platform: 'openai'`/`'openai-compatible'` with a Flux baseUrl) or by the
- * canonical Flux platform id.
+ * `isOpenAINativeImageModel`.
+ *
+ * The MCP subprocess only sees `platform`/`baseUrl`/`useModel` from env, and the
+ * real connected Flux provider arrives as `platform: 'openai-compatible'` with
+ * an EMPTY baseUrl - so host/platform alone do not identify it. The reliable
+ * signal here is the model id: `flux-image` and the Flux arm ids are
+ * Flux-specific. (Host/platform still match direct or differently-shaped rows.)
  */
 export function isFluxImagesProvider(provider: TProviderWithModel): boolean {
   if ((provider.platform || '') === FLUX_PROVIDER_ID) return true;
+  if ((FLUX_IMAGE_ARMS as readonly string[]).includes(provider.useModel || '')) return true;
   const baseUrl = provider.baseUrl || '';
   try {
     return new URL(baseUrl).host.toLowerCase() === FLUX_IMAGE_HOST;

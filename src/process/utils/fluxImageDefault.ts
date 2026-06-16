@@ -16,22 +16,10 @@
  */
 
 import type { IProvider, IConfigStorageRefer } from '@/common/config/storage';
-import { FLUX_PROVIDER_ID, FLUX_SURFACE } from '@/common/config/flux';
-import { FLUX_DEFAULT_IMAGE_ARM } from '@/common/config/imageModels';
+import { FLUX_SURFACE } from '@/common/config/flux';
+import { FLUX_DEFAULT_IMAGE_ARM, isFluxProviderRow } from '@/common/config/imageModels';
 
 type ImageGenConfig = IConfigStorageRefer['tools.imageGenerationModel'];
-
-const FLUX_HOST = 'api.fluxrouter.ai';
-
-/** True when a legacy provider row is FluxRouter (by host or platform id). */
-function isFluxRow(p: { platform?: string; baseUrl?: string }): boolean {
-  if ((p.platform || '') === FLUX_PROVIDER_ID) return true;
-  try {
-    return new URL(p.baseUrl || '').host.toLowerCase() === FLUX_HOST;
-  } catch {
-    return false;
-  }
-}
 
 export type FluxImageDefaultDeps = {
   /** Current `tools.imageGenerationModel`, or undefined when never set. */
@@ -54,7 +42,7 @@ export function resolveFluxImageDefault(deps: FluxImageDefaultDeps): ImageGenCon
   if (current?.useModel) return null;
   if (!fluxKey) return null;
 
-  const row = (providers || []).find(isFluxRow);
+  const row = (providers || []).find(isFluxProviderRow);
   if (!row) return null;
 
   return {

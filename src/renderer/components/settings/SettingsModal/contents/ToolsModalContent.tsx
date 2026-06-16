@@ -662,7 +662,7 @@ const ToolsModalContent: React.FC = () => {
     const list = (data || [])
       .filter((v) => v.model.some(isImageModelName))
       .map((v) => Object.assign({}, v, { model: v.model.filter(isImageModelName) }));
-    return list.sort((a, b) => Number(isFluxProviderRow(b)) - Number(isFluxProviderRow(a)));
+    return list.toSorted((a, b) => Number(isFluxProviderRow(b)) - Number(isFluxProviderRow(a)));
   }, [data]);
 
   useEffect(() => {

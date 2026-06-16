@@ -40,6 +40,24 @@ describe('resolveFluxImageDefault', () => {
     });
   });
 
+  it('seeds for the real bridged Flux row (openai-compatible + empty baseUrl + registry tag)', () => {
+    const bridged = {
+      id: '3a5a47d1',
+      platform: 'openai-compatible',
+      name: 'Flux Router',
+      baseUrl: '',
+      apiKey: '',
+      model: ['flux-image'],
+      __waylandModelRegistryBridge: 'v2:flux-router',
+    } as unknown as IProvider;
+    const seed = resolveFluxImageDefault({ current: undefined, providers: [bridged], fluxKey: 'sk-flux' });
+    expect(seed?.useModel).toBe('flux-image');
+    expect(seed?.id).toBe('3a5a47d1');
+    expect(seed?.apiKey).toBe('sk-flux');
+    // Empty baseUrl falls back to the Flux OpenAI surface.
+    expect(seed?.baseUrl).toBe('https://api.fluxrouter.ai/v1');
+  });
+
   it('uses the registry key, not the legacy row apiKey', () => {
     const seed = resolveFluxImageDefault({ current: undefined, providers: [fluxRow()], fluxKey: 'sk-from-registry' });
     expect(seed?.apiKey).toBe('sk-from-registry');
