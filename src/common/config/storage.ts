@@ -711,6 +711,16 @@ export interface IProvider {
   apiKey: string;
   model: string[];
   /**
+   * Image-generation model ids for this provider, sourced from the
+   * auto-refreshing model catalog (see `legacyModelConfigBridge`). Kept
+   * separate from `model` (which is text-only, for the chat pickers) so the
+   * image-tool picker can read current image models without polluting the chat
+   * dropdowns. Absent for providers the registry mirror skips (e.g. Google-auth
+   * Gemini) or manually-added legacy rows; the picker falls back to scanning
+   * `model` and a curated floor in those cases.
+   */
+  imageModels?: string[];
+  /**
    * List of model capability tags. A tag's presence means the capability is supported; absence means it is not.
    */
   capabilities?: ModelCapability[];

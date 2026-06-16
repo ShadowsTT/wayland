@@ -145,6 +145,25 @@ export function selectMirrorModelIds(catalog: CatalogModel[], overrides: Registr
   return (enabled.length > 0 ? enabled : curated).map((m) => m.id);
 }
 
+/**
+ * The image-generation model ids to mirror into the legacy `model.config` row's
+ * `imageModels` field for the image-tool picker.
+ *
+ * This is the inverse of {@link selectMirrorModelIds}: the `Curator` keeps only
+ * `kind: 'text'` (chat pickers), so image models were silently dropped from the
+ * mirror and never reached the image picker. Here we take the catalog's
+ * `kind: 'image'` models directly, newest-first by `releaseDate` so the best
+ * current model leads the dropdown. The catalog auto-refreshes from models.dev,
+ * so new image models appear on the next refresh with no code change.
+ */
+export function selectImageModelIds(catalog: CatalogModel[]): string[] {
+  return catalog
+    .filter((m) => m.kind === 'image')
+    .slice()
+    .sort((a, b) => (b.releaseDate ?? '').localeCompare(a.releaseDate ?? ''))
+    .map((m) => m.id);
+}
+
 // ─── Public API ───────────────────────────────────────────────────────────────
 
 /**
@@ -177,7 +196,9 @@ export function mirrorConnectOrRekey(repo: ProviderRepository, providerId: Provi
     if (!apiKey && providerId !== 'ollama-local') return;
 
     const baseUrl = typeof stored.creds.baseUrl === 'string' ? stored.creds.baseUrl : '';
-    const modelIds = selectMirrorModelIds(repo.getRegistryCatalog(providerId), repo.listRegistryOverrides(providerId));
+    const catalog = repo.getRegistryCatalog(providerId);
+    const modelIds = selectMirrorModelIds(catalog, repo.listRegistryOverrides(providerId));
+    const imageModelIds = selectImageModelIds(catalog);
     const modelProtocols =
       stored.creds.protocols && typeof stored.creds.protocols === 'object'
         ? (stored.creds.protocols as Record<string, string>)
@@ -206,6 +227,7 @@ export function mirrorConnectOrRekey(repo: ProviderRepository, providerId: Provi
       baseUrl,
       apiKey,
       model: modelIds,
+      ...(imageModelIds.length > 0 ? { imageModels: imageModelIds } : {}),
       ...(modelProtocols ? { modelProtocols } : {}),
       ...(priorEnabled !== undefined ? { enabled: priorEnabled } : {}),
       ...(priorModelEnabled !== undefined ? { modelEnabled: priorModelEnabled } : {}),

@@ -9,6 +9,7 @@ import { Divider, Form, Switch, Tooltip, Message } from '@arco-design/web-react'
 import { HelpCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { ConfigStorage, BUILTIN_IMAGE_GEN_ID, type IConfigStorageRefer, type IMcpServer } from '@/common/config/storage';
+import { isImageModelName } from '@/common/config/imageModels';
 import useConfigModelListWithImage from '@renderer/hooks/agent/useConfigModelListWithImage';
 import {
   useMcpServers,
@@ -46,13 +47,9 @@ const ImageGenSettings: React.FC = () => {
 
   // Filter providers to only those with image-capable models
   const imageModelList = useMemo(() => {
-    const isImageModel = (modelName: string) => {
-      const n = modelName.toLowerCase();
-      return n.includes('image') || n.includes('banana') || n.includes('imagine');
-    };
     return (modelListWithImage || [])
-      .filter((p) => p.model.some(isImageModel))
-      .map((p) => ({ ...p, model: p.model.filter(isImageModel) }));
+      .filter((p) => p.model.some(isImageModelName))
+      .map((p) => Object.assign({}, p, { model: p.model.filter(isImageModelName) }));
   }, [modelListWithImage]);
 
   // Load persisted model selection on mount

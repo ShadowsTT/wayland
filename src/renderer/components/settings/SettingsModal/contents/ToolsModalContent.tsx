@@ -15,6 +15,7 @@ import type { SpeechToTextConfig, SpeechToTextProvider } from '@/common/types/sp
 import type { TextToSpeechConfig, TextToSpeechProvider } from '@/common/types/ttsTypes';
 import { DEFAULT_TTS_CONFIG, normalizeTextToSpeechConfig } from '@/common/types/ttsTypes';
 import { acpConversation, voiceAsset } from '@/common/adapter/ipcBridge';
+import { isImageModelName } from '@/common/config/imageModels';
 import type { VoiceAsset } from '@/common/types/voiceAsset';
 import {
   Divider,
@@ -647,20 +648,10 @@ const ToolsModalContent: React.FC = () => {
 
   const imageGenerationModelList = useMemo(() => {
     if (!data) return [];
-    // Filter models that support image generation
-    const isImageModel = (modelName: string) => {
-      const name = modelName.toLowerCase();
-      return name.includes('image') || name.includes('banana') || name.includes('imagine');
-    };
+    // Filter providers to those exposing image-capable models
     return (data || [])
-      .filter((v) => {
-        const filteredModels = v.model.filter(isImageModel);
-        return filteredModels.length > 0;
-      })
-      .map((v) => {
-        const filteredModels = v.model.filter(isImageModel);
-        return Object.assign({}, v, { model: filteredModels });
-      });
+      .filter((v) => v.model.some(isImageModelName))
+      .map((v) => Object.assign({}, v, { model: v.model.filter(isImageModelName) }));
   }, [data]);
 
   useEffect(() => {
