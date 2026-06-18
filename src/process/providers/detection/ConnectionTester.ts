@@ -32,6 +32,7 @@
  * `{ ok: false, error }`.
  */
 
+import { fetchWithRetry } from '../../utils/fetchWithRetry';
 import type { ConnectError, ProviderId } from '../types';
 import { PROVIDER_ENDPOINTS } from './providerEndpoints';
 import type { AuthStrategy } from './providerAuth';
@@ -201,7 +202,7 @@ export class ConnectionTester {
 
     let res: Response;
     try {
-      res = await this.fetchWithTimeout(url, { method: 'GET', headers: authHeaders(auth, apiKey) });
+      res = await this.fetchWithTimeout(url, { method: 'GET', headers: authHeaders(auth, apiKey) }, providerId);
     } catch {
       return { ok: false, error: 'offline' };
     }
@@ -218,15 +219,14 @@ export class ConnectionTester {
 
   // ─── fetch with timeout ─────────────────────────────────────────────────────
 
-  /** `fetch` bounded by `FETCH_TIMEOUT_MS`; a timeout aborts and rejects. */
-  private async fetchWithTimeout(url: string, init: RequestInit): Promise<Response> {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
-    try {
-      return await fetch(url, { ...init, signal: controller.signal });
-    } finally {
-      clearTimeout(timer);
-    }
+  /**
+   * `fetch` bounded by `FETCH_TIMEOUT_MS` with a bounded retry on transient
+   * faults (dropped sockets, timeouts, 429/5xx). `providerId` is passed only on
+   * model-list GETs (`probeModelsEndpoint`) so the OpenAI-family false-404 retry
+   * never delays the stale-model fallback in `probeInference`.
+   */
+  private async fetchWithTimeout(url: string, init: RequestInit, providerId?: ProviderId): Promise<Response> {
+    return fetchWithRetry(url, init, { timeoutMs: FETCH_TIMEOUT_MS, providerId });
   }
 }
 
