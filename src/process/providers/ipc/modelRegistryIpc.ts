@@ -1912,7 +1912,14 @@ export async function connectModelRegistryProvider(
   // Detect a FIRST-TIME Flux connection before the upsert so a later rekey - or a
   // reconnect after the user turned routing off (#160) - never silently re-enables
   // routing. Connecting Flux Router at all IS the intent to route through it.
-  const isFreshFluxConnect = providerId === FLUX_PROVIDER_ID && !!_repo && !_repo.getRegistryProvider(providerId);
+  // Gate on "no CONNECTED row", not "no row at all": the connect handler upserts
+  // an `error`-state row when the first attempt fails (transient catalog/network
+  // blip), so keying off mere existence would treat the successful RETRY as
+  // non-fresh and never enable routing - dropping the user back on a tiny local
+  // model. This mirrors the headless importEnvKeys guard (skip only when already
+  // connected); the #160 promise holds because a connected row is still skipped.
+  const priorFlux = providerId === FLUX_PROVIDER_ID ? _repo?.getRegistryProvider(providerId) : undefined;
+  const isFreshFluxConnect = providerId === FLUX_PROVIDER_ID && !!_repo && priorFlux?.state !== 'connected';
   const result = await _handlers.connect({ providerId, creds });
   if (result.ok && _repo) void mirrorConnectOrRekey(_repo, providerId);
   // Enable Flux routing once on first connect so the home/chat default resolves
