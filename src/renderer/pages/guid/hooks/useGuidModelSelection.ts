@@ -317,11 +317,21 @@ export const useGuidModelSelection = (agentKey: ProviderAgentKey = 'gemini'): Gu
         savedPin && !isLikelyExperimentalModel(savedPin.useModel) && !isExperimentalProvider(savedPin.provider)
           ? savedPin
           : null;
-      // Flux Router's Autopilot is the recommended default when connected, but
-      // it sits below real usage signals and a chosen pin - only above the
-      // generic safe default. So a brand-new user with Flux connected lands on
-      // flux-auto, while anyone who has actually picked a model keeps it.
-      const fluxAuto = resolveFluxAuto(modelList);
+      // Flux Router's Autopilot is the recommended default only while "Route
+      // through Flux" is enabled. It sits below real usage signals and a chosen
+      // pin - only above the generic safe default - so a brand-new user (whose
+      // onboarding turns the toggle on when they connect Flux) lands on
+      // flux-auto, while anyone who picked a model keeps it. Crucially, a user
+      // who turns the toggle OFF must escape the flux-auto default here too, not
+      // just in the per-conversation path, or the home picker keeps re-selecting
+      // flux (#160). Mirrors the gating in createConversationParams.
+      let routeThroughFlux = false;
+      try {
+        routeThroughFlux = (await ipcBridge.systemSettings.getRouteThroughFlux.invoke()) ?? false;
+      } catch {
+        /* on failure leave flux-auto out of the default chain */
+      }
+      const fluxAuto = routeThroughFlux ? resolveFluxAuto(modelList) : null;
       const chosen =
         recentMatch ?? savedNonExperimental ?? frequentMatch ?? fluxAuto ?? resolveSafeDefault(modelList) ?? savedPin;
       if (!chosen) return;
