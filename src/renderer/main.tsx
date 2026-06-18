@@ -86,6 +86,7 @@ import Sider from './components/layout/Sider';
 import { useAuth } from './hooks/context/AuthContext';
 import { ConversationHistoryProvider } from './hooks/context/ConversationHistoryContext';
 import HOC from './utils/ui/HOC';
+import { canonicalizeWebUiRoute } from './utils/canonicalizeRoute';
 
 // Patch Korean locale with missing properties from English locale
 const koKRComplete = {
@@ -156,6 +157,10 @@ const Main = () => {
 const App = HOC.Wrapper(Config)(Main);
 
 void registerPwa();
+
+// Reconcile a mixed path/hash URL (e.g. `/assistants#/guid`) before the
+// HashRouter mounts, so the rendered route matches the visible path (#151).
+canonicalizeWebUiRoute();
 
 const root = createRoot(document.getElementById('root')!);
 root.render(
