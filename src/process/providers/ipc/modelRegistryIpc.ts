@@ -1127,7 +1127,12 @@ const CHAT_START_BASE_URL: Partial<Record<ProviderId, string>> = {
   baichuan: 'https://api.baichuan-ai.com/v1',
   lingyiwanwu: 'https://api.lingyiwanwu.com/v1',
   'zhipu-glm': 'https://open.bigmodel.cn/api/paas/v4',
-  minimax: 'https://api.minimax.chat/v1',
+  // International MiniMax platform (`.io`); the mainland-China `api.minimax.chat`
+  // host 401s international keys (and vice versa) - same split as Moonshot above.
+  // Inference MUST use the same host the key was validated against (the probe in
+  // providerEndpoints.ts also uses `.io`), or a key that connects fine then 401s
+  // on the first message (#135).
+  minimax: 'https://api.minimax.io/v1',
   stability: 'https://api.stability.ai/v1',
   deepgram: 'https://api.deepgram.com/v1',
   assemblyai: 'https://api.assemblyai.com/v2',
