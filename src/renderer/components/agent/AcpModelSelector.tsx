@@ -20,6 +20,7 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import useSWR from 'swr';
 import MarqueePillLabel from './MarqueePillLabel';
+import { resolvePinnedModelInfo } from './acpModelPin';
 import ModelSelectorFlyout from '@renderer/components/model/modelSelector/ModelSelectorFlyout';
 import { useModelSelectorViewModel } from '@renderer/components/model/modelSelector/useModelSelectorViewModel';
 import { usePinnedModels } from '@renderer/hooks/usage/usePinnedModels';
@@ -112,15 +113,22 @@ const AcpModelSelector: React.FC<{
   const selectedFluxModelRef = useRef<FluxModelId | null>(
     isFluxModelId(initialModelId) ? (initialModelId as FluxModelId) : null
   );
+  // The native (non-Flux) model the user picked in THIS chat. Like the flux pin
+  // above, this survives the background refreshes (the claude 1.5s poll, model-
+  // info reloads, stream updates) that otherwise revert the pick to the agent's
+  // default (#136 / #146 / #149). Null until the user switches models in-chat;
+  // cleared on conversation switch.
+  const selectedModelRef = useRef<string | null>(null);
 
   const updateModelInfo = useCallback(
     (nextModelInfo: AcpModelInfo) => {
       setModelInfo((prev) => {
-        const pinned = selectedFluxModelRef.current;
-        const next =
-          pinned && showFlux
-            ? { ...nextModelInfo, currentModelId: pinned, currentModelLabel: FLUX_MODEL_DISPLAY[pinned] }
-            : nextModelInfo;
+        const next = resolvePinnedModelInfo(nextModelInfo, {
+          fluxModelId: selectedFluxModelRef.current,
+          showFlux,
+          userChangedModel: hasUserChangedModel.current,
+          selectedModelId: selectedModelRef.current,
+        });
         return isSameModelInfo(prev, next) ? prev : next;
       });
     },
@@ -201,6 +209,7 @@ const AcpModelSelector: React.FC<{
     // Reset flag when switching to a different conversation
     if (prevConversationIdRef.current !== conversationId) {
       hasUserChangedModel.current = false;
+      selectedModelRef.current = null;
       prevConversationIdRef.current = conversationId;
     }
 
@@ -213,7 +222,11 @@ const AcpModelSelector: React.FC<{
     if (backend !== 'claude') return;
 
     const refresh = () => {
-      void reloadModelInfo().catch(() => {
+      // preserveInitialModel keeps the Guid-page model before any in-chat change;
+      // once the user has switched, updateModelInfo's pin keeps THAT selection.
+      // Without either, this 1.5s poll reports the agent default and reverts the
+      // user's model to Default (#136 / #146 / #149).
+      void reloadModelInfo({ preserveInitialModel: true }).catch(() => {
         // loadCachedModelInfo is already handled inside reloadModelInfo
       });
     };
@@ -281,6 +294,8 @@ const AcpModelSelector: React.FC<{
       hasUserChangedModel.current = true;
       // Pin or clear the Flux selection so reloads/polls/streams cannot overwrite it.
       selectedFluxModelRef.current = isFluxModelId(modelId) ? (modelId as FluxModelId) : null;
+      // Pin the user's pick (native models too) against the same refreshes.
+      selectedModelRef.current = modelId;
       const fluxLabel = isFluxModelId(modelId) ? FLUX_MODEL_DISPLAY[modelId as FluxModelId] : undefined;
       setModelInfo((prev) => {
         if (!prev) return prev;
