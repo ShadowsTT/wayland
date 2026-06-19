@@ -20,6 +20,7 @@ import {
 import { AcpError as AcpSessionError } from '@process/acp/errors/AcpError';
 import { AcpSession, type SessionOptions } from '@process/acp/session/AcpSession';
 import { readClaudeModelInfoFromCcSwitch } from '@process/services/ccSwitchModelSource';
+import { buildClaudeSlotModelInfo } from '@process/agent/acp/utils';
 // TODO(ACP Discovery): Re-enable when acp_session persistence is restored.
 // import type { IAcpSessionRepository } from '@process/services/database/IAcpSessionRepository';
 import { getTeamGuideStdioConfig } from '@/process/team/mcp/guide/teamGuideSingleton';
@@ -837,6 +838,13 @@ export class AcpAgentV2 {
           };
         }
         return ccSwitchInfo;
+      }
+      // Claude Code's ACP wrapper never advertises a switchable model list, so
+      // cachedModelInfo stays null and the picker is stuck on "Select Model"
+      // (#184). Fall back to the static Sonnet/Opus/Haiku slots (applied via
+      // --model / ANTHROPIC_MODEL on (re)spawn) so the user can pick a model.
+      if (!this.cachedModelInfo || this.cachedModelInfo.availableModels.length === 0) {
+        return buildClaudeSlotModelInfo(this.userModelOverride ?? this.cachedModelInfo?.currentModelId);
       }
     }
     return this.cachedModelInfo;

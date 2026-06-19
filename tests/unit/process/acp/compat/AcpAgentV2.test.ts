@@ -642,10 +642,16 @@ describe('AcpAgentV2 - Config/Model/Mode Methods', () => {
   }
 
   describe('getModelInfo()', () => {
-    it('should return null initially', () => {
+    it('returns the static Sonnet/Opus/Haiku slot fallback initially for claude (#184)', () => {
+      // Claude Code's ACP wrapper never advertises a model list, so with no
+      // cc-switch data and no cache, getModelInfo falls back to the static slots
+      // (instead of null) so the in-chat picker is populated + switchable.
       const agent = createAgent();
 
-      expect(agent.getModelInfo()).toBe(null);
+      const info = agent.getModelInfo();
+      expect(info?.availableModels.map((m) => m.id)).toEqual(['sonnet', 'opus', 'haiku']);
+      expect(info?.canSwitch).toBe(true);
+      expect(info?.sourceDetail).toBe('claude-slots');
     });
 
     it('should return cached model info after onModelUpdate callback', async () => {

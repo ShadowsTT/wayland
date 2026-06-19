@@ -39,7 +39,7 @@ import { AcpApprovalStore, createAcpApprovalKey } from './ApprovalStore';
 import { CLAUDE_YOLO_SESSION_MODE, CODEBUDDY_YOLO_SESSION_MODE, QWEN_YOLO_SESSION_MODE } from './constants';
 import { buildAcpModelInfo } from './modelInfo';
 import { buildAcpSessionMcpServers, buildTeamMcpServer, type AcpSessionMcpServer } from './mcpSessionConfig';
-import { buildClaudeSlotModelInfo, getClaudeModelSlot } from './utils';
+import { getClaudeModelSlot } from './utils';
 import { getTeamGuideStdioConfig } from '@process/team/mcp/guide/teamGuideSingleton';
 import { shouldInjectTeamGuideMcp } from '@process/team/prompts/teamGuideCapability.ts';
 import { waitForMcpReady } from '@process/team/mcpReadiness';
@@ -526,18 +526,7 @@ export class AcpAgent {
         };
       }
     }
-    const info = buildAcpModelInfo(this.connection.getConfigOptions(), this.connection.getModels(), preferredModelInfo);
-
-    // #184: the claude-agent-acp bridge can advertise NO models (its model list
-    // comes back empty for Claude subscription / OAuth auth), leaving the in-chat
-    // picker stuck on a dead "Select Model" that never resolves. Fall back to the
-    // known Claude slots (Sonnet/Opus/Haiku) so the picker is always populated and
-    // switchable. The selected slot applies via the bridge `set_model` and, for a
-    // (re)spawn, via ANTHROPIC_MODEL=<slot>. Only kicks in when nothing real exists.
-    if (this.extra.backend === 'claude' && (!info || info.availableModels.length === 0)) {
-      return buildClaudeSlotModelInfo(this.userModelOverride);
-    }
-    return info;
+    return buildAcpModelInfo(this.connection.getConfigOptions(), this.connection.getModels(), preferredModelInfo);
   }
 
   /**
