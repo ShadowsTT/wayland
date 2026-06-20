@@ -237,7 +237,17 @@ export const useWCoreMessage = (
           break;
         default: {
           if (message.type === 'error') {
+            // An error frame ends the turn. Clear ALL running contributors so the
+            // "Processing/Working" spinner stops and the composer unlocks — a fatal
+            // provider error (e.g. Compound's "tool calling is not supported") used
+            // to leave the chat stuck running with no way to send again.
             setWaitingResponse(false);
+            waitingResponseRef.current = false;
+            setStreamRunning(false);
+            streamRunningRef.current = false;
+            setHasActiveTools(false);
+            hasActiveToolsRef.current = false;
+            setThought({ subject: '', description: '' });
             onError?.(message as IResponseMessage);
           } else {
             // Mark that current turn has content output (exclude error type)

@@ -1015,6 +1015,12 @@ export class WCoreManager extends BaseAgentManager<WCoreManagerData, string> {
       if (processedData.type === 'finish') {
         const total = this._messageSentAt ? `${Date.now() - this._messageSentAt}ms` : 'n/a';
         mainLog('[WCoreManager]', `stream_end: msg_id=${processedData.msg_id}, total=${total}`, processedData.data);
+        // Mark the turn terminal. `this.status` is otherwise only set to 'finished'
+        // on a content/tool_group frame, so an error-only turn (provider rejects the
+        // request, 0 content) was left 'running' forever — `conversation.get` returns
+        // `task.status` (conversationBridge), so the renderer's mount/resume hydration
+        // kept restoring a stuck "Processing" spinner that blocked further sends.
+        this.status = 'finished';
         this._messageSentAt = null;
         this.heartbeatActive = false;
         this.heartbeatMissedCount = 0;
