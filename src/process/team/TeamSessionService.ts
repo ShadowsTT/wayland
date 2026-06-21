@@ -15,7 +15,7 @@ import type { IWorkerTaskManager } from '@process/task/IWorkerTaskManager';
 import type { IConversationService } from '@process/services/IConversationService';
 import type { AgentType } from '@process/task/agentTypes';
 import type { AgentBackend } from '@/common/types/acpTypes';
-import type { TChatConversation, TProviderWithModel } from '@/common/config/storage';
+import type { IProvider, TChatConversation, TProviderWithModel } from '@/common/config/storage';
 import { ProcessConfig } from '@process/utils/initStorage';
 import { getAssistantsDir } from '@process/utils/initStorage';
 import { EventLogger } from './EventLogger';
@@ -207,13 +207,31 @@ export class TeamSessionService {
    * default-resolved provider's (which could send an sk-flux key to an OpenAI
    * surface). Shared by the wcore and gemini pin paths.
    */
-  private async resolveOwningProviderModelById(modelId: string): Promise<TProviderWithModel | null> {
+  private async resolveOwningProviderModelById(
+    modelId: string,
+    conversationType?: string
+  ): Promise<TProviderWithModel | null> {
     const configuredProviders = await ProcessConfig.get('model.config');
     const providers = Array.isArray(configuredProviders) ? configuredProviders.filter((p) => p.enabled !== false) : [];
 
-    const owner = providers.find(
-      (p) => Array.isArray(p.model) && p.model.includes(modelId) && p.modelEnabled?.[modelId] !== false
-    );
+    const owns = (p: IProvider): boolean =>
+      Array.isArray(p.model) && p.model.includes(modelId) && p.modelEnabled?.[modelId] !== false;
+
+    // For a Gemini teammate, only a Gemini/Google provider may own the model id.
+    // Otherwise an unrelated provider that merely lists the same id (e.g.
+    // OpenRouter listing "gemma") hijacks the route and sends a Google model to
+    // the wrong endpoint, which 401s (#207). When no Gemini provider owns it,
+    // return null so the caller falls back to the default-resolved Gemini
+    // provider rather than the first foreign match.
+    if (conversationType === 'gemini') {
+      const geminiOwner = providers.find((p) => {
+        const platform = p.platform?.toLowerCase() || '';
+        return owns(p) && (platform.includes('gemini') || platform.includes('google'));
+      });
+      return geminiOwner ? ({ ...geminiOwner, useModel: modelId } as TProviderWithModel) : null;
+    }
+
+    const owner = providers.find(owns);
     if (!owner) {
       return null;
     }
@@ -463,7 +481,7 @@ export class TeamSessionService {
         // useModel-only override on the already-resolved provider when no
         // enabled provider claims it - e.g. a Google-auth Gemini model that
         // lives outside model.config.
-        const owned = await this.resolveOwningProviderModelById(agent.model);
+        const owned = await this.resolveOwningProviderModelById(agent.model, type);
         model = owned ?? { ...model, useModel: agent.model };
       }
     }
