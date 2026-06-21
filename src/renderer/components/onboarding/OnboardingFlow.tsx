@@ -731,7 +731,19 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ detection, onFinish }) 
                 {keyStatus()}
                 <p className={styles.keyhint}>
                   {t('onboarding.flow.outcome.geminiKeyHint')}{' '}
-                  <a href='https://aistudio.google.com/apikey' target='_blank' rel='noreferrer'>
+                  <a
+                    href='https://aistudio.google.com/apikey'
+                    rel='noreferrer'
+                    onClick={(e) => {
+                      // In the Electron renderer a bare target=_blank anchor opens
+                      // nothing (no system browser, no new window), so the link was
+                      // dead on desktop (#202). Route through openExternalUrl, which
+                      // uses shell.openExternal on desktop and window.open in the
+                      // WebUI. href stays for right-click-copy / accessibility.
+                      e.preventDefault();
+                      void openExternalUrl('https://aistudio.google.com/apikey');
+                    }}
+                  >
                     {t('onboarding.flow.outcome.geminiKeyLink')}
                   </a>
                 </p>
