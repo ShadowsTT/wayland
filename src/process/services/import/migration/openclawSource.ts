@@ -60,7 +60,10 @@ function resolveSecretInput(input: unknown, envMap: Record<string, string>): str
 }
 
 /** Provider keys inline in openclaw.json `models.providers.<name>.apiKey`. */
-export function openclawKeysFromConfig(config: Record<string, unknown>, envMap: Record<string, string>): RawProviderKey[] {
+export function openclawKeysFromConfig(
+  config: Record<string, unknown>,
+  envMap: Record<string, string>
+): RawProviderKey[] {
   const out: RawProviderKey[] = [];
   const models = config.models;
   const providers = models && typeof models === 'object' ? (models as Record<string, unknown>).providers : undefined;
@@ -98,7 +101,10 @@ export function openclawKeysFromProfiles(storeJson: string): RawProviderKey[] {
 }
 
 /** MCP servers + default model from openclaw.json. */
-export function openclawConfigItems(config: Record<string, unknown>): { mcp: RawMcpServer[]; defaultModel: string | null } {
+export function openclawConfigItems(config: Record<string, unknown>): {
+  mcp: RawMcpServer[];
+  defaultModel: string | null;
+} {
   const mcp: RawMcpServer[] = [];
   let defaultModel: string | null = null;
 
@@ -230,7 +236,10 @@ export function collectOpenClawRaw(env: NodeJS.ProcessEnv = process.env): OpenCl
     /* env is optional */
   }
   // Process env can also resolve ${VAR} templates the user relied on at runtime.
-  envMap = { ...Object.fromEntries(Object.entries(env).filter(([, v]) => typeof v === 'string') as [string, string][]), ...envMap };
+  envMap = {
+    ...Object.fromEntries(Object.entries(env).filter(([, v]) => typeof v === 'string') as [string, string][]),
+    ...envMap,
+  };
 
   let config: Record<string, unknown> | null = null;
   const configPath = ['openclaw.json', 'clawdbot.json', 'moltbot.json', 'moldbot.json']
@@ -255,7 +264,8 @@ export function collectOpenClawRaw(env: NodeJS.ProcessEnv = process.env): OpenCl
 /** Scan the OpenClaw install into a (secret-free) migration plan. */
 export function scanOpenClaw(existing: ExistingState, env: NodeJS.ProcessEnv = process.env): MigrationPlan {
   const raw = collectOpenClawRaw(env);
-  if (!raw.detected) return { toolId: 'openclaw', sourcePath: null, detected: false, items: [], warnings: raw.warnings };
+  if (!raw.detected)
+    return { toolId: 'openclaw', sourcePath: null, detected: false, items: [], warnings: raw.warnings };
   return buildOpenClawPlan(
     { keys: raw.keys, mcp: raw.mcp, defaultModel: raw.defaultModel },
     existing,

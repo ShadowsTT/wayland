@@ -96,11 +96,7 @@ function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T | 'timeout'>
 }
 
 /** Apply selected provider keys. Returns per-key outcomes. */
-async function applyKeys(
-  keys: RawProviderKey[],
-  selected: Set<string>,
-  result: MigrationResult
-): Promise<void> {
+async function applyKeys(keys: RawProviderKey[], selected: Set<string>, result: MigrationResult): Promise<void> {
   const seen = new Set<string>();
   for (const key of keys) {
     const id = `provider-key:${key.providerId}`;
@@ -112,7 +108,10 @@ async function applyKeys(
       // Bounded so one unreachable/invalid key can't hang the whole import - it
       // is reported as an error and the batch moves on.
       // oxlint-disable-next-line no-await-in-loop
-      const res = await withTimeout(connectModelRegistryProvider(key.providerId, { key: key.value }), KEY_CONNECT_TIMEOUT_MS);
+      const res = await withTimeout(
+        connectModelRegistryProvider(key.providerId, { key: key.value }),
+        KEY_CONNECT_TIMEOUT_MS
+      );
       if (res === 'timeout') result.errors.push({ label: key.providerId, reason: 'validation timed out' });
       else if (res.ok) result.applied += 1;
       else result.errors.push({ label: key.providerId, reason: res.error ?? 'connect failed' });
@@ -123,11 +122,7 @@ async function applyKeys(
 }
 
 /** Apply selected MCP servers (skip-existing), then sync to agents once. */
-async function applyMcp(
-  servers: RawMcpServer[],
-  selected: Set<string>,
-  result: MigrationResult
-): Promise<void> {
+async function applyMcp(servers: RawMcpServer[], selected: Set<string>, result: MigrationResult): Promise<void> {
   const existing = ((await ProcessConfig.get('mcp.config')) as IMcpServer[] | undefined) ?? [];
   const existingNames = new Set(existing.map((s) => s.name.toLowerCase()));
   const now = Date.now();

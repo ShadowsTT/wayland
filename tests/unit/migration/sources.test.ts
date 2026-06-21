@@ -5,7 +5,11 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { parseEnvText, mcpDetail, type ExistingState } from '../../../src/process/services/import/migration/migrationShared';
+import {
+  parseEnvText,
+  mcpDetail,
+  type ExistingState,
+} from '../../../src/process/services/import/migration/migrationShared';
 import {
   hermesProviderKeys,
   hermesConfigItems,
@@ -50,9 +54,9 @@ describe('parseEnvText', () => {
 describe('mcpDetail', () => {
   it('describes stdio and http servers without leaking secrets', () => {
     expect(mcpDetail({ command: 'npx', args: ['-y', '@mcp/fs', '/tmp'] })).toBe('stdio: npx -y @mcp/fs /tmp');
-    expect(mcpDetail({ url: 'https://mcp.example.com/sse', transport: 'sse', headers: { Authorization: 'secret' } })).toBe(
-      'sse: https://mcp.example.com'
-    );
+    expect(
+      mcpDetail({ url: 'https://mcp.example.com/sse', transport: 'sse', headers: { Authorization: 'secret' } })
+    ).toBe('sse: https://mcp.example.com');
     expect(mcpDetail({ url: 'https://mcp.example.com/sse' }).includes('secret')).toBe(false);
   });
 });
@@ -136,10 +140,7 @@ describe('OpenClaw source', () => {
   });
 
   it('does not migrate an unresolved env template', () => {
-    const keys = openclawKeysFromConfig(
-      { models: { providers: { anthropic: { apiKey: '${MISSING_VAR}' } } } },
-      {}
-    );
+    const keys = openclawKeysFromConfig({ models: { providers: { anthropic: { apiKey: '${MISSING_VAR}' } } } }, {});
     expect(keys).toHaveLength(0);
   });
 
@@ -158,7 +159,10 @@ describe('OpenClaw source', () => {
 
   it('reads mcp servers + default model (string or {primary})', () => {
     expect(
-      openclawConfigItems({ agents: { defaults: { model: 'claude-opus' } }, mcp: { servers: { fs: { command: 'x' } } } })
+      openclawConfigItems({
+        agents: { defaults: { model: 'claude-opus' } },
+        mcp: { servers: { fs: { command: 'x' } } },
+      })
     ).toEqual({ mcp: [{ name: 'fs', config: { command: 'x' } }], defaultModel: 'claude-opus' });
     expect(openclawConfigItems({ agents: { defaults: { model: { primary: 'gpt-5' } } } }).defaultModel).toBe('gpt-5');
   });

@@ -138,7 +138,10 @@ const PanelRoute: React.FC<{ layout: React.ReactElement }> = ({ layout }) => {
             <Route path='/settings/mcp-library' element={<Navigate to='/settings/mcp-library/browse' replace />} />
             <Route path='/settings/mcp-library/browse' element={withRouteFallback(McpLibraryBrowsePage)} />
             <Route path='/settings/migrate' element={withRouteFallback(MigrateSettings)} />
-            <Route path='/settings/mcp-library/installed' element={<Navigate to='/settings/mcp-library/browse' replace />} />
+            <Route
+              path='/settings/mcp-library/installed'
+              element={<Navigate to='/settings/mcp-library/browse' replace />}
+            />
             <Route path='/settings/mcp-library/:entryId' element={withRouteFallback(McpLibraryDetailPage)} />
             {/* Legacy redirect - old `/settings/tools/mcp` route now lands on Browse. */}
             <Route path='/settings/tools/mcp' element={<Navigate to='/settings/mcp-library/browse' replace />} />

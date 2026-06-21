@@ -130,9 +130,8 @@ export const conversation = {
    * (re-reading the same content / a command failing repeatedly). Carries the
    * conversation + reason so the renderer can explain why it stopped.
    */
-  runawayHalted: buildEmitter<import('@process/services/runaway/RunawayMonitor').RunawayHalted>(
-    'conversation.runaway-halted'
-  ),
+  runawayHalted:
+    buildEmitter<import('@process/services/runaway/RunawayMonitor').RunawayHalted>('conversation.runaway-halted'),
   listChanged: buildEmitter<IConversationListChangedEvent>('conversation.list-changed'),
   getWorkspace: buildProvider<
     IDirOrFile[],
