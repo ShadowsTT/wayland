@@ -462,6 +462,13 @@ const ENGINE_ENV_ALLOWLIST: readonly string[] = [
   'TMP',
   'TEMP',
   'PWD',
+  // ── Wayland engine config (non-secret) ─────────────────────────────────
+  // The user's bash-tool shell selection. Set in the environment (never by the
+  // app), so a GUI-launched engine only receives it when it survives this
+  // filter; CLI/headless already inherit the full env. Without it the engine
+  // falls back to its default shell (#197). Reaches `full` via process.env or
+  // the login-shell capture (see SHELL_INHERITED_ENV_VARS in shellEnv.ts).
+  'WAYLAND_BASH_SHELL',
   // ── Windows system (load-bearing for spawning + DLL resolution) ─────────
   'SYSTEMROOT',
   'SYSTEMDRIVE',

@@ -125,6 +125,14 @@ describe('buildEngineSpawnEnv - SEC-1 allowlist', () => {
     expect(env.HOME).toBe(process.env.HOME);
   });
 
+  it('forwards WAYLAND_BASH_SHELL so the GUI-spawned engine inherits the shell selection (#197)', () => {
+    process.env.WAYLAND_BASH_SHELL = '/opt/homebrew/bin/fish';
+
+    const env = buildEngineSpawnEnv({ providerEnv: {} });
+
+    expect(env.WAYLAND_BASH_SHELL).toBe('/opt/homebrew/bin/fish');
+  });
+
   it('always preserves the provider auth env even though it is a secret name', () => {
     const env = buildEngineSpawnEnv({ providerEnv: { ANTHROPIC_API_KEY: 'sk-ant-123' } });
     expect(env.ANTHROPIC_API_KEY).toBe('sk-ant-123');
