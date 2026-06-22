@@ -35,13 +35,19 @@ export const PROVIDER_KEY_PATTERNS: PatternRule[] = [
   },
   {
     provider: 'openai',
-    test: (k) => k.startsWith('sk-proj-'),
+    // Project keys (`sk-proj-`), plus service-account (`sk-svcacct-`) and Admin
+    // API (`sk-admin-`) keys - all OpenAI-issued, all distinct from the bare
+    // legacy `sk-` shape handled structurally below (#224 audit).
+    test: (k) => k.startsWith('sk-proj-') || k.startsWith('sk-svcacct-') || k.startsWith('sk-admin-'),
     match: 'unique',
     priority: 100,
   },
   {
     provider: 'google-gemini',
-    test: (k) => k.startsWith('AIza'),
+    // Google AI Studio issues two key formats: the classic `AIza` "traffic"
+    // keys and the newer `AQ.` "authentication" keys that some accounts now get
+    // exclusively. Both are valid Generative Language API keys (#224).
+    test: (k) => k.startsWith('AIza') || k.startsWith('AQ.'),
     match: 'unique',
     priority: 100,
   },

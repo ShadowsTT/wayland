@@ -334,8 +334,15 @@ export function recognizeKey(raw: string): KeyRecognition {
   if (key.startsWith('sk-ant-')) return { kind: 'recognized', provider: 'anthropic' };
   if (key.startsWith('sk-flux-')) return { kind: 'recognized', provider: 'flux-router' };
   if (key.startsWith('sk-or-')) return { kind: 'recognized', provider: 'openrouter' };
-  if (key.startsWith('sk-proj-')) return { kind: 'recognized', provider: 'openai' };
-  if (key.startsWith('AIza')) return { kind: 'recognized', provider: 'google-gemini' };
+  // OpenAI project (`sk-proj-`), service-account (`sk-svcacct-`), and Admin API
+  // (`sk-admin-`) keys - all distinct from the bare legacy `sk-` shape (#224 audit).
+  if (key.startsWith('sk-proj-') || key.startsWith('sk-svcacct-') || key.startsWith('sk-admin-')) {
+    return { kind: 'recognized', provider: 'openai' };
+  }
+  // Google AI Studio issues classic `AIza` "traffic" keys and newer `AQ.`
+  // "authentication" keys (some accounts now get the latter exclusively); both
+  // are valid Generative Language API keys (#224).
+  if (key.startsWith('AIza') || key.startsWith('AQ.')) return { kind: 'recognized', provider: 'google-gemini' };
   if (key.startsWith('gsk_')) return { kind: 'recognized', provider: 'groq' };
   if (key.startsWith('xai-')) return { kind: 'recognized', provider: 'xai' };
   if (key.startsWith('hf_')) return { kind: 'recognized', provider: 'huggingface' };

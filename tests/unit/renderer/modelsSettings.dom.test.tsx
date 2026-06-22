@@ -420,7 +420,12 @@ describe('recognizeKey', () => {
     ['flux-router', 'sk-flux-abcdef'],
     ['openrouter', 'sk-or-v1-abcdef'],
     ['openai', 'sk-proj-abcdef'],
+    ['openai', 'sk-svcacct-abcdef'],
+    ['openai', 'sk-admin-abcdef'],
     ['google-gemini', 'AIzaSyAbcdef'],
+    // Google's newer `AQ.` "authentication" key format - some accounts now get
+    // it exclusively, and it must auto-recognize just like the classic AIza (#224).
+    ['google-gemini', 'AQ.Ab8cDefGhiJklMnoPqr'],
     ['groq', 'gsk_abcdef'],
     ['xai', 'xai-abcdef'],
     ['huggingface', 'hf_abcdef'],
