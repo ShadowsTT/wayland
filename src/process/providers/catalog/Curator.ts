@@ -337,6 +337,18 @@ function curateOne(model: CatalogModel, rank: number, familyEligible: boolean): 
   if (model.providerId === CHATGPT_SUBSCRIPTION_PROVIDER_ID) {
     return { ...model, recommended: true, enabled: true, role: 'flagship' };
   }
+  // Local Ollama (`ollama-local`) is keyless and unenriched by design - the
+  // loopback daemon has no `/v1/models` registry entry to enrich it, so it
+  // fails the enrichment gate (Rule 4) and would land `enabled: false`, hiding
+  // every model from the picker (the renderer surfaces only `enabled` models)
+  // even though `autoRegisterOllama` promises they are "immediately selectable
+  // in chat". Same class as the Flux / ChatGPT-subscription virtual sets above.
+  // Force the local set `enabled` so the daemon's models are selectable +
+  // searchable; keep `recommended: false` so user-installed local models
+  // populate "More models" rather than crowding the Recommended zone.
+  if (model.providerId === 'ollama-local') {
+    return { ...model, recommended: false, enabled: true };
+  }
   if (familyEligible && rank === 0 && !isKnownLegacy(model.id)) {
     return { ...model, recommended: true, enabled: true, role: 'flagship' };
   }
