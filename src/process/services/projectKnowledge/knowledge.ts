@@ -5,10 +5,13 @@
  */
 
 import fs from 'fs/promises';
+import os from 'os';
 import path from 'path';
 import { WAYLAND_KNOWLEDGE_DIR } from './bootstrap';
 import { confinePath } from '@process/bridge/pathConfinement';
 import { resolveWithinApprovedDirectory } from '@process/bridge/userApprovedPaths';
+import { getIjfwArchiveService } from '@process/services/memory/ijfwArchiveService';
+import i18n from '@process/services/i18n';
 
 /**
  * Read, write, inject and manage a project's `.wayland/` knowledge.
@@ -122,6 +125,95 @@ export async function loadProjectKnowledgeBlock(workspace: string): Promise<stri
   });
   if (sections.length === 0) return '';
   return `[Project Knowledge - shared context for every chat in this project]\n\n${sections.join('\n\n')}`;
+}
+
+/** Largest single memory entry body included in the injected memory block. */
+const MEMORY_ENTRY_CHAR_CAP = 8_000;
+/** Largest total memory block injected into a chat's system-rules channel. */
+const MEMORY_BLOCK_CHAR_CAP = 24_000;
+/** Most memory entries scanned when building the injected block. */
+const MEMORY_BLOCK_MAX_ENTRIES = 50;
+
+/**
+ * Compose the user's global Wayland Memory store (`~/.ijfw/memory/*.md`) into a
+ * single attributed block ready to append to a conversation's system-rules
+ * channel, alongside the project-knowledge block. This is what lets the chat
+ * agent answer questions about content the user dropped into the Memory UI
+ * (GitHub #256): drop ingestion writes full file content under the GLOBAL memory
+ * dir, but the only context the agent previously saw was project `.wayland/`
+ * knowledge, so dropped memory was invisible to chat.
+ *
+ * We read from the already-in-process `getIjfwArchiveService()` index (no new
+ * disk walk or watcher) and pull only entries whose source file lives under the
+ * global memory dir - exactly where drop ingestion and `quickAdd('global')`
+ * write - so per-project memory (surfaced separately, read-only, in the Memory
+ * tab) is not pulled in and cannot double with project knowledge. Bodies are
+ * read in full (the list index only carries a 200-char preview); per-entry and
+ * total size are capped, and the block truncates gracefully. Returns '' when the
+ * store is empty or unreadable, so nothing is injected.
+ *
+ * The entry cap (MEMORY_BLOCK_MAX_ENTRIES) is applied AFTER the global-store
+ * filter, never before (#256). `listEntries` returns the whole corpus -
+ * global AND per-project entries, recency-sorted - so capping at the service
+ * layer would let a user's active project (which may have written dozens of
+ * recent journal/observation entries) push every global-memory entry past the
+ * cap, leaving the global filter empty and re-introducing the "not found"
+ * symptom. We deliberately do NOT use `listEntries({ project: 'global' })`: the
+ * `global` tag is not reliably present on everything under the global dir
+ * (`quickAdd('global')` writes `tags: []`, and drops that already carry their
+ * own frontmatter bypass the `scope: global` mapping), so the sourcePath prefix
+ * is the true source of truth for global-store membership.
+ */
+export async function loadGlobalMemoryBlock(): Promise<string> {
+  const globalDir = path.join(os.homedir(), '.ijfw', 'memory');
+  const svc = getIjfwArchiveService();
+  let listed: Awaited<ReturnType<typeof svc.listEntries>>;
+  try {
+    // No `limit`: pull the full recency-sorted corpus so the global filter and
+    // the entry cap below both operate on global entries only, not on a corpus
+    // already truncated by the user's active per-project entries.
+    listed = await svc.listEntries({ sort: 'recent' });
+  } catch (err) {
+    console.warn('[projectKnowledge] global memory block: list failed:', err);
+    return '';
+  }
+
+  const globalEntries = listed.entries
+    .filter((e) => e.sourcePath.startsWith(globalDir + path.sep))
+    .slice(0, MEMORY_BLOCK_MAX_ENTRIES);
+  if (globalEntries.length === 0) return '';
+
+  const sections: string[] = [];
+  let used = 0;
+  for (const entry of globalEntries) {
+    // Stop before reading the next body once the remaining char budget is
+    // nearly exhausted: the heading + label overhead means a section needs room
+    // beyond its body, so once `used` is within one body-cap of the total cap we
+    // cannot fit another meaningful entry and should not read it (#256 perf).
+    if (used + MEMORY_ENTRY_CHAR_CAP > MEMORY_BLOCK_CHAR_CAP && used > 0) break;
+
+    let body = entry.bodyPreview;
+    try {
+      const full = await svc.getEntry(entry.id);
+      if (full?.body) body = full.body;
+    } catch {
+      // fall back to the preview already in hand
+    }
+    body = body.trim();
+    if (!body) continue;
+    if (body.length > MEMORY_ENTRY_CHAR_CAP) body = `${body.slice(0, MEMORY_ENTRY_CHAR_CAP)}\n\n…(truncated)`;
+    const heading = entry.summary.trim() || 'Untitled';
+    const section = `## ${heading}\n\n${body}`;
+    if (used + section.length > MEMORY_BLOCK_CHAR_CAP) break;
+    sections.push(section);
+    used += section.length;
+  }
+
+  if (sections.length === 0) return '';
+  const label = i18n.t('memory.injectedLabel', {
+    defaultValue: 'User memory (from Wayland Memory) - the user dropped or saved this; use it to answer questions about it',
+  });
+  return `[${label}]\n\n${sections.join('\n\n')}`;
 }
 
 /** True for a Node error carrying an ENOENT-style "file not found" code. */

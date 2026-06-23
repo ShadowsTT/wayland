@@ -10,7 +10,7 @@ import type { TChatConversation } from '@/common/config/storage';
 import { uuid } from '@/common/utils';
 import { cronService } from './cron/cronServiceSingleton';
 import { SqliteProjectRepository } from '@process/services/database/SqliteProjectRepository';
-import { loadProjectKnowledgeBlock } from '@process/services/projectKnowledge/knowledge';
+import { loadProjectKnowledgeBlock, loadGlobalMemoryBlock } from '@process/services/projectKnowledge/knowledge';
 import { enforceProjectWorkspace } from '@process/services/projectWorkspace';
 import {
   createGeminiAgent,
@@ -125,31 +125,51 @@ export class ConversationServiceImpl implements IConversationService {
   }
 
   /**
-   * Resolve the project's `.wayland/` knowledge and append it to this
-   * conversation's system-rules channel, in place on `params.extra`. No-op when
-   * the chat is not in a project, the project has no workspace, or the knowledge
-   * docs are still empty (unedited boilerplate injects nothing). Failures are
-   * logged and swallowed so chat creation is never blocked by knowledge IO.
+   * Resolve the project's `.wayland/` knowledge AND the user's global Wayland
+   * Memory store and append both to this conversation's system-rules channel, in
+   * place on `params.extra`.
+   *
+   * Project knowledge is per-project: a no-op when the chat is not in a project,
+   * the project has no workspace, or the docs are still empty boilerplate.
+   *
+   * Global memory (`~/.ijfw/memory/*.md`) rides the SAME seam but is injected
+   * into EVERY chat, project or not (GitHub #256): drop-folder ingestion writes
+   * dropped files to the global store, and without this the chat agent never saw
+   * that memory and answered "not found". Both blocks are clearly attributed and
+   * read from disjoint dirs, so they never double-inject the same content.
+   *
+   * Failures are logged and swallowed so chat creation is never blocked by IO.
    */
   private async injectProjectKnowledge(params: CreateConversationParams): Promise<void> {
     const extra = params.extra as Record<string, unknown> | undefined;
-    const projectId = extra?.projectId as string | undefined;
-    if (!extra || !projectId) return;
+    if (!extra) return;
+    const blocks: string[] = [];
     try {
-      const project = await new SqliteProjectRepository().getProject(projectId);
-      const workspace = project?.workspace;
-      if (!workspace) return;
-      const block = await loadProjectKnowledgeBlock(workspace);
-      if (!block) return;
-      const merge = (existing: unknown): string =>
-        [existing as string | undefined, block].filter(Boolean).join('\n\n---\n\n');
-      // gemini + wcore read presetRules; acp reads presetContext. Set both so the
-      // active backend picks it up; the others harmlessly ignore the unused field.
-      extra.presetRules = merge(extra.presetRules);
-      extra.presetContext = merge(extra.presetContext);
+      const projectId = extra.projectId as string | undefined;
+      if (projectId) {
+        const project = await new SqliteProjectRepository().getProject(projectId);
+        const workspace = project?.workspace;
+        if (workspace) {
+          const block = await loadProjectKnowledgeBlock(workspace);
+          if (block) blocks.push(block);
+        }
+      }
     } catch (err) {
       console.error('[ConversationServiceImpl] project knowledge injection failed:', err);
     }
+    try {
+      const memoryBlock = await loadGlobalMemoryBlock();
+      if (memoryBlock) blocks.push(memoryBlock);
+    } catch (err) {
+      console.error('[ConversationServiceImpl] global memory injection failed:', err);
+    }
+    if (blocks.length === 0) return;
+    const merge = (existing: unknown): string =>
+      [existing as string | undefined, ...blocks].filter(Boolean).join('\n\n---\n\n');
+    // gemini + wcore read presetRules; acp reads presetContext. Set both so the
+    // active backend picks it up; the others harmlessly ignore the unused field.
+    extra.presetRules = merge(extra.presetRules);
+    extra.presetContext = merge(extra.presetContext);
   }
 
   /**
