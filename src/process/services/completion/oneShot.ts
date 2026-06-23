@@ -155,6 +155,31 @@ const fetchWithTimeout = async (url: string, init: RequestInit, timeoutMs = FETC
 const joinUrl = (base: string, suffix: string): string => `${base.replace(/\/+$/, '')}${suffix}`;
 
 /**
+ * Read a JSON response body defensively: pull the body as text first, then check
+ * the status before parsing. Non-2xx responses with a non-JSON/HTML body (a
+ * Cloudflare/nginx 502, a 404 page, an auth/login redirect) would otherwise make
+ * `res.json()` throw an opaque "Unexpected token '<'" SyntaxError that masks the
+ * real HTTP failure. This surfaces a clear "<status>: <message>" when the body is
+ * a JSON error, and a clear HTTP error otherwise.
+ */
+const parseJsonResponse = async <T>(res: Response): Promise<T> => {
+  const text = await res.text();
+  let data: T | undefined;
+  try {
+    data = text ? (JSON.parse(text) as T) : undefined;
+  } catch {
+    data = undefined;
+  }
+  if (!res.ok) {
+    const msg = (data as { error?: { message?: string } } | undefined)?.error?.message;
+    if (msg) throw new Error(`${res.status}: ${msg}`);
+    throw new Error(`Provider returned HTTP ${res.status} (non-JSON response)`);
+  }
+  if (data === undefined) throw new Error(`Provider returned HTTP ${res.status} (non-JSON response)`);
+  return data;
+};
+
+/**
  * Make a single completion call. Routes by endpoint host so a Claude/Gemini
  * model served via an OpenAI-compatible proxy is still called the right way.
  */
@@ -194,8 +219,7 @@ export async function oneShotComplete(
       },
       timeoutMs
     );
-    const data = (await res.json()) as { content?: Array<{ text?: string }>; error?: { message?: string } };
-    if (!res.ok) throw new Error(`${res.status}: ${data.error?.message || 'request failed'}`);
+    const data = await parseJsonResponse<{ content?: Array<{ text?: string }>; error?: { message?: string } }>(res);
     return (data.content?.[0]?.text || '').trim();
   }
 
@@ -213,11 +237,10 @@ export async function oneShotComplete(
       },
       timeoutMs
     );
-    const data = (await res.json()) as {
+    const data = await parseJsonResponse<{
       candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
       error?: { message?: string };
-    };
-    if (!res.ok) throw new Error(`${res.status}: ${data.error?.message || 'request failed'}`);
+    }>(res);
     return (data.candidates?.[0]?.content?.parts?.[0]?.text || '').trim();
   }
 
@@ -235,10 +258,9 @@ export async function oneShotComplete(
     },
     timeoutMs
   );
-  const data = (await res.json()) as {
+  const data = await parseJsonResponse<{
     choices?: Array<{ message?: { content?: string } }>;
     error?: { message?: string };
-  };
-  if (!res.ok) throw new Error(`${res.status}: ${data.error?.message || 'request failed'}`);
+  }>(res);
   return (data.choices?.[0]?.message?.content || '').trim();
 }
