@@ -575,6 +575,18 @@ export class WCoreAgent {
             }${event.error ? `: ${event.error}` : ''}`,
             msg_id: this.activeMsgId ?? '',
           });
+          // #252: also surface the open transition as an activity-tree node so
+          // failover (which fallback provider took over) is visible in-line.
+          this.onStreamEvent({
+            type: 'provider_circuit_event',
+            data: {
+              primary: event.primary,
+              fallback: event.fallback,
+              state: event.state,
+              error: event.error,
+            },
+            msg_id: this.activeMsgId ?? '',
+          });
         }
         break;
 
@@ -642,6 +654,9 @@ export class WCoreAgent {
         break;
 
       // ── W6 F7: end-of-session cost aggregate ──────────────────────
+      // #252: stamp the active msg_id so the renderer attaches the per-turn
+      // cost rows to the in-flight turn's activity card. WCoreManager
+      // force-forwards this past the empty-msg_id guard.
       case 'session_cost':
         this.onStreamEvent({
           type: 'session_cost',
@@ -650,7 +665,7 @@ export class WCoreAgent {
             totalCostUsd: event.total_cost_usd,
             perTurn: event.per_turn,
           },
-          msg_id: '',
+          msg_id: this.activeMsgId ?? '',
         });
         break;
 

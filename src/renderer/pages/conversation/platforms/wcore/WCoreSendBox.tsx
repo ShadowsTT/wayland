@@ -12,6 +12,7 @@ import ContextUsageIndicator from '@/renderer/components/agent/ContextUsageIndic
 import CommandQueuePanel from '@/renderer/components/chat/CommandQueuePanel';
 import SendBox from '@/renderer/components/chat/sendbox';
 import ThoughtDisplay from '@/renderer/components/chat/ThoughtDisplay';
+import StatusFooter from '@/renderer/components/chat/StatusFooter';
 import FileAttachButton from '@/renderer/components/media/FileAttachButton';
 import FilePreview from '@/renderer/components/media/FilePreview';
 import HorizontalFileList from '@/renderer/components/media/HorizontalFileList';
@@ -426,7 +427,13 @@ const WCoreSendBox: React.FC<{
         onRemove={remove}
         onClear={clear}
       />
-      <ThoughtDisplay thought={thought} running={running} onStop={handleStop} />
+      {/* #252: StatusFooter gives a persistent live cue (elapsed + rotating
+          phrases + dot-pulse) for the whole turn, replacing ThoughtDisplay's
+          running-only spinner that vanished the instant any message arrived.
+          ThoughtDisplay is kept (without `running`) only for the thought-subject
+          hint path (e.g. "Awaiting Confirmation"), which renders null otherwise. */}
+      <StatusFooter isProcessing={running} />
+      <ThoughtDisplay thought={thought} onStop={handleStop} />
 
       <SendBox
         value={content}

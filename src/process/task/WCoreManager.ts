@@ -171,6 +171,10 @@ export class WCoreManager extends BaseAgentManager<WCoreManagerData, string> {
   private _messageSentAt: number | null = null;
   private currentMsgId: string | null = null;
   private currentMsgContent: string = '';
+  // #252 - the most recent turn's msg_id, retained past stream finish so the
+  // end-of-session `session_cost` event (which fires after currentMsgId is
+  // cleared) can be stamped onto the correct turn's activity card.
+  private _lastTurnMsgId: string | null = null;
 
   // Heartbeat state
   private heartbeatInterval: ReturnType<typeof setInterval> | null = null;
@@ -991,6 +995,22 @@ export class WCoreManager extends BaseAgentManager<WCoreManagerData, string> {
         return;
       }
 
+      // #252 - session_cost is end-of-session metadata that fires AFTER the
+      // turn's stream finishes, so its msg_id is already empty/cleared and the
+      // empty-msg_id guard below would drop it. Force-forward it stamped with
+      // the last turn's msg_id so the renderer attaches the per-turn cost rows
+      // to that turn's activity card (mirrors the sub_agent_event pass-through).
+      if (data.type === 'session_cost') {
+        const turnMsgId = data.msg_id || this._lastTurnMsgId || '';
+        ipcBridge.conversation.responseStream.emit({
+          type: 'session_cost',
+          conversation_id: this.conversation_id,
+          msg_id: turnMsgId,
+          data: data.data,
+        });
+        return;
+      }
+
       // When the inference provider rejects the key (401 / invalid x-api-key),
       // flip that provider off "connected" so the UI stops showing it healthy
       // and the next spawn does not reuse the dead key. Side-effect only: the
@@ -1024,6 +1044,7 @@ export class WCoreManager extends BaseAgentManager<WCoreManagerData, string> {
         this.heartbeatActive = true;
         this.heartbeatMissedCount = 0;
         this.currentMsgId = data.msg_id ?? null;
+        this._lastTurnMsgId = data.msg_id ?? this._lastTurnMsgId;
         this.currentMsgContent = '';
 
         // Reset thinking state on new turn

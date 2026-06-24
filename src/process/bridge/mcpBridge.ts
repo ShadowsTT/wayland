@@ -120,6 +120,18 @@ export function initMcpBridge(): void {
     }
   });
 
+  ipcBridge.mcpService.cancelMcpOAuth.provider(async (serverName) => {
+    try {
+      mcpOAuthService.cancel(serverName);
+      return { success: true };
+    } catch (error) {
+      return {
+        success: false,
+        msg: error instanceof Error ? error.message : 'Unknown error cancelling OAuth login',
+      };
+    }
+  });
+
   ipcBridge.mcpService.logoutMcpOAuth.provider(async (serverName) => {
     try {
       await mcpOAuthService.logout(serverName);

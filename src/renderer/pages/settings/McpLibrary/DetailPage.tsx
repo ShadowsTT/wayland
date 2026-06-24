@@ -126,7 +126,7 @@ export function DetailPage() {
   const { mcpServers, saveMcpServers } = useMcpServers();
   const { agentInstallStatus, setAgentInstallStatus, checkSingleServerInstallStatus } = useMcpAgentStatus();
   const { syncMcpToAgents, removeMcpFromAgents } = useMcpOperations(mcpServers, message);
-  const { login, loggingIn, oauthStatus, setByoCredentials } = useMcpOAuth();
+  const { login, cancel: cancelMcpOAuthIpc, loggingIn, oauthStatus, setByoCredentials } = useMcpOAuth();
   const crud = useMcpServerCRUD(
     mcpServers,
     saveMcpServers,
@@ -199,6 +199,10 @@ export function DetailPage() {
   if (!entry) return <div className={styles.unknown}>Unknown entry: {id}</div>;
 
   const w = entry['x-wayland'];
+
+  // Catalog-declared OAuth scope names (e.g. GitHub repo / read:org / workflow)
+  // threaded into login() so the authorization request actually asks for them.
+  const oauthScopes = w.auth.scopes?.map((s) => s.name).filter((n) => n.length > 0);
 
   const install = async (): Promise<IMcpServer | null> => {
     setInstalling(true);
@@ -315,7 +319,7 @@ export function DetailPage() {
 
     const controller = new AbortController();
     oauthAbortRef.current = controller;
-    const result = await login(server, { signal: controller.signal });
+    const result = await login(server, oauthScopes, { signal: controller.signal });
     oauthAbortRef.current = null;
     if (result.success === true) {
       await finishOAuthSuccess(server);
@@ -352,7 +356,7 @@ export function DetailPage() {
   const handleOAuthAbort = (result: McpOAuthLoginResult): boolean => {
     if (result.success !== false) return false;
     if (result.code === 'cancelled') return true;
-    if (result.code === 'unknown' && result.error === 'timeout') {
+    if (result.code === 'timeout') {
       message.error(
         t(
           'mcpLibrary.install.oauthTimeout',
@@ -390,7 +394,7 @@ export function DetailPage() {
 
     const controller = new AbortController();
     oauthAbortRef.current = controller;
-    const retryResult = await login(saveResult.server, { signal: controller.signal });
+    const retryResult = await login(saveResult.server, oauthScopes, { signal: controller.signal });
     oauthAbortRef.current = null;
     if (retryResult.success === true) {
       await finishOAuthSuccess(saveResult.server);
@@ -404,11 +408,13 @@ export function DetailPage() {
     );
   };
 
-  // Abort the in-flight OAuth wait (wired to the Cancel button surfaced while
-  // signing in). login() then settles to a `cancelled` result and clears the
-  // spinner; no error toast is shown for a user-initiated back-out.
-  const cancelOAuth = () => {
+  // Back out of an in-flight OAuth sign-in (#242). Does BOTH: aborts the local
+  // race so login() settles to a `cancelled` result and clears the spinner (no
+  // error toast for a user-initiated back-out), AND fires the main-process IPC
+  // cancel so the service frees the callback port + stops waiting.
+  const cancelOAuth = (server: IMcpServer) => {
     oauthAbortRef.current?.abort();
+    void cancelMcpOAuthIpc(server);
   };
 
   // "Connected and ready" must reflect a real connection, not just an install.
@@ -600,8 +606,12 @@ export function DetailPage() {
               ? t('mcpLibrary.detail.signingIn', 'Signing in…')
               : t('mcpLibrary.detail.signIn', 'Sign in')}
           </button>
-          {oauthInFlight && (
-            <button type="button" className={styles.btn2} onClick={cancelOAuth}>
+          {oauthInFlight && installedServer && (
+            <button
+              type="button"
+              className={styles.btn2}
+              onClick={() => cancelOAuth(installedServer)}
+            >
               {t('mcpLibrary.detail.cancelSignIn', 'Cancel sign-in')}
             </button>
           )}
@@ -672,8 +682,12 @@ export function DetailPage() {
                 : t('mcpLibrary.detail.signIn', 'Sign in')
               : t('mcpLibrary.detail.addToken', 'Add token')}
           </button>
-          {isOauth && oauthInFlight && (
-            <button type="button" className={styles.btn2} onClick={cancelOAuth}>
+          {isOauth && oauthInFlight && installedServer && (
+            <button
+              type="button"
+              className={styles.btn2}
+              onClick={() => cancelOAuth(installedServer)}
+            >
               {t('mcpLibrary.detail.cancelSignIn', 'Cancel sign-in')}
             </button>
           )}
@@ -920,6 +934,15 @@ export function DetailPage() {
                             provider: w.auth.providerName ?? entry.title,
                           })}
                   </button>
+                  {!isApiKey && oauthInFlight && installedServer && (
+                    <button
+                      type="button"
+                      className={styles.btn2}
+                      onClick={() => void cancelOAuth(installedServer)}
+                    >
+                      {t('mcpLibrary.detail.cancelSignIn', 'Cancel')}
+                    </button>
+                  )}
                   {isApiKey && (
                     <span className={styles.connectHint}>
                       {t('mcpLibrary.detail.saveConnectHint', 'Paste your key above, then connect.')}
@@ -1036,6 +1059,12 @@ export function DetailPage() {
             : undefined) as ByoVendorHint | undefined
         }
         onCancel={() => setByoModal({ ...byoModal, visible: false, server: null })}
+        onCancelInFlight={() => {
+          // Abort the in-flight retry login() (bug #242) and close the modal so
+          // the user is never stuck behind a frozen "Save & sign in".
+          if (byoModal.server) void cancelOAuth(byoModal.server);
+          setByoModal({ ...byoModal, visible: false, server: null });
+        }}
         onSubmit={handleByoSubmit}
       />
     </div>

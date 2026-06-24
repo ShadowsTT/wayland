@@ -23,6 +23,12 @@ interface Props {
   /** Vendor-specific catalog hint when known; undefined triggers the universal fallback UI. */
   vendorHint?: ByoVendorHint;
   onCancel: () => void;
+  /**
+   * Abort an in-flight login triggered by onSubmit. Called when the user clicks
+   * Cancel WHILE submitting (bug #242: a never-arriving OAuth callback used to
+   * leave Cancel disabled and the user stuck). Closes the modal too.
+   */
+  onCancelInFlight?: () => void;
   onSubmit: (clientId: string, clientSecret: string | undefined) => Promise<void>;
 }
 
@@ -49,6 +55,7 @@ export function ByoCredentialsModal({
   redirectUri,
   vendorHint,
   onCancel,
+  onCancelInFlight,
   onSubmit,
 }: Props) {
   const { t } = useTranslation();
@@ -72,7 +79,14 @@ export function ByoCredentialsModal({
   };
 
   const handleCancel = () => {
-    if (submitting) return;
+    // Cancel is ALWAYS available (bug #242): when a sign-in is in flight, abort
+    // it so a never-arriving OAuth callback can't trap the user. Otherwise just
+    // close the modal.
+    if (submitting) {
+      setSubmitting(false);
+      onCancelInFlight?.();
+      return;
+    }
     onCancel();
   };
 
@@ -85,7 +99,7 @@ export function ByoCredentialsModal({
       cancelText={t('mcpLibrary.byo.cancel', 'Cancel')}
       onOk={handleSubmit}
       okButtonProps={{ disabled: !canSubmit, loading: submitting }}
-      cancelButtonProps={{ disabled: submitting }}
+      cancelButtonProps={{ disabled: false }}
       maskClosable={!submitting}
       autoFocus
       simple={false}

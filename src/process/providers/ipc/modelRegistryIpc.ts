@@ -1167,6 +1167,7 @@ const CHAT_START_NAME: Partial<Record<ProviderId, string>> = {
   'google-gemini': 'Google Gemini',
   'aws-bedrock': 'AWS Bedrock',
   vertex: 'Google Vertex',
+  'chatgpt-subscription': 'ChatGPT',
   openrouter: 'OpenRouter',
   groq: 'Groq',
   xai: 'xAI',
@@ -1245,6 +1246,15 @@ function buildChatStartPayload(
   if (isGoogleAuthGemini) {
     // No credential material in the payload - the dispatcher reads the OAuth
     // tokens from the main-process auth store.
+    return { kind: 'payload', payload };
+  }
+
+  // ── ChatGPT subscription ───────────────────────────────────────────────
+  if (providerId === 'chatgpt-subscription') {
+    // Keyless, like Google-auth Gemini: no credential in the payload. The engine
+    // reads the ChatGPT OAuth token from its own store (~/.codex/auth.json,
+    // written by the desktop on sign-in) via `--provider openai-chatgpt`, so the
+    // empty-key branch below (-> undecryptable) must NOT apply here (#243).
     return { kind: 'payload', payload };
   }
 

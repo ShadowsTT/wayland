@@ -172,6 +172,14 @@ if (!process.env.OAUTH_CALLBACK_PORT) {
   process.env.OAUTH_CALLBACK_PORT = WAYLAND_OAUTH_CALLBACK_PORT;
 }
 
+// Max time a single BYO/DCR login() is allowed to wait for the loopback OAuth
+// callback before we give up and return control to the renderer. The upstream
+// MCPOAuthProvider only rejects on its own 5-minute timer, which is far too
+// long - the user sees a frozen "Save & sign in" with no way out. Cap the wait
+// so a never-arriving callback (wrong redirect URI, closed browser tab) fails
+// in ~2 minutes with a structured 'timeout' result instead of hanging.
+const OAUTH_LOGIN_TIMEOUT_MS = 120_000;
+
 export interface OAuthStatus {
   isAuthenticated: boolean;
   needsLogin: boolean;
@@ -186,7 +194,7 @@ export type OAuthLoginResult =
        * Stable failure-code the renderer can branch on. Add new codes here
        * as new failure modes are discovered.
        */
-      code: 'needs_byo' | 'transport_unsupported' | 'no_url' | 'cancelled' | 'unknown';
+      code: 'needs_byo' | 'transport_unsupported' | 'no_url' | 'cancelled' | 'timeout' | 'unknown';
       error?: string;
       /** When code='needs_byo', the redirect URI the user must register on the vendor. */
       redirectUri?: string;
@@ -204,6 +212,14 @@ export class McpOAuthService {
   private oauthProvider: MCPOAuthProvider;
   private tokenStorage: MCPOAuthTokenStorage;
   private eventEmitter: EventEmitter;
+
+  /**
+   * In-flight login()s keyed by server name, so cancel(serverName) can abort a
+   * specific login (or cancel() with no arg aborts all). Each entry's abort()
+   * settles the login()'s Promise.race with a 'cancelled' result and closes the
+   * upstream loopback callback server to free port 57000.
+   */
+  private inflightLogins = new Map<string, { abort: () => void }>();
 
   constructor() {
     this.tokenStorage = new MCPOAuthTokenStorage();
@@ -345,6 +361,15 @@ export class McpOAuthService {
 
     const config: MCPOAuthConfig = oauthConfig ? { ...oauthConfig } : { enabled: true };
 
+    // Thread the catalog-declared OAuth scopes (e.g. GitHub's repo / read:org /
+    // workflow) into the config so the authorization request actually asks for
+    // them. Without this the vendor grants only its default scope set and the
+    // connector silently lacks the access the catalog advertised. The caller
+    // (renderer login() -> loginMcpOAuth IPC) passes them via oauthConfig.scopes.
+    if (oauthConfig?.scopes && oauthConfig.scopes.length > 0) {
+      config.scopes = oauthConfig.scopes;
+    }
+
     // Step 2: BYO credentials short-circuit. If the user has previously pasted
     // client_id/secret for this server, populate them so MCPOAuthProvider skips
     // its DCR attempt.
@@ -379,8 +404,49 @@ export class McpOAuthService {
       }
     }
 
+    // Race authenticate() against a timeout / explicit cancel so a never-arriving
+    // loopback callback can't hang the renderer for the upstream 5-minute timer.
+    // authenticate() itself isn't AbortSignal-aware, so on timeout/cancel we
+    // resolve the race with a structured failure AND close the upstream callback
+    // server to free port 57000; the orphaned authenticate() promise is left to
+    // settle on the upstream timer (it can no longer affect the UI).
+    let settleAbort: ((reason: 'cancelled' | 'timeout') => void) | undefined;
+    const abortPromise = new Promise<{ aborted: 'cancelled' | 'timeout' }>((resolve) => {
+      settleAbort = (reason) => resolve({ aborted: reason });
+    });
+    const timer = setTimeout(() => settleAbort?.('timeout'), OAUTH_LOGIN_TIMEOUT_MS);
+    if (timer.unref) timer.unref();
+
+    const closeCallbackServer = () => {
+      try {
+        (
+          this.oauthProvider as unknown as { _activeCallbackServer?: { close?: () => void } }
+        )._activeCallbackServer?.close?.();
+      } catch {
+        /* already closed */
+      }
+    };
+
+    this.inflightLogins.set(server.name, { abort: () => settleAbort?.('cancelled') });
+
     try {
-      await this.oauthProvider.authenticate(server.name, config, url);
+      const outcome = await Promise.race([
+        this.oauthProvider.authenticate(server.name, config, url).then(() => ({ ok: true as const })),
+        abortPromise,
+      ]);
+
+      if ('aborted' in outcome) {
+        closeCallbackServer();
+        return {
+          success: false,
+          code: outcome.aborted,
+          error:
+            outcome.aborted === 'timeout'
+              ? `OAuth login timed out after ${Math.round(OAUTH_LOGIN_TIMEOUT_MS / 1000)}s waiting for the authorization callback.`
+              : 'OAuth login was cancelled.',
+        };
+      }
+
       console.log(`[McpOAuthService] OAuth login successful for ${server.name}`);
       return { success: true };
     } catch (error) {
@@ -405,6 +471,27 @@ export class McpOAuthService {
 
       console.error('[McpOAuthService] OAuth login failed:', error);
       return { success: false, code: 'unknown', error: msg };
+    } finally {
+      clearTimeout(timer);
+      this.inflightLogins.delete(server.name);
+    }
+  }
+
+  /**
+   * Abort an in-flight login(). With a serverName, aborts only that login; with
+   * no arg, aborts every in-flight login. The aborted login() resolves with a
+   * `{ success: false, code: 'cancelled' }` result and its upstream loopback
+   * callback server is closed (freeing port 57000). Safe to call when nothing is
+   * in flight - it's a no-op. Lets the renderer's Cancel button unstick a user
+   * waiting on a callback that will never arrive.
+   */
+  cancel(serverName?: string): void {
+    if (serverName) {
+      this.inflightLogins.get(serverName)?.abort();
+      return;
+    }
+    for (const entry of this.inflightLogins.values()) {
+      entry.abort();
     }
   }
 

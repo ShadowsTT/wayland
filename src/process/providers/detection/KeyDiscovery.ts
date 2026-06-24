@@ -63,6 +63,7 @@ export const PROVIDER_ENV_VARS: Partial<Record<ProviderId, readonly string[]>> =
   cerebras: ['CEREBRAS_API_KEY'],
   moonshot: ['MOONSHOT_API_KEY'],
   nvidia: ['NVIDIA_API_KEY'],
+  minimax: ['MINIMAX_API_KEY'],
 };
 
 /**
@@ -86,6 +87,7 @@ const ENV_SCAN_ORDER: readonly ProviderId[] = [
   'cerebras',
   'moonshot',
   'nvidia',
+  'minimax',
 ];
 
 /**

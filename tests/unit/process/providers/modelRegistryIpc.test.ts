@@ -1753,3 +1753,41 @@ describe('modelRegistry IPC - refreshAllOnce SSRF gate (ollama-local exemption)'
     expect(summary.succeeded).not.toContain('ollama-local');
   });
 });
+
+describe('modelRegistry IPC - resolveForChatStart (#243 ChatGPT subscription)', () => {
+  it('resolves a connected ChatGPT subscription to platform openai-chatgpt with no key, no bounce (#243)', async () => {
+    const { deps, repo } = makeFakes();
+    repo.upsertRegistryProvider({
+      providerId: 'chatgpt-subscription',
+      connectedVia: 'oauth',
+      state: 'connected',
+      creds: {}, // keyless: the OAuth token lives in the engine's own ~/.codex/auth.json
+    });
+    const h = createModelRegistryHandlers(deps);
+
+    const result = await h.resolveForChatStart({ providerId: 'chatgpt-subscription', modelId: 'gpt-5.2-codex' });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.provider.platform).toBe('openai-chatgpt');
+      expect(result.provider.providerId).toBe('chatgpt-subscription');
+      expect(result.provider.name).toBe('ChatGPT');
+      expect(result.provider.baseUrl).toBe('');
+    }
+  });
+
+  it('still returns unsupported for a connected provider with no chat-start arm (negative control)', async () => {
+    const { deps, repo } = makeFakes();
+    // azure is intentionally absent from CHAT_START_PLATFORM - it must still bounce.
+    repo.upsertRegistryProvider({
+      providerId: 'azure',
+      connectedVia: 'apiKey',
+      state: 'connected',
+      creds: { key: 'sk-azure' },
+    });
+    const h = createModelRegistryHandlers(deps);
+
+    const result = await h.resolveForChatStart({ providerId: 'azure', modelId: 'gpt-4o' });
+    expect(result).toEqual({ ok: false, error: 'unsupported' });
+  });
+});

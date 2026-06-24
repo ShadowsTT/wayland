@@ -167,11 +167,16 @@
       "renameTimeout": "Rename request timed out, please try again",
       "addToChat": "Add to chat",
       "addedToChat": "Added to chat",
+      "favorite": "Favorite",
+      "unfavorite": "Unfavorite",
       "openFailed": "Failed to open",
       "revealFailed": "Failed to open containing folder",
       "download": "Download",
       "downloadSuccess": "Download successful",
       "downloadFailed": "Download failed"
+    },
+    "favorites": {
+      "title": "Favorites"
     },
     "changes": {
       "tab": "Changes",
@@ -314,6 +319,29 @@
     "statusRunning": "Running",
     "statusDone": "Done",
     "statusFailed": "Failed"
+  },
+  "activity": {
+    "activeHeader": "Activity",
+    "stepCount": "{{count}} steps",
+    "completedSummary": "Completed {{count}} steps in {{duration}}",
+    "statusWorking": "Working",
+    "statusDone": "Done",
+    "statusFailed": "Failed",
+    "kindTool": "Tool",
+    "kindThinking": "Thinking",
+    "kindSubAgent": "Sub-agent",
+    "kindCircuit": "Provider",
+    "kindBrowser": "Browser",
+    "kindCua": "Computer",
+    "costPerTurn": "${{cost}}"
+  },
+  "observability": {
+    "title": "Observability",
+    "toggle": "Observability",
+    "close": "Close panel",
+    "empty": "Activity from this conversation will appear here.",
+    "showCost": "Show cost",
+    "showCostHint": "off by default"
   },
   "skills": {
     "loaded": "Loaded Skills"

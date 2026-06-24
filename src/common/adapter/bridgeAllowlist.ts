@@ -305,6 +305,7 @@ const REMOTE_DENIED_KEYS: ReadonlySet<string> = new Set([
   'mcp.sync-to-agents',
   'mcp.remove-from-agents',
   'mcp.login-oauth',
+  'mcp.cancel-oauth',
   'mcp.logout-oauth',
   'mcp.set-byo-oauth-credentials',
   // --- Project knowledge draft (reads arbitrary filePaths to feed the model) ---

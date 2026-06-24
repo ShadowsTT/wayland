@@ -276,13 +276,7 @@ const BrowseModal: React.FC<Props> = ({ visible, onClose, initialProvider, conne
         onClick={() => handlePick(provider)}
         aria-label={t('settings.modelsPage.browse.connectAria', { provider: provider.displayName })}
       >
-        <ProviderLogo
-          id={provider.id}
-          mono={provider.mono}
-          bg={provider.bg}
-          darkText={provider.darkText}
-          size={28}
-        />
+        <ProviderLogo id={provider.id} mono={provider.mono} bg={provider.bg} darkText={provider.darkText} size={28} />
         <span className={styles.tileText}>
           <span className={styles.tileName}>{provider.displayName}</span>
           {cloud && <span className={styles.tileSub}>{t('settings.modelsPage.browse.cloudTag')}</span>}

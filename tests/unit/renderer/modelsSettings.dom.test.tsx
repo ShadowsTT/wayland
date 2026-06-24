@@ -420,7 +420,12 @@ describe('recognizeKey', () => {
     ['flux-router', 'sk-flux-abcdef'],
     ['openrouter', 'sk-or-v1-abcdef'],
     ['openai', 'sk-proj-abcdef'],
+    ['openai', 'sk-svcacct-abcdef'],
+    ['openai', 'sk-admin-abcdef'],
     ['google-gemini', 'AIzaSyAbcdef'],
+    // Google's newer `AQ.` "authentication" key format - some accounts now get
+    // it exclusively, and it must auto-recognize just like the classic AIza (#224).
+    ['google-gemini', 'AQ.Ab8cDefGhiJklMnoPqr'],
     ['groq', 'gsk_abcdef'],
     ['xai', 'xai-abcdef'],
     ['huggingface', 'hf_abcdef'],
@@ -431,10 +436,9 @@ describe('recognizeKey', () => {
     ['cerebras', 'csk-abcdef'],
     ['nvidia', 'nvapi-abcdef'],
     ['anyscale', 'esecret_abcdef'],
-    ['deepgram', 'dg_abcdef'],
-    ['assemblyai', 'aai_abcdef'],
-    ['elevenlabs', 'xi-api-abcdef'],
     ['sakana', 'fish_f2570dfe4dac266a7ee64b3df6b64b49'],
+    ['github-models', 'ghp_abcdef1234567890'],
+    ['github-models', 'github_pat_11ABCDEF0_abcdef'],
     // Structural sk- variants - these resolve uniquely despite the bare-sk
     // prefix because their internal shape is distinctive (32-hex for DeepSeek;
     // 48-mixed-alnum minus OpenAI's `T3BlbkFJ` signature for Moonshot).

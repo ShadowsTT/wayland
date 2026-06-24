@@ -20,6 +20,9 @@ import {
   type FluxFailoverTurn,
 } from '@renderer/pages/conversation/platforms/acp/acpFluxFailover';
 import { useFluxConnected } from '@renderer/hooks/useFluxConnected';
+import { useObservabilitySettings } from '@renderer/hooks/settings/useObservabilitySettings';
+import { useResizableSplit } from '@renderer/hooks/ui/useResizableSplit';
+import ObservabilityPanel from '@renderer/pages/conversation/Messages/components/ObservabilityPanel';
 import { FLUX_AUTO_MODEL, isFluxModelId } from '@/common/config/flux';
 import type { TProviderWithModel } from '@/common/config/storage';
 import { emitter, useAddEventListener } from '@renderer/utils/emitter';
@@ -136,6 +139,18 @@ const WCoreChat: React.FC<{
   useEffect(() => {
     updateLocalImage({ root: workspace });
   }, [workspace]);
+
+  // #252 reframe: the activity tree moves out of the inline message list into an
+  // opt-in right-side panel. The open state + showCost are shared with the header
+  // toggle (WCoreConversationPanel) via the cross-instance settings store; the
+  // split ratio reuses the proven Preview-panel resize machinery.
+  const { settings: obs, update: updateObs } = useObservabilitySettings();
+  const { splitRatio, createDragHandle } = useResizableSplit({
+    defaultWidth: 62,
+    minWidth: 45,
+    maxWidth: 80,
+    storageKey: 'observability-panel-split-ratio',
+  });
   const conversationValue = useMemo<ConversationContextValue>(() => {
     return {
       conversationId: conversation_id,
@@ -149,34 +164,45 @@ const WCoreChat: React.FC<{
 
   return (
     <ConversationProvider value={conversationValue}>
-      <div className='flex-1 flex flex-col px-20px min-h-0'>
-        <FlexFullContainer>
-          <MessageList className='flex-1' emptySlot={emptySlot} />
-        </FlexFullContainer>
-        {engineAsleep && (
-          <div className='max-w-800px w-full mx-auto mb-8px'>
-            <ActivationCard onConnectFlux={handleConnectFlux} onUseOwnKey={goToModels} onUseClaudeCode={goToModels} />
-          </div>
-        )}
-        {authRemedy && (
-          <div className='max-w-800px w-full mx-auto mb-12px'>
-            <AcpAuthFailureCard
-              remedy={authRemedy}
-              onAddKey={goToModels}
-              onRouteThroughFlux={onAuthRouteThroughFlux}
-              onDismiss={() => setAuthRemedy(null)}
+      <div className='flex-1 flex relative min-h-0'>
+        <div
+          className='flex flex-col px-20px min-h-0'
+          style={obs.panelOpen ? { width: `${splitRatio}%`, minWidth: 0 } : { flex: 1, minWidth: 0 }}
+        >
+          <FlexFullContainer>
+            <MessageList className='flex-1' emptySlot={emptySlot} />
+          </FlexFullContainer>
+          {engineAsleep && (
+            <div className='max-w-800px w-full mx-auto mb-8px'>
+              <ActivationCard onConnectFlux={handleConnectFlux} onUseOwnKey={goToModels} onUseClaudeCode={goToModels} />
+            </div>
+          )}
+          {authRemedy && (
+            <div className='max-w-800px w-full mx-auto mb-12px'>
+              <AcpAuthFailureCard
+                remedy={authRemedy}
+                onAddKey={goToModels}
+                onRouteThroughFlux={onAuthRouteThroughFlux}
+                onDismiss={() => setAuthRemedy(null)}
+              />
+            </div>
+          )}
+          <ConversationChatConfirm conversation_id={conversation_id}>
+            <WCoreSendBox
+              conversation_id={conversation_id}
+              modelSelection={modelSelection}
+              teamId={teamId}
+              agentSlotId={agentSlotId}
+              sessionMode={sessionMode}
             />
+          </ConversationChatConfirm>
+        </div>
+        {obs.panelOpen && (
+          <div className='relative flex flex-col min-h-0' style={{ width: `${100 - splitRatio}%`, minWidth: 0 }}>
+            {createDragHandle({ className: 'left-0 top-0 bottom-0', reverse: true })}
+            <ObservabilityPanel onClose={() => updateObs('panelOpen', false)} />
           </div>
         )}
-        <ConversationChatConfirm conversation_id={conversation_id}>
-          <WCoreSendBox
-            conversation_id={conversation_id}
-            modelSelection={modelSelection}
-            teamId={teamId}
-            agentSlotId={agentSlotId}
-            sessionMode={sessionMode}
-          />
-        </ConversationChatConfirm>
       </div>
     </ConversationProvider>
   );

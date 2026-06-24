@@ -16,6 +16,7 @@ import type { AgentBackend, AcpModelInfo } from '../types/acpTypes';
 import type { SlashCommandItem } from '../chat/slash/types';
 import type { IMcpServer, IProvider, TChatConversation, TProviderWithModel, ICssTheme } from '../config/storage';
 import type { PreviewHistoryTarget, PreviewSnapshotInfo } from '../types/preview';
+import type { MigrationPlan, MigrationResult, MigrationToolId } from '../types/migration';
 import type { IjfwErrorReason, IjfwInvokeResult, IjfwRuntimeModePublic } from '../types/ijfw';
 import type {
   CodexSetupResult,
@@ -129,9 +130,8 @@ export const conversation = {
    * (re-reading the same content / a command failing repeatedly). Carries the
    * conversation + reason so the renderer can explain why it stopped.
    */
-  runawayHalted: buildEmitter<import('@process/services/runaway/RunawayMonitor').RunawayHalted>(
-    'conversation.runaway-halted'
-  ),
+  runawayHalted:
+    buildEmitter<import('@process/services/runaway/RunawayMonitor').RunawayHalted>('conversation.runaway-halted'),
   listChanged: buildEmitter<IConversationListChangedEvent>('conversation.list-changed'),
   getWorkspace: buildProvider<
     IDirOrFile[],
@@ -232,6 +232,11 @@ export const application = {
   updateSystemInfo: buildProvider<IBridgeResponse, { cacheDir: string; workDir: string }>('system.update-info'), // Update system info
   getZoomFactor: buildProvider<number, void>('app.get-zoom-factor'),
   setZoomFactor: buildProvider<number, { factor: number }>('app.set-zoom-factor'),
+  // Pop a main destination (e.g. Mission Control) out into its own window, reusing
+  // the conversation pop-out window infrastructure. `route` is validated against an
+  // allowlist in the main process. Returns alreadyOpen:true when an existing
+  // pop-out of the same route was focused instead of a new one created (#157).
+  popoutRoute: buildProvider<{ ok: boolean; alreadyOpen: boolean }, { route: string }>('app.popout-route'),
   // CDP (Chrome DevTools Protocol) management
   getCdpStatus: buildProvider<IBridgeResponse<ICdpStatus>, void>('app.get-cdp-status'), // Get CDP status
   updateCdpConfig: buildProvider<IBridgeResponse<ICdpConfig>, Partial<ICdpConfig>>('app.update-cdp-config'), // Update CDP config
@@ -865,7 +870,7 @@ export const mcpService = {
       | { success: true }
       | {
           success: false;
-          code: 'needs_byo' | 'transport_unsupported' | 'no_url' | 'cancelled' | 'unknown';
+          code: 'needs_byo' | 'transport_unsupported' | 'no_url' | 'cancelled' | 'timeout' | 'unknown';
           error?: string;
           redirectUri?: string;
           authorizationUrl?: string;
@@ -873,6 +878,12 @@ export const mcpService = {
     >,
     { server: IMcpServer; config?: any }
   >('mcp.login-oauth'),
+  /**
+   * Abort an in-flight loginMcpOAuth. Optional serverName targets a single
+   * login; omit to cancel all. Lets the renderer's Cancel button unstick a user
+   * waiting on an OAuth callback that will never arrive.
+   */
+  cancelMcpOAuth: buildProvider<IBridgeResponse, string | undefined>('mcp.cancel-oauth'),
   logoutMcpOAuth: buildProvider<IBridgeResponse, string>('mcp.logout-oauth'),
   getAuthenticatedServers: buildProvider<IBridgeResponse<string[]>, void>('mcp.get-authenticated-servers'),
   /**
@@ -2704,7 +2715,7 @@ export const project = {
    * takes name/description directly rather than a project id. Never rejects.
    */
   generateKnowledgeDraft: buildProvider<
-    { draft: string; error?: 'no-model' | 'failed' },
+    { draft: string; error?: 'no-model' | 'failed'; detail?: string },
     {
       name?: string;
       description?: string;
@@ -2735,4 +2746,16 @@ export const project = {
    * existing `changed.on(() => refresh())` listeners remain valid.
    */
   changed: buildEmitter<{ id?: string; count?: number } | undefined>('project.changed'),
+};
+
+/**
+ * Migrate config (provider keys, MCP servers) from a sibling agent tool
+ * (Hermes, OpenClaw) into Wayland (#migrate). `scan` is read-only and returns a
+ * secret-free plan; `apply` re-reads the source in the main process to recover
+ * key values, so secrets never cross this boundary - the renderer only sends
+ * back the selected item ids.
+ */
+export const migrate = {
+  scan: buildProvider<MigrationPlan, { toolId: MigrationToolId }>('migrate.scan'),
+  apply: buildProvider<MigrationResult, { toolId: MigrationToolId; selectedIds: string[] }>('migrate.apply'),
 };

@@ -323,4 +323,8 @@ describe('KeyDiscovery - PROVIDER_ENV_VARS map', () => {
     expect(PROVIDER_ENV_VARS.moonshot).toEqual(['MOONSHOT_API_KEY']);
     expect(PROVIDER_ENV_VARS.nvidia).toEqual(['NVIDIA_API_KEY']);
   });
+
+  it('covers minimax with its canonical env var (issue #135)', () => {
+    expect(PROVIDER_ENV_VARS.minimax).toEqual(['MINIMAX_API_KEY']);
+  });
 });

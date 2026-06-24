@@ -28,6 +28,7 @@ import { registerWeixinLoginRoutes } from './weixinLoginRoutes';
 import { registerWecomChannelRoutes } from './wecomChannelRoutes';
 import { registerStorageRoutes } from './storageRoutes';
 import { registerProviderKeyRoutes } from './providerKeyRoutes';
+import { registerProjectKnowledgeDraftRoutes } from './projectKnowledgeDraftRoutes';
 import { registerToolKeyRoutes } from './toolKeyRoutes';
 import { registerMcpConfigRoutes } from './mcpConfigRoutes';
 import { registerChannelConfigRoutes } from './channelConfigRoutes';
@@ -740,6 +741,11 @@ export function registerApiRoutes(app: Express): void {
   // Provider API-key entry from a remote WebUI client (remote-secure-config
   // W1.A): write-only CONFIG-WRITE route, returns { state, modelCount } only.
   registerProviderKeyRoutes(app, validateApiAccess);
+
+  // Headless knowledge-draft route for the Project AI wizard (issue #234,
+  // W1.C): IPC action stays denied; HTTP is the headless path. Returns
+  // { draft, error? } only — never echoes file paths or content.
+  registerProjectKnowledgeDraftRoutes(app, validateApiAccess);
 
   // Tool / service API-key entry from a remote WebUI client
   // (remote-secure-config W1.B): write-only CONFIG-WRITE routes, return

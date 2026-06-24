@@ -133,6 +133,14 @@ describe('buildEngineSpawnEnv - SEC-1 allowlist', () => {
     expect(env.WAYLAND_BASH_SHELL).toBe('/opt/homebrew/bin/fish');
   });
 
+  it('forwards LD_LIBRARY_PATH so the engine resolves OpenSSL 1.1 on ARM64 Ubuntu 24.04 (#233)', () => {
+    process.env.LD_LIBRARY_PATH = '/opt/openssl-1.1/lib:/usr/lib/aarch64-linux-gnu';
+
+    const env = buildEngineSpawnEnv({ providerEnv: {} });
+
+    expect(env.LD_LIBRARY_PATH).toBe('/opt/openssl-1.1/lib:/usr/lib/aarch64-linux-gnu');
+  });
+
   it('always preserves the provider auth env even though it is a secret name', () => {
     const env = buildEngineSpawnEnv({ providerEnv: { ANTHROPIC_API_KEY: 'sk-ant-123' } });
     expect(env.ANTHROPIC_API_KEY).toBe('sk-ant-123');

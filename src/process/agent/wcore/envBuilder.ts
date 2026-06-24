@@ -135,6 +135,10 @@ const NATIVE_ENGINE_PROVIDER_IDS = [
   'fireworks',
   'cerebras',
   'nvidia',
+  // minimax is an Anthropic-wire native provider in the bundled engine (0.12.5):
+  // `--provider minimax` -> api.minimax.io/anthropic with MINIMAX_API_KEY. Without
+  // this it falls through to `--provider openai` and breaks (#135).
+  'minimax',
 ] as const;
 const NATIVE_ENGINE_PROVIDER_SET: ReadonlySet<string> = new Set(NATIVE_ENGINE_PROVIDER_IDS);
 
@@ -201,6 +205,12 @@ function mapProvider(model: TProviderWithModel): WCoreProvider {
   // xai additionally gets the engine's Grok OAuth refresh + grok-4.3 stop fix.
   const nativeId = nativeEngineProviderId(model);
   if (nativeId) return nativeId;
+
+  // ChatGPT subscription: route to the engine's native `openai-chatgpt` provider
+  // (platform set by CHAT_START_PLATFORM). The engine reads the OAuth token from
+  // its own store (~/.codex/auth.json, written by the desktop on sign-in), so we
+  // pass NO key env var and NO --base-url - it owns the ChatGPT backend (#243).
+  if (model.platform === 'openai-chatgpt') return 'openai-chatgpt';
 
   // Special handling for new-api: respect per-model protocol setting
   if (model.platform === 'new-api' && model.useModel && model.modelProtocols) {
@@ -532,6 +542,11 @@ const ENGINE_ENV_ALLOWLIST: readonly string[] = [
   'TMP',
   'TEMP',
   'PWD',
+  // ── Linux dynamic linker ───────────────────────────────────────────────
+  // Shared-library search path. Required on ARM64 Ubuntu 24.04 (Noble) when
+  // the engine needs OpenSSL 1.1 from a non-system prefix. Without it the
+  // dynamic linker can't find the .so and the engine fails on startup (#233).
+  'LD_LIBRARY_PATH',
   // ── Wayland engine config (non-secret) ─────────────────────────────────
   // The user's bash-tool shell selection. Set in the environment (never by the
   // app), so a GUI-launched engine only receives it when it survives this
