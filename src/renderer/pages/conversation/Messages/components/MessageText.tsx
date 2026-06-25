@@ -175,7 +175,9 @@ const MessageText: React.FC<{ message: IMessageText; toolbarMode?: ActionsDispla
     if (!trimmed || !conversationId || !message.createdAt) return;
     window.dispatchEvent(
       new CustomEvent<ChatEditRerunDetail>(EDIT_AND_RERUN_EVENT, {
-        detail: { conversationId, afterTimestamp: message.createdAt, text: trimmed },
+        // Truncate from the edited message INCLUSIVE (delete is `created_at > ?`),
+        // so the resend REPLACES the original instead of appending a duplicate.
+        detail: { conversationId, afterTimestamp: message.createdAt - 1, text: trimmed },
       })
     );
     setEditing(false);

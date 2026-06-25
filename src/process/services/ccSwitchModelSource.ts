@@ -227,7 +227,12 @@ const CLAUDE_NATIVE_SLOT_ORDER: readonly ClaudeModelSlotId[] = ['opus', 'default
 export function readClaudeModelInfoFromSettings(homeDir = os.homedir()): AcpModelInfo | null {
   const { claudeSettingsPath } = getCcSwitchPaths(homeDir);
   if (!fs.existsSync(claudeSettingsPath)) return null;
-  const settings = parseJsonObject<ClaudeSettings>(fs.readFileSync(claudeSettingsPath, 'utf-8'));
+  let settings: ClaudeSettings | null;
+  try {
+    settings = parseJsonObject<ClaudeSettings>(fs.readFileSync(claudeSettingsPath, 'utf-8'));
+  } catch {
+    return null; // permissions / TOCTOU race — honor the documented "not set up" null contract
+  }
   const currentModelId = claudeSlotForModelId(settings?.model) ?? 'opus';
   const availableModels = CLAUDE_NATIVE_SLOT_ORDER.map((id) => ({ id, label: CLAUDE_SLOT_LABELS[id] }));
   const currentModelLabel =
