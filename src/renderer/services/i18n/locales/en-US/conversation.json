@@ -347,7 +347,8 @@
     "runningCount": "{{count}} running",
     "summaryDid": "Did {{count}} things · {{duration}}",
     "summaryDidShort": "Did {{count}} things",
-    "expandRow": "Toggle step detail"
+    "expandRow": "Toggle step detail",
+    "sourcesCount": "{{count}} sources"
   },
   "actions": {
     "readAloud": "Read aloud",

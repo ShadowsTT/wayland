@@ -17,6 +17,7 @@
 
 import type { IMessageActivity, IMessageAcpToolCall, IMessageSubAgent, IMessageToolGroup, ActivityNode } from '../chatLib';
 import { nodeToStep, nodesToSteps, type ActivitySource, type ActivityStep } from './activityStep';
+import { parseWcoreSearchOutput } from './sources';
 
 /** wcore tool_group item status -> canonical node status. */
 const TOOLGROUP_STATUS: Record<string, ActivityNode['status']> = {
@@ -46,16 +47,28 @@ const toolGroupDetail = (rd: IMessageToolGroup['content'][number]['resultDisplay
   return undefined;
 };
 
+/** Names that identify a web-search tool call - same pattern as activityLabels RULES. */
+const WEB_SEARCH_RE = /web[_-]?search|google[_-]?search|search[_-]?web|brave[_-]?search/i;
+
 /** Map one wcore tool_group message's items to canonical tool nodes. */
 export const toolGroupToNodes = (content: IMessageToolGroup['content']): ActivityNode[] =>
-  content.map((t) => ({
-    id: t.callId,
-    kind: 'tool',
-    callId: t.callId,
-    name: t.name,
-    status: TOOLGROUP_STATUS[t.status] ?? 'running',
-    ...(toolGroupDetail(t.resultDisplay) ? { detail: toolGroupDetail(t.resultDisplay) } : {}),
-  }));
+  content.map((t) => {
+    const detail = toolGroupDetail(t.resultDisplay);
+    const node: ActivityNode = {
+      id: t.callId,
+      kind: 'tool',
+      callId: t.callId,
+      name: t.name,
+      status: TOOLGROUP_STATUS[t.status] ?? 'running',
+      ...(detail ? { detail } : {}),
+    };
+    if (WEB_SEARCH_RE.test(t.name)) {
+      const raw = typeof t.resultDisplay === 'string' ? t.resultDisplay : '';
+      const sources = parseWcoreSearchOutput(raw);
+      if (sources.length) node.sources = sources;
+    }
+    return node;
+  });
 
 /** Map one ACP tool_call message to a canonical tool node (fields nest under `.update`). */
 export const acpToolCallToNode = (content: IMessageAcpToolCall['content']): ActivityNode => {
