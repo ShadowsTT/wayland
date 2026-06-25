@@ -77,9 +77,14 @@ function itemToSource(item: unknown): Source | null {
  * Parse the wcore `web_search` tool_result output string into Source[].
  *
  * Accepted shapes (any extras are silently ignored):
- *   - `[{ title, url, ... }, ...]`          array at root
- *   - `{ results: [{ title, url }, ...] }`  nested under `results`
- *   - `{ sources: [{ title, url }, ...] }`  nested under `sources`
+ *   - `[{ title, url, ... }, ...]`            array at root
+ *   - `{ results: [{ title, url }, ...] }`    nested under `results`
+ *   - `{ sources: [{ title, url }, ...] }`    nested under `sources`
+ *   - `{ data: { web: [{ title, url }, ...] } }`  native wcore `web` tool
+ *
+ * The wcore `web` tool (operation=search) returns the last shape: a JSON
+ * envelope whose `data.web[]` entries each carry `{ title, url, snippet }`
+ * (the snippet is itself markdown). Captured live against Flux 0.12.8.
  *
  * Any other string (prose, malformed JSON, empty) returns [].
  * NEVER throws.
@@ -95,6 +100,10 @@ export function parseWcoreSearchOutput(output: string): Source[] {
       const obj = parsed as Record<string, unknown>;
       if (Array.isArray(obj['results'])) items = obj['results'];
       else if (Array.isArray(obj['sources'])) items = obj['sources'];
+      else if (typeof obj['data'] === 'object' && obj['data'] !== null) {
+        const data = obj['data'] as Record<string, unknown>;
+        if (Array.isArray(data['web'])) items = data['web'];
+      }
     }
     if (!items) return [];
     const out: Source[] = [];

@@ -47,8 +47,14 @@ const toolGroupDetail = (rd: IMessageToolGroup['content'][number]['resultDisplay
   return undefined;
 };
 
-/** Names that identify a web-search tool call - same pattern as activityLabels RULES. */
-const WEB_SEARCH_RE = /web[_-]?search|google[_-]?search|search[_-]?web|brave[_-]?search/i;
+/**
+ * Names that identify a web-search tool call. Covers the named variants
+ * (`web_search`, `brave_web_search`, ...) AND the bare native wcore tool
+ * literally named `web` (operation=search lives in the args, not the name -
+ * captured live against Flux 0.12.8). parseWcoreSearchOutput is defensive, so
+ * a non-search `web` op simply yields [].
+ */
+const WEB_SEARCH_RE = /^web$|web[_-]?search|google[_-]?search|search[_-]?web|brave[_-]?search/i;
 
 /** Map one wcore tool_group message's items to canonical tool nodes. */
 export const toolGroupToNodes = (content: IMessageToolGroup['content']): ActivityNode[] =>

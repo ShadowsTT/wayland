@@ -48,6 +48,23 @@ describe('sources.parseWcoreSearchOutput', () => {
     expect(out[0].title).toBe('AP');
   });
 
+  it('parses the native wcore web tool { data: { web: [...] } } shape', () => {
+    // Real shape captured live from the Flux `web` tool (operation=search).
+    const payload = {
+      data: {
+        web: [
+          { title: 'OpenAI: Latest News - WinBuzzer', url: 'https://winbuzzer.com/ai/openai/', snippet: '# **OpenAI**' },
+          { title: 'OpenAI News', url: 'https://openai.com/news', snippet: '* Research' },
+        ],
+      },
+      success: true,
+    };
+    const out = parseWcoreSearchOutput(JSON.stringify(payload));
+    expect(out).toHaveLength(2);
+    expect(out[0]).toMatchObject({ title: 'OpenAI: Latest News - WinBuzzer', domain: 'winbuzzer.com', snippet: '# **OpenAI**' });
+    expect(out[1].domain).toBe('openai.com');
+  });
+
   it('returns [] for a plain prose string (not JSON)', () => {
     expect(parseWcoreSearchOutput('Here are the results for your search query.')).toEqual([]);
   });

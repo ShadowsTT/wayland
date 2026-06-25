@@ -139,6 +139,30 @@ describe('projectMessages.toolGroupToNodes - web_search sources', () => {
     expect(nodes[0].sources).toBeUndefined();
   });
 
+  it('attaches sources for the bare native `web` tool with { data: { web: [...] } }', () => {
+    // The Flux native web tool is named `web` (operation=search in args) and
+    // returns this envelope. Captured + verified live against Flux 0.12.8.
+    const msg: IMessageToolGroup = {
+      type: 'tool_group',
+      content: [
+        {
+          callId: 'web1',
+          name: 'web',
+          description: '',
+          renderOutputAsMarkdown: true,
+          status: 'Success',
+          resultDisplay: JSON.stringify({
+            data: { web: [{ title: 'WinBuzzer', url: 'https://winbuzzer.com/ai/openai/', snippet: '# OpenAI' }] },
+            success: true,
+          }),
+        },
+      ],
+    } as unknown as IMessageToolGroup;
+    const nodes = toolGroupToNodes(msg.content);
+    expect(nodes[0].sources).toHaveLength(1);
+    expect(nodes[0].sources?.[0]).toMatchObject({ title: 'WinBuzzer', domain: 'winbuzzer.com' });
+  });
+
   it('does not attach sources for non-search tools', () => {
     const msg: IMessageToolGroup = {
       type: 'tool_group',
