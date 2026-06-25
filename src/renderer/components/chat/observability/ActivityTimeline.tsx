@@ -27,6 +27,7 @@ import { Badge, Tag } from '@arco-design/web-react';
 import { Check, Close, Right } from '@icon-park/react';
 import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import SourceBlock from './SourceBlock';
 import styles from './ActivityTimeline.module.css';
 
 type Props = { steps: ActivityStep[]; defaultExpanded?: boolean };
@@ -68,7 +69,8 @@ const StepRow: React.FC<{ step: ActivityStep }> = ({ step }) => {
 
   const hasDetail = Boolean(step.detail && step.detail.length);
   const hasChildren = Boolean(step.children && step.children.length);
-  const expandable = hasDetail || hasChildren;
+  const hasSources = Boolean(step.sources && step.sources.length);
+  const expandable = hasDetail || hasChildren || hasSources;
   const toggle = (): void => setOpen((v) => !v);
 
   const showAgentTag = step.kind === 'sub_agent' || Boolean(step.agent);
@@ -112,6 +114,11 @@ const StepRow: React.FC<{ step: ActivityStep }> = ({ step }) => {
       {open && hasChildren && (
         <div className={styles.childRail}>
           <ActivityTimeline steps={step.children!} defaultExpanded />
+        </div>
+      )}
+      {open && hasSources && (
+        <div className={styles.detailRail}>
+          <SourceBlock sources={step.sources!} />
         </div>
       )}
 
