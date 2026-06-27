@@ -179,7 +179,9 @@ export const useGuidAgentSelection = ({
       const assistant = customAgents.find((a) => a.id === customAgentId);
       if (assistant) {
         return {
-          backend: assistant.presetAgentType || 'gemini',
+          // #380: an assistant with no preset type runs on the bundled WCore
+          // engine, not Gemini CLI.
+          backend: assistant.presetAgentType || 'wcore',
           name: assistant.name,
           customAgentId: assistant.id,
           isPreset: true,
@@ -550,7 +552,8 @@ export const useGuidAgentSelection = ({
    */
   const selectPresetAssistant = useCallback(
     (preset: { id: string; presetAgentType?: string }) => {
-      const backend = (preset.presetAgentType ?? 'gemini') as AcpBackend;
+      // #380: default a typeless preset onto the bundled WCore engine, not Gemini.
+      const backend = (preset.presetAgentType ?? 'wcore') as AcpBackend;
       const key = getAgentKey({ backend, customAgentId: preset.id });
       setSelectedAgentKey(key);
     },
