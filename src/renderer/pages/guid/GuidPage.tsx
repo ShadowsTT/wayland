@@ -54,6 +54,7 @@ import { getAgentLogo } from '@/renderer/utils/model/agentLogo';
 import type { AcpBackendConfig } from './types';
 import { Button, ConfigProvider, Dropdown, Menu, Message } from '@arco-design/web-react';
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { warmCuratedForAgent } from '@/renderer/hooks/useModelRegistry';
 import { useTranslation } from 'react-i18next';
 import { useLocation, useNavigate } from 'react-router-dom';
 import styles from './index.module.css';
@@ -156,6 +157,18 @@ const GuidPage: React.FC = () => {
     () => filterVisibleAgents(agentSelection.availableAgents, hiddenSet, agentSelection.selectedAgentKey),
     [agentSelection.availableAgents, agentSelection.selectedAgentKey, hiddenSet]
   );
+
+  // Pre-warm each toolbar agent's curated model catalog as soon as the agents
+  // are known, so the FIRST open of any agent's model picker shows the real
+  // list instantly instead of flashing the Flux-only placeholder while its
+  // (sometimes CLI-spawning, e.g. `codex debug models`) enumeration resolves.
+  // Best-effort + deduped/cached in useModelRegistry; safe to call repeatedly.
+  useEffect(() => {
+    if (!Array.isArray(visibleAgents)) return;
+    for (const agent of visibleAgents) {
+      if (agent?.backend) warmCuratedForAgent(agent.backend);
+    }
+  }, [visibleAgents]);
 
   // Cold-boot launchpad gate (cross-audit smoke HIGH).
   //
