@@ -1078,8 +1078,7 @@
         "id": "snapshot-refresh",
         "text": "Time for a refresh? Let me update your snapshot since last time.\nTell me what changed — new income, a paid-off debt, a market move — I'll re-run net worth and flag the shifts.\n",
         "prefill": "Update my existing position.md. What's changed since the last snapshot: [pay raise / new debt / paid off X / moved jurisdiction / investment up or down / new insurance]. Re-run my net worth and tell me which direction I moved.\n",
-        "scenario": "recurring",
-        "timeBucket": "any"
+        "scenario": "cold-start"
       }
     ]
   },
@@ -1109,8 +1108,7 @@
         "id": "market-value-calibration",
         "text": "Want me to pin down what you're actually worth right now?\nTell me your title, location, and current pay; I'll return a median / 75th-percentile range and how far below market you are.\n",
         "prefill": "Calibrate my market value. Title: [your role + level]. Location: [city or remote]. Years in role: [#]. Current total comp: [base + bonus + equity]. I want the median, the 75th percentile, and how far under market I am.\n",
-        "scenario": "cold-start",
-        "timeBucket": "any"
+        "scenario": "cold-start"
       },
       {
         "id": "trajectory-check",
@@ -1123,28 +1121,27 @@
         "id": "negotiation-reps",
         "text": "Want to run negotiation reps before the real call?\nTell me the offer and your number; I'll play the recruiter, push back, and coach your counter line by line.\n",
         "prefill": "Let's run negotiation reps. The offer on the table: [base + bonus + equity]. My target number: [#]. My leverage (competing offer / current job / none): [your BATNA]. Play the recruiter and pressure-test me, then score my counter.\n",
-        "scenario": "follow-up",
+        "scenario": "continuation-friendly",
         "timeBucket": "afternoon"
       },
       {
         "id": "skill-stack-audit",
         "text": "Want me to audit your skill stack for the highest-paid version of you?\nList your top skills and target role; I'll map your T-shape and name the one skill that unlocks the next pay tier.\n",
         "prefill": "Audit my skill stack. My core skills: [list 4-6]. Target role / level: [where I'm aiming]. Show me my T-shape (the deep spike + the broad bar) and the single skill that's worth the most money to add next.\n",
-        "scenario": "recent-work",
-        "timeBucket": "any"
+        "scenario": "continuation-friendly"
       },
       {
         "id": "switching-cost-math",
         "text": "Want me to run the switching-cost math before you jump?\nGive me the new offer vs. your current deal; I'll net out equity left behind, ramp risk, and the real raise.\n",
         "prefill": "Run the switching-cost math on this move. New offer: [base + bonus + equity + start date]. Current deal: [base + bonus + unvested equity + vesting dates]. Net out what I'd forfeit, the ramp-up risk, and the true raise after all of it.\n",
-        "scenario": "follow-up",
+        "scenario": "continuation-friendly",
         "timeBucket": "evening"
       },
       {
         "id": "raise-ask-case",
         "text": "Want me to build the case for an internal raise?\nTell me your wins this year and current pay; I'll return an evidence-based ask with the number and the script.\n",
         "prefill": "Build my internal raise case. My wins / impact this past year: [3-5 concrete results]. Current pay: [base]. What comparable roles pay: [market figure if known]. Give me the exact number to ask for and the script to deliver it to my manager.\n",
-        "scenario": "recurring",
+        "scenario": "cold-start",
         "timeBucket": "morning"
       }
     ]
@@ -1182,35 +1179,33 @@
         "id": "no-one-knows-test",
         "text": "Want me to run a purchase through the no-one-knows test?\nTell me what you're about to buy and I'll tell you if it's real Joy or hidden Signal.\n",
         "prefill": "Run the no-one-knows test on this. I'm thinking about buying [the thing] for [$amount]. Be honest about whether I'd still want it if no one ever saw it.\n",
-        "scenario": "cold-start",
-        "timeBucket": "any"
+        "scenario": "cold-start"
       },
       {
         "id": "ratchet-defense",
         "text": "Just got a raise or windfall? Want me to defend against lifestyle ratchet?\nTell me the new income and I'll show you how much to absorb vs. lock away before it creeps.\n",
         "prefill": "I just got [a raise / bonus / windfall] of [$amount]. Help me defend against lifestyle ratchet — how much should I let lifestyle absorb, and how much do I lock away before it becomes my new normal?\n",
-        "scenario": "follow-up",
+        "scenario": "continuation-friendly",
         "timeBucket": "afternoon"
       },
       {
         "id": "subscription-sweep",
         "text": "Want me to sweep your recurring charges for quiet leaks?\nList your subscriptions and recurring bills; I'll mark each Keep / Investigate / Cancel with the annual cost.\n",
         "prefill": "Sweep my recurring charges. Here's what I'm paying for: [list subscriptions, memberships, and recurring bills with amounts]. Flag what I'm probably not using.\n",
-        "scenario": "recent-work",
-        "timeBucket": "any"
+        "scenario": "continuation-friendly"
       },
       {
         "id": "annual-spending-audit",
         "text": "Time for your annual Spending Audit? Want me to run the full pass?\nGive me a year of categories or statements and I'll surface drift, leaks, and where Joy money got crowded out.\n",
         "prefill": "Run my annual Spending Audit. Here's the year: [paste yearly category totals or attach statements]. I want to see category drift, the biggest leaks, and whether my Joy bucket is getting squeezed.\n",
-        "scenario": "recurring",
+        "scenario": "cold-start",
         "timeBucket": "evening"
       },
       {
         "id": "joy-reallocation",
         "text": "Want me to find Signal money to redirect into real Joy?\nTell me one status purchase you keep making and I'll show you what it could buy instead.\n",
         "prefill": "Help me redirect Signal spending into real Joy. One thing I keep buying mostly for how it looks: [the purchase, roughly $amount/year]. What would actually make me happier with that money?\n",
-        "scenario": "follow-up",
+        "scenario": "continuation-friendly",
         "timeBucket": "evening"
       }
     ]
@@ -1241,8 +1236,7 @@
         "id": "windfall-12-month-rule",
         "text": "Want me to set up your 12-month decision-free zone?\nTell me the amount and where it came from. I'll park it safely and give you a do-nothing plan until the dust settles.\n",
         "prefill": "I just received a windfall and want to avoid a money mistake. Amount: [how much]. Source: [inheritance / settlement / sale / bonus / lottery]. My instinct right now is to [the big thing I'm tempted to do]. Build me the 12-month decision-free plan.\n",
-        "scenario": "cold-start",
-        "timeBucket": "any"
+        "scenario": "cold-start"
       },
       {
         "id": "income-shock-runway",
@@ -1255,8 +1249,7 @@
         "id": "divorce-money-separation",
         "text": "Want me to walk you through separating your finances safely?\nTell me what's joint right now. I'll give you the protect-yourself-without-overstepping sequence for accounts, credit, and beneficiaries.\n",
         "prefill": "I'm heading into a separation and need to protect my finances without making a bad-faith move. What's joint right now: [checking / savings / credit cards / mortgage / car loan]. My biggest worry: [account being drained / debt in my name / credit / something else]. Give me the step-by-step.\n",
-        "scenario": "cold-start",
-        "timeBucket": "any"
+        "scenario": "cold-start"
       },
       {
         "id": "health-shock-medical-bill",
@@ -1269,15 +1262,13 @@
         "id": "sudden-expense-no-debt",
         "text": "Want me to cover a surprise expense without wrecking your budget?\nName the expense and what you can free up. I'll rank your funding sources from cheapest to most painful.\n",
         "prefill": "A surprise expense just landed and I want to cover it without spiraling into debt. The expense: [car repair / home repair / vet / appliance / other] for [amount]. What I could free up this month: [amount]. What's in emergency savings: [amount]. Rank my options cheapest to most painful.\n",
-        "scenario": "cold-start",
-        "timeBucket": "any"
+        "scenario": "cold-start"
       },
       {
         "id": "windfall-plan-after-parking",
         "text": "Parked the cash and ready for the real plan?\nTell me the amount sitting and your top 3 goals. I'll draft the deploy order: taxes, reserve, debt, then growth.\n",
         "prefill": "My windfall has been parked and the dust has settled. Amount sitting safely: [amount]. My top 3 goals: [e.g. pay off house, build a year of reserve, invest, help family]. Known tax owed or unclear: [details]. Draft my deploy order so I move in the right sequence.\n",
-        "scenario": "follow-up",
-        "timeBucket": "any"
+        "scenario": "continuation-friendly"
       }
     ]
   },
@@ -1326,7 +1317,7 @@
         "id": "beneficiary-audit",
         "text": "Want me to audit your beneficiaries before a mistake costs your family?\nList your accounts and who's named on each — I'll flag the gaps: missing contingents, minors named directly, and stale ex-spouses.\n",
         "prefill": "Audit my beneficiary designations for problems. Accounts and current beneficiaries: [401k → ___, life insurance → ___, IRA → ___, bank/brokerage → ___]. Anything that changed recently: [marriage / divorce / new baby / death]. Kids are minors: [yes/no].\n",
-        "scenario": "recurring",
+        "scenario": "cold-start",
         "timeBucket": "afternoon"
       },
       {
@@ -1340,8 +1331,7 @@
         "id": "generational-readiness-scan",
         "text": "Want a full readiness scan of your family's safety net?\nGive me a quick snapshot of your situation — I'll score all six pieces (life, will, guardian, education, beneficiaries, disability) and rank what to fix first.\n",
         "prefill": "Run a full Layer-G readiness scan on my family. Quick snapshot — partner: [yes/no], kids: [ages], income: [$], who depends on me: [list]. What I've already done: [will? life insurance? 529? none?]. What's been nagging at me: [the thing I know I'm behind on].\n",
-        "scenario": "follow-up",
-        "timeBucket": "any"
+        "scenario": "continuation-friendly"
       }
     ]
   },
@@ -1391,21 +1381,21 @@
         "id": "friday-question",
         "text": "It's Friday — want this week's one question?\nTell me what filled your week; I'll ask the high-leverage-vs-theatre question and help you reset Monday.\n",
         "prefill": "Run my Friday review. What actually filled my week: [the big time sinks]. What I meant to do but didn't: [the thing that got crowded out]. One sentence on how the week felt: [honest read].\n",
-        "scenario": "recurring",
+        "scenario": "cold-start",
         "timeBucket": "evening"
       },
       {
         "id": "weekly-friday-ritual",
         "text": "Want me to set up your standing Friday check-in?\nTell me your week's shape and I'll build a 15-minute Friday ritual with the three questions to ask every week.\n",
         "prefill": "Set up my weekly Friday check-in ritual. My typical week looks like: [work + life shape]. What I most want more of: [time, focus, people, rest]. Best 15-minute slot for me: [day/time].\n",
-        "scenario": "follow-up",
+        "scenario": "continuation-friendly",
         "timeBucket": "afternoon"
       },
       {
         "id": "deathbed-audit",
         "text": "Want the once-a-year audit against the five deathbed regrets?\nTell me where this year went; I'll score it against what dying people actually wish they'd done.\n",
         "prefill": "Run my annual deathbed audit. Where my hours went this year: [work, people, health, projects]. What I kept postponing: [the thing]. The relationship or dream I've been neglecting: [name it]. Am I living true to myself or to others' expectations: [honest answer].\n",
-        "scenario": "recurring",
+        "scenario": "cold-start",
         "timeBucket": "evening"
       }
     ]
@@ -4171,8 +4161,7 @@
         "id": "first-run-setup",
         "text": "First time? Let me stand up your publishing house.\nTell me the book you want to write and the readers it's for - I'll assemble the crew and open your STATUS manifest.\n",
         "prefill": "Setting up my standing publishing house for the first time. Book idea: [one or two sentences on what it's about]. It's [fiction / non-fiction]. The reader I'm writing for: [who they are]. My finish line: [self-publish / agent submission / just a clean manuscript].\n",
-        "scenario": "cold-start",
-        "timeBucket": "any"
+        "scenario": "cold-start"
       },
       {
         "id": "architect-the-book",
@@ -4185,28 +4174,27 @@
         "id": "dev-edit-draft",
         "text": "Want the Developmental Editor to pressure-test a draft?\nPaste a chapter or the full draft - I'll flag structure, pacing, gaps, and repeats at the big-picture level.\n",
         "prefill": "Developmental edit pass, please. This is [a single chapter / the full draft] of my [fiction / non-fiction] book. What I'm worried about: [pacing / a sticky middle / argument doesn't land / not sure if it's working]. Here it is:\n\n[paste]\n",
-        "scenario": "recent-work",
+        "scenario": "continuation-friendly",
         "timeBucket": "afternoon"
       },
       {
         "id": "copy-edit-polish",
         "text": "Want the Copy Editor to do a line-level pass?\nPaste a section that's structurally settled - I'll return it edited for clarity, consistency, and grammar, with changes flagged.\n",
         "prefill": "Copy edit this section - the structure is locked, I just need it clean. Voice I'm going for: [formal / conversational / literary / plain]. Section:\n\n[paste]\n",
-        "scenario": "follow-up",
+        "scenario": "continuation-friendly",
         "timeBucket": "afternoon"
       },
       {
         "id": "production-publish-ready",
         "text": "Want Production to assemble the publish-ready manuscript?\nTell me your format and platform - I'll build front matter, back matter, and a final proofread checklist to ship.\n",
         "prefill": "Production pass - get me to publish-ready. Target: [print / ebook / both] on [Amazon KDP / IngramSpark / agent submission / other]. Pull the edited chapters together with front matter, back matter, and a final proofread checklist.\n",
-        "scenario": "follow-up",
-        "timeBucket": "any"
+        "scenario": "continuation-friendly"
       },
       {
         "id": "weekly-check-in",
         "text": "Want your weekly check-in on where the book stands?\nI'll open the STATUS manifest, show what moved, what's stalled, and the three things to do next.\n",
         "prefill": "Weekly check-in on my book. Open the STATUS manifest and tell me: where each chapter is, what stalled since last time, and the three things I should tackle this week. Since we last talked I [did this / didn't get to it].\n",
-        "scenario": "recurring",
+        "scenario": "cold-start",
         "timeBucket": "morning"
       }
     ],
@@ -4244,7 +4232,7 @@
         "id": "weekly-broadcast-calendar",
         "text": "Want next week's broadcast calendar, fully written?\nGive me your promo and audience. I'll return 7 days of sends with copy, subject lines, segments, and send times.\n",
         "prefill": "Build me next week's broadcast calendar. This week's focus/promo: [what you're pushing]. Audience: [who they are]. Send cadence I can handle: [e.g. 3 sends]. Anything off-limits: [topics/dates to avoid].\n",
-        "scenario": "recurring",
+        "scenario": "cold-start",
         "timeBucket": "morning"
       },
       {
@@ -4258,21 +4246,21 @@
         "id": "cart-flow-rescue",
         "text": "Want me to rebuild a cart-recovery flow that's leaking money?\nPaste your current cart emails and timing. I'll return a 3-email sequence with new copy, send windows, and an incentive ladder.\n",
         "prefill": "Rebuild my abandoned-cart flow. Current setup: [how many emails, what timing, any discount]. Product + price point: [what + $]. Recovery rate now if you know it: [%]. Optimize copy, timing windows, and when (if ever) to discount.\n",
-        "scenario": "follow-up",
+        "scenario": "continuation-friendly",
         "timeBucket": "afternoon"
       },
       {
         "id": "segment-strategy",
         "text": "Want the Analyst to carve your list into segments that earn?\nDescribe your list and what people buy. I'll return a segment map with the message each one should get.\n",
         "prefill": "Have the Analyst segment my list for targeting. What people buy: [products/tiers]. Signals I can see in my data: [purchases, opens, clicks, browse, location]. Goal: [more repeat buyers / win back lapsed / upsell]. Return segments + the message each gets.\n",
-        "scenario": "recent-work",
+        "scenario": "continuation-friendly",
         "timeBucket": "afternoon"
       },
       {
         "id": "flow-audit-scorecard",
         "text": "Want a revenue audit of the flows you already have?\nList your live flows and recent numbers. I'll return a scorecard against benchmarks with the three fixes that move the most money.\n",
         "prefill": "Audit my existing email flows against benchmarks. Live flows: [welcome / cart / post-purchase / win-back / other]. Recent numbers I can share: [open %, click %, revenue per recipient, or just total email revenue]. Rank the fixes by revenue impact.\n",
-        "scenario": "follow-up",
+        "scenario": "continuation-friendly",
         "timeBucket": "evening"
       }
     ]
@@ -4330,14 +4318,13 @@
         "id": "kill-keep-scale-call",
         "text": "Want the Analyst to call kill, keep, or scale on running ads?\nPaste your ad stats (spend, CTR, CPA/ROAS). I'll return a verdict per ad with the reason and the next move.\n",
         "prefill": "Analyst: give me a kill / keep / scale call on these ads. Target CPA or ROAS: [number]. Per ad, here's spend, impressions, CTR, and CPA/ROAS: [paste your numbers].\n",
-        "scenario": "follow-up",
-        "timeBucket": "any"
+        "scenario": "continuation-friendly"
       },
       {
         "id": "weekly-performance-review",
         "text": "Want a weekly war-room review of last week's spend?\nPaste this week's account numbers. The crew returns what worked, what's bleeding budget, and 3 moves for next week.\n",
         "prefill": "Run the weekly war-room review. Here's last week's numbers (total spend, top + bottom ads by CPA/ROAS, hook/hold rates if I have them): [paste]. Budget for next week: [$]. One thing I want fixed: [the worry on my mind].\n",
-        "scenario": "recurring",
+        "scenario": "cold-start",
         "timeBucket": "morning"
       }
     ]
@@ -4395,14 +4382,14 @@
         "id": "refresh-decaying-posts",
         "text": "Want the Analyst to find your decaying posts and fix them?\nList the posts (or a topic) slipping in rankings; you get a refresh plan with the exact edits per post, ranked by impact.\n",
         "prefill": "Have the Analyst find my decaying content and build a refresh plan. Posts or topic slipping in rankings: [paste URLs/titles, or name the topic]. Target keywords they should own: [the phrases]. For each one, tell me the exact edits to make - new sections, updated stats, internal links - ranked by likely impact.\n",
-        "scenario": "follow-up",
+        "scenario": "continuation-friendly",
         "timeBucket": "afternoon"
       },
       {
         "id": "ai-overview-snippet-pass",
         "text": "Want a Quality Gate pass to win AI Overviews and snippets?\nPaste a draft or URL + its target query; you get extractable answer blocks, schema, and an E-E-A-T checklist.\n",
         "prefill": "Run the Quality Gate to optimize this for AI Overviews and featured snippets. Target query: [the keyword]. Draft or URL: [paste content or link]. Rewrite the lead into a clean extractable answer block, suggest FAQ/schema markup, and run it against an E-E-A-T checklist so an answer engine will cite it.\n",
-        "scenario": "follow-up",
+        "scenario": "continuation-friendly",
         "timeBucket": "evening"
       }
     ]
@@ -4446,28 +4433,28 @@
         "id": "build-prospect-list",
         "text": "Want a clean prospect list scored against your ICP?\nGive me the ICP and target count; I'll return named accounts and decision-makers with the buying signal to lead on.\n",
         "prefill": "Build me a prospect list of [number] accounts that match this ICP: [paste ICP or describe: titles, industry, company size, region]. For each, flag the buying signal worth opening with (hiring, funding, tool switch, etc.).\n",
-        "scenario": "recent-work",
+        "scenario": "continuation-friendly",
         "timeBucket": "afternoon"
       },
       {
         "id": "write-sequence",
         "text": "Want the Copy crew to write a multi-touch sequence that gets replies?\nName your offer and primary objection; I'll return an 8-touch, 14-day cadence across email, LinkedIn, and phone.\n",
         "prefill": "Write a multi-touch outbound sequence for my offer: [what I sell + the outcome]. Audience: [who]. The objection they hold: [the doubt]. Channels I can run: [email / LinkedIn / phone]. Tone: [direct / warm / founder-to-founder].\n",
-        "scenario": "follow-up",
+        "scenario": "continuation-friendly",
         "timeBucket": "morning"
       },
       {
         "id": "personalize-at-scale",
         "text": "Want personalized first lines for your whole list, not copy-paste mail-merge?\nPaste your prospects (or a few rows); I'll return a signal-based opener for each tied to a real reason to reach out.\n",
         "prefill": "Write personalized opening lines for these prospects: [paste names + companies, or a CSV of rows]. The offer I'm tying it to: [what I sell]. Use a real trigger per prospect (recent post, hire, launch, news) — no generic flattery.\n",
-        "scenario": "recent-work",
+        "scenario": "continuation-friendly",
         "timeBucket": "afternoon"
       },
       {
         "id": "rescue-dead-sequence",
         "text": "Sequence going to crickets? Let the squad diagnose and rebuild it.\nPaste your current emails plus open/reply rates; I'll find what's killing replies and ship a fixed cadence.\n",
         "prefill": "My outbound sequence isn't getting replies — diagnose and rebuild it. Current emails: [paste]. Open rate: [%], reply rate: [%], booked calls: [#]. Who I'm sending to: [audience]. What I think is wrong: [your hunch, if any].\n",
-        "scenario": "recurring",
+        "scenario": "cold-start",
         "timeBucket": "afternoon"
       }
     ]
@@ -4525,15 +4512,13 @@
         "id": "citation-nap-cleanup",
         "text": "First time? Let the crew clean up your citations and NAP.\nGive me your name, address, and phone as they appear now. You get a directory audit and exact-match fixes so listings stop contradicting each other.\n",
         "prefill": "Audit and fix my citations / NAP consistency. Name: [business name]. Address: [full address]. Phone: [number]. Any old names, addresses, or numbers I've used before: [list any]. Directories I know I'm listed on: [Yelp, Apple Maps, etc.].\n",
-        "scenario": "cold-start",
-        "timeBucket": "any"
+        "scenario": "cold-start"
       },
       {
         "id": "negative-review-response",
         "text": "Want me to draft replies to your reviews the right way?\nPaste a review (good or bad) and what really happened. You get an on-brand response that acknowledges, de-escalates, and moves it private.\n",
         "prefill": "Draft a response to this review. The review: [paste it]. What actually happened from my side: [your context]. How I want to come across: [warm / professional / no-nonsense]. Best private contact to offer: [name + phone or email].\n",
-        "scenario": "follow-up",
-        "timeBucket": "any"
+        "scenario": "continuation-friendly"
       }
     ]
   },
@@ -4576,28 +4561,28 @@
         "id": "testing-rubric-experience",
         "text": "Want the crew to turn your hands-on notes into a real testing section?\nPaste your raw notes. We build a scored rubric (battery, build, speed...) and write the experience with original data points.\n",
         "prefill": "Turn my hands-on time into a credible testing section. Product: [product name]. My raw notes: [what I did, how long I used it, anything I measured]. Build a scored rubric and write it up with the specific numbers.\n",
-        "scenario": "recent-work",
+        "scenario": "continuation-friendly",
         "timeBucket": "afternoon"
       },
       {
         "id": "compliance-disclosure-pass",
         "text": "Want Counsel to make the affiliate links FTC-clean?\nPaste the draft (or links). I place a clear-and-conspicuous disclosure near every link and run the proximity/prominence/placement check.\n",
         "prefill": "Run a compliance pass on this review. Here's the draft / the affiliate links: [paste]. Place the disclosure where readers see it before the links, and confirm it passes the FTC four-factor test.\n",
-        "scenario": "follow-up",
+        "scenario": "continuation-friendly",
         "timeBucket": "afternoon"
       },
       {
         "id": "quality-gate-rescue",
         "text": "Want the Quality Gate to fix a review that reads like AI?\nPaste your existing draft. I flag thin claims, add proof of real testing, tighten the verdict, and return the upgraded version.\n",
         "prefill": "Send my draft through the Quality Gate. Here it is: [paste]. Strip the generic filler, flag anything I can't back with hands-on proof, sharpen the verdict, and hand it back publish-ready.\n",
-        "scenario": "follow-up",
+        "scenario": "continuation-friendly",
         "timeBucket": "evening"
       },
       {
         "id": "best-of-roundup",
         "text": "Want the crew to ship a 'best X for Y' comparison roundup?\nName the category and the buyer. We pick the winners, build the comparison table, and write the pick-by-pick verdicts with links.\n",
         "prefill": "Build a 'best [category] for [buyer/use-case]' roundup. Contenders I have in mind: [list a few, or 'crew decides from research']. Give me the comparison table, a clear top pick + runner-up + budget pick, and disclosure in place.\n",
-        "scenario": "recurring",
+        "scenario": "cold-start",
         "timeBucket": "morning"
       }
     ]
@@ -4648,8 +4633,7 @@
         "id": "red-flag-quality-gate",
         "text": "Want the Quality Gate to scan one program for deal-breakers?\nPaste the program's terms or link. I'll flag clawback/reversal risk, payout terms, and tracking red flags before you build.\n",
         "prefill": "Run the Quality Gate on one program before I build content around it. Program: [name/link]. Terms I have: [paste payment terms, cookie, commission, anything]. Flag the deal-breakers.\n",
-        "scenario": "cold-start",
-        "timeBucket": "any"
+        "scenario": "cold-start"
       },
       {
         "id": "niche-fit-finder",
@@ -4662,7 +4646,7 @@
         "id": "re-vet-current-stack",
         "text": "Want me to re-vet the programs you're already running?\nList your current offers + how each is performing. I'll return keep / cut / renegotiate calls with the scoring behind each.\n",
         "prefill": "Re-vet the affiliate programs I'm already promoting. Current offers + how each is doing: [name - rough EPC or earnings, one per line]. Tell me keep, cut, or renegotiate for each.\n",
-        "scenario": "recurring",
+        "scenario": "cold-start",
         "timeBucket": "evening"
       }
     ]
@@ -4713,22 +4697,21 @@
         "id": "schema-markup-pass",
         "text": "Want me to add the right structured data to a roundup so it earns rich results?\nPaste the page or its URL. You get correct ItemList schema for the picks, plus a guardrail flag on any Review/FAQ markup that risks a Google penalty.\n",
         "prefill": "Add structured data to my comparison/roundup page. Page (paste content or URL): [here]. Tell me which schema is safe to use, generate the JSON-LD, and flag any Review or FAQ markup that could trip a manual action since these are editorial picks, not user reviews.\n",
-        "scenario": "follow-up",
+        "scenario": "continuation-friendly",
         "timeBucket": "afternoon"
       },
       {
         "id": "long-tail-cut-spinoffs",
         "text": "Want me to spin a winning roundup into long-tail money-page variants?\nPoint me at the page. You get 3-5 buyer-intent cuts like 'best under $X', 'best for beginners', 'best for travel', each with its own angle and table.\n",
         "prefill": "Spin my existing roundup into long-tail variants. Source page (paste or URL): [here]. Cuts I want (or let the crew pick the highest-intent ones): [best under $___, best for beginners, best for ___, cheapest, best free]. Keep the verdict logic consistent across all of them.\n",
-        "scenario": "recent-work",
+        "scenario": "continuation-friendly",
         "timeBucket": "afternoon"
       },
       {
         "id": "refresh-stale-comparison",
         "text": "Want me to fact-check and refresh a comparison page that's gone stale?\nPaste the live page. You get updated prices/features, a re-verified table, a re-tested winner, and a flagged list of every claim that changed.\n",
         "prefill": "Refresh and re-verify my existing comparison page. Live page (paste or URL): [here]. Re-check current pricing, features, and availability for each option, update the table and verdict if the facts moved, and give me a changelog of exactly what changed and why.\n",
-        "scenario": "recurring",
-        "timeBucket": "any"
+        "scenario": "cold-start"
       }
     ]
   },
@@ -4771,28 +4754,27 @@
         "id": "pre-payout-fix-list",
         "text": "Payout dropping soon? Let me ship a pre-payout fix list.\nTell me the deadline and site; the crew prioritizes the dead links and disclosure gaps that put commissions at risk first.\n",
         "prefill": "I have an affiliate payout / program review on [date] for [site URL]. Build me a prioritized fix list before then: dead affiliate links losing me clicks, plus any disclosure gaps that could flag a TOS violation. Put the revenue-at-risk items at the top.\n",
-        "scenario": "recurring",
+        "scenario": "cold-start",
         "timeBucket": "afternoon"
       },
       {
         "id": "link-rot-reclamation",
         "text": "Want me to recover revenue from rotted affiliate links?\nGive me your site; the crew finds dead/redirected affiliate links and proposes live replacement URLs plus 301s.\n",
         "prefill": "Sites lose ~5% of links to rot yearly. Scan [your site URL] for affiliate links that now 404, redirect, or point to discontinued products, and propose a live replacement URL or 301 for each. Flag the highest-traffic ones first.\n",
-        "scenario": "recent-work",
+        "scenario": "continuation-friendly",
         "timeBucket": "afternoon"
       },
       {
         "id": "tos-risk-phrase-scan",
         "text": "Want me to catch ToS-risk phrasing before a program does?\nGive me your site; Counsel flags cloaked links, banned claims, and wording that breaches Amazon/affiliate operating agreements.\n",
         "prefill": "Scan [your site URL] for affiliate-program TOS risks: link cloaking/masking, missing 'As an Amazon Associate...' wording, price/availability claims that go stale, and any phrasing that could trigger a material breach. Programs: [Amazon Associates / others]. Give me each issue with the fix.\n",
-        "scenario": "follow-up",
-        "timeBucket": "any"
+        "scenario": "continuation-friendly"
       },
       {
         "id": "compliance-proof-report",
         "text": "Want a sign-off-ready compliance report after the fixes?\nTell me what's been fixed; the Quality Gate re-checks and produces a dated pass/fail report you can file.\n",
         "prefill": "Re-verify [your site URL] after my last round of fixes and produce a dated compliance report: links checked vs. broken remaining, pages with compliant disclosures vs. gaps, and TOS-risk items cleared. I need something I can keep on file for [Amazon / the affiliate network / my own records].\n",
-        "scenario": "follow-up",
+        "scenario": "continuation-friendly",
         "timeBucket": "evening"
       }
     ]
@@ -4836,28 +4818,27 @@
         "id": "rewrite-slipping-post",
         "text": "Want me to rewrite a slipping post end to end?\nPaste the post or its URL. The crew returns a rewritten intro, refreshed stats, and a tightened body with what changed.\n",
         "prefill": "Rewrite this slipping post. URL or paste: [the post]. It used to rank/convert and has faded. Rebuild the intro (clear answer in the first 150 words), swap any stale stats for current-year data, and tell me what you changed and why.\n",
-        "scenario": "follow-up",
+        "scenario": "continuation-friendly",
         "timeBucket": "afternoon"
       },
       {
         "id": "products-prices-sweep",
         "text": "Want me to sweep dead products and stale prices out of old posts?\nGive me your current product list. The crew flags every mention that's outdated and rewrites it to what you sell now.\n",
         "prefill": "Find and fix dead products and old prices across my published posts. My current lineup: [paste products + prices, or a link to your shop/affiliate dashboard]. Flag every mention of discontinued items or wrong prices and rewrite those sections to match what I sell today.\n",
-        "scenario": "recurring",
+        "scenario": "cold-start",
         "timeBucket": "afternoon"
       },
       {
         "id": "ai-search-freshness",
         "text": "Want me to refresh your best pages for AI search visibility?\nName the 3 pages you most want cited. The crew returns rewrites built to get pulled into AI answers.\n",
         "prefill": "Refresh these pages so AI search (ChatGPT, Perplexity, Google AI) cites them. Pages: [3 URLs you want quoted]. Put a direct answer in the first 150 words, add current-year stats, and structure for citation. Tell me what each change buys me.\n",
-        "scenario": "recent-work",
-        "timeBucket": "any"
+        "scenario": "continuation-friendly"
       },
       {
         "id": "quality-gate-review",
         "text": "Want the Quality Gate to check a refresh before it goes live?\nPaste your updated draft. The crew checks the delta is real, facts hold up, and links work, then gives a ship/hold call.\n",
         "prefill": "Run my refreshed draft through the Quality Gate before I publish. Draft: [paste]. Confirm the update is substantive (not a cosmetic date swap), every stat and claim checks out, internal links work, and the intro answers fast. Give me a ship-or-hold verdict with fixes.\n",
-        "scenario": "follow-up",
+        "scenario": "continuation-friendly",
         "timeBucket": "evening"
       }
     ]
@@ -4914,14 +4895,14 @@
       {
         "id": "competitive-timing-research",
         "text": "Want the Research lead to find the best window for your sale?\nTell me your category and the rough timeframe; I'll return the date to run it and which events to dodge or ride.\n",
-        "scenario": "follow-up",
+        "scenario": "continuation-friendly",
         "timeBucket": "morning",
         "prefill": "Research the best timing for my next promo. Category: [products]. Rough window I'm considering: [month/quarter]. Tell me the exact dates to run it, which retail events (Prime Day, BFCM, Walmart/Target deal days) to ride or avoid, and where competitors will be loud.\n"
       },
       {
         "id": "channel-sequencing-plan",
         "text": "Want the Channels lead to sequence the launch across your channels?\nName your channels and the promo dates; I'll return a day-by-day send/post schedule so nothing collides.\n",
-        "scenario": "recurring",
+        "scenario": "cold-start",
         "timeBucket": "afternoon",
         "prefill": "Sequence my promo across channels. Channels I use: [email / SMS / Instagram / paid ads / Amazon / etc.]. Promo runs: [start date - end date]. Give me a day-by-day schedule of what goes out where (tease, launch, mid-sale push, last-chance) so sends don't overlap or burn the list.\n"
       }
@@ -4966,8 +4947,7 @@
         "id": "etsy-13-tags-attributes",
         "text": "Want the Research crew to fill all 13 Etsy tags + attributes the smart way?\nDrop your product and current title; you get a 140-char title plus 13 non-repeating tags covering audience, occasion, style, and use case.\n",
         "prefill": "Optimize my Etsy listing for search. Product: [what it is]. Current title: [paste, or say none yet]. Who/what it's for: [recipient, occasion, room, aesthetic]. Use all 13 tags without repeating my title, and tell me which attributes to set.\n",
-        "scenario": "cold-start",
-        "timeBucket": "any"
+        "scenario": "cold-start"
       },
       {
         "id": "shopify-schema-conversion",
@@ -4980,15 +4960,14 @@
         "id": "quality-gate-audit",
         "text": "Want the Quality Gate to audit a listing you already have?\nPaste your current title/bullets/description; the crew flags policy violations, keyword gaps, and weak spots, then returns a fixed version.\n",
         "prefill": "Run the Quality Gate on my existing [Amazon / Shopify / Etsy] listing and rewrite the weak parts. Here's what I have now: [paste title, bullets, description, tags]. Flag anything that breaks platform rules, misses obvious keywords, or buries the benefit.\n",
-        "scenario": "follow-up",
+        "scenario": "continuation-friendly",
         "timeBucket": "afternoon"
       },
       {
         "id": "multi-platform-repurpose",
         "text": "Already have one good listing? Want the crew to adapt it across platforms?\nPaste your existing listing and name the new platform; you get a version reworked to that platform's rules, limits, and buyer behavior.\n",
         "prefill": "I have a working listing on [source platform] and want to launch it on [new platform]. Here it is: [paste title, bullets, description]. Rework it for the new platform's character limits, tag/keyword fields, and how buyers shop there.\n",
-        "scenario": "recent-work",
-        "timeBucket": "any"
+        "scenario": "continuation-friendly"
       }
     ]
   },
@@ -5038,21 +5017,21 @@
         "id": "weekly-numbers-readout",
         "text": "Want Analyst + Numbers to give you the weekly readout?\nShare last week's sales and costs; I'll return turnover, stockout rate, margin, and the one number to fix.",
         "prefill": "Have the Analyst and Numbers run my weekly readout. Pull [last 7 days] of sales + costs from [source]. Report inventory turnover, stockout rate, GMROI, and gross margin vs the prior week. End with the single metric slipping and what to do about it.",
-        "scenario": "recurring",
+        "scenario": "cold-start",
         "timeBucket": "evening"
       },
       {
         "id": "sla-breach-rescue",
         "text": "Want me to rescue the orders and tickets that are about to blow their SLA?\nConnect orders + inbox; I'll surface every at-risk item and draft the proactive customer note.",
         "prefill": "Run an SLA rescue sweep. Connect [orders] and [inbox]. Find every order past its ship window and every ticket near my [24h] first-response target. Rank by how close to breach + customer value, and draft a proactive 'here's your update' note for each.",
-        "scenario": "follow-up",
+        "scenario": "continuation-friendly",
         "timeBucket": "afternoon"
       },
       {
         "id": "standing-daily-brief",
         "text": "Want the crew on standby to brief you every morning automatically?\nTell me your sources and the hour; I'll deliver a triaged Support + Ops + Numbers brief on schedule.",
         "prefill": "Set the crew up as a standing daily brief. Sources: [inbox], [inventory], [sales]. Deliver it every day at [8:00am] as one scannable brief: overnight support fires, low-stock/reorder alerts, and yesterday's revenue vs target. Keep it to what I must act on.",
-        "scenario": "recurring",
+        "scenario": "cold-start",
         "timeBucket": "morning"
       }
     ]
@@ -5096,14 +5075,14 @@
         "id": "landed-cost-margin-math",
         "text": "Want Numbers to run true landed cost and net margin?\nGive supplier price, MOQ, shipping, and your sell price; I return landed cost per unit, net margin %, and break-even units after tariffs and fees.",
         "prefill": "Run the unit economics. Supplier unit price: [$X]. MOQ: [units]. Shipping/freight: [$X or unknown]. Sell price: [$X]. Marketplace fees: [Amazon FBA / Shopify+ads / unknown]. Importing from: [China / other]. Show landed cost, net margin %, and break-even.",
-        "scenario": "follow-up",
+        "scenario": "continuation-friendly",
         "timeBucket": "afternoon"
       },
       {
         "id": "supplier-vetting-checklist",
         "text": "Want a supplier-vetting checklist before you wire a deposit?\nTell me the product + where you're sourcing; I return the MOQ quote checklist and the questions every proforma must answer first.",
         "prefill": "Vet my sourcing before I pay a deposit. Product: [what it is]. Sourcing from: [Alibaba / specific supplier / unknown]. Quoted MOQ: [units] at [$X/unit]. Flag the traps and give me the exact questions to send the supplier before I wire the 30%.",
-        "scenario": "follow-up",
+        "scenario": "continuation-friendly",
         "timeBucket": "afternoon"
       },
       {
@@ -5117,7 +5096,7 @@
         "id": "go-no-go-verdict",
         "text": "Want a blunt go/no-go with specific kill reasons?\nPaste your research so far; the Quality Gate audits demand, margin, and risk, then returns GO or NO-GO with the exact reasons.",
         "prefill": "Give me the final go/no-go verdict. Here's what I've gathered: [paste demand numbers, costs, margin, supplier notes, competition]. Audit it honestly and tell me GO or NO-GO with the specific reasons, plus what would have to change to flip a no.",
-        "scenario": "recurring",
+        "scenario": "cold-start",
         "timeBucket": "evening"
       }
     ]
@@ -5154,8 +5133,7 @@
         "id": "negative-review-recovery",
         "text": "First time? Let me defuse a brutal 1-star.\nPaste the review + what actually happened. You get a public reply (acknowledge, own it, offer to fix) plus the offline outreach note.\n",
         "prefill": "Need to respond to a harsh negative review. The review: [paste]. What really happened on our end: [the context]. Outcome I want: [refund offered / fix shipped / win them back]. Keep it human, not corporate.\n",
-        "scenario": "cold-start",
-        "timeBucket": "any"
+        "scenario": "cold-start"
       },
       {
         "id": "solicitation-sequence",
@@ -5175,14 +5153,13 @@
         "id": "five-star-amplify",
         "text": "Want me to turn your best reviews into marketing?\nPaste your 5-star reviews. You get personable thank-you replies plus 5 pull-quotes ready for your site and socials.\n",
         "prefill": "Put my glowing reviews to work. Here are the 5-star ones: [paste]. Write a genuine reply to each (no copy-paste feel), then pull the 5 strongest quotes I can use as social proof on my [site / ads / Instagram].\n",
-        "scenario": "recent-work",
-        "timeBucket": "any"
+        "scenario": "continuation-friendly"
       },
       {
         "id": "weekly-review-sweep",
         "text": "Want a standing weekly review sweep?\nDrop this week's new reviews. The crew ships replies, flags anything urgent, and updates your running fix list.\n",
         "prefill": "Run my weekly review sweep. This week's new reviews: [paste]. Draft replies in my usual voice, flag anything that needs me personally, and tell me if any complaint is now showing up often enough to fix.\n",
-        "scenario": "recurring",
+        "scenario": "cold-start",
         "timeBucket": "morning"
       }
     ]
@@ -5212,7 +5189,7 @@
         "id": "weekly-kill-scale-call",
         "text": "Want the crew to run this week's kill / scale / hold call?\nPaste each campaign's spend, ROAS, and CPA. You get a verdict per campaign with the reason and the next move.\n",
         "prefill": "Run this week's kill/scale/hold call. My target ROAS is [e.g. 3x] and my max CPA is [$X]. Here's each campaign (name, spend, ROAS, CPA, days running):\n[paste your numbers]\n",
-        "scenario": "recurring",
+        "scenario": "cold-start",
         "timeBucket": "morning"
       },
       {
@@ -5233,21 +5210,21 @@
         "id": "offer-rework",
         "text": "Want the Offer specialist to rebuild a stalling offer?\nTell me what you sell and the price. You get 3 reworked offers with the hook, guarantee, and urgency angle for each.\n",
         "prefill": "Rework my offer so it pulls harder. Product: [what it is]. Current price + offer: [e.g. $X, free shipping]. Who it's for: [audience]. Where it's stalling: [CTR fine but no sales / cheap clicks no add-to-carts / etc].\n",
-        "scenario": "follow-up",
+        "scenario": "continuation-friendly",
         "timeBucket": "afternoon"
       },
       {
         "id": "budget-reallocation",
         "text": "Want the Channels specialist to re-split your budget?\nPaste spend and return per channel. You get a reallocation plan with how much to shift where, and why.\n",
         "prefill": "Re-split my ad budget across channels. Total budget: [$X/week]. Per channel right now (spend, ROAS/CPA): [Meta...] [TikTok...] [Google...]. My goal: [protect ROAS / scale spend / find new volume].\n",
-        "scenario": "recent-work",
+        "scenario": "continuation-friendly",
         "timeBucket": "morning"
       },
       {
         "id": "loser-teardown",
         "text": "Want the Analyst to autopsy a campaign that's bleeding?\nPaste the campaign's funnel numbers. You get the exact failure point (hook, click, or offer) and the fix to test next.\n",
         "prefill": "Tear down a campaign that's losing money. Funnel numbers: impressions [X], CTR [X%], CPC [$X], add-to-cart/lead rate [X%], conversion rate [X%], CPA [$X], ROAS [Xx]. Tell me where it's breaking and what to fix first.\n",
-        "scenario": "follow-up",
+        "scenario": "continuation-friendly",
         "timeBucket": "afternoon"
       }
     ]
@@ -5298,21 +5275,21 @@
         "id": "platform-native-rewrite",
         "text": "Want me to adapt one message for every platform instead of copy-pasting?\nPaste the core point. I'll return it rewritten native to Reels, Shorts, LinkedIn, and X with the right length and hook.\n",
         "prefill": "Adapt this one point natively for each platform (not copy-paste). The point: [paste the insight or quote]. Platforms: [Reels / Shorts / LinkedIn / X]. Voice: [casual / authority / punchy].\n",
-        "scenario": "recent-work",
+        "scenario": "continuation-friendly",
         "timeBucket": "afternoon"
       },
       {
         "id": "humanize-and-de-ai",
         "text": "Want me to run the draft posts through the Humanizer so they don't read as AI?\nPaste the posts. I'll return them in your voice with real variance, killed clichés, and tightened hooks.\n",
         "prefill": "Humanize these draft posts so they sound like me, not AI. The posts: [paste them]. My voice: [describe it, or name a post that sounds like me]. Keep: [any non-negotiable lines].\n",
-        "scenario": "follow-up",
+        "scenario": "continuation-friendly",
         "timeBucket": "afternoon"
       },
       {
         "id": "weekly-repurpose-cadence",
         "text": "Doing this every week? Want me to stand up a repeatable repurposing cadence?\nTell me how often you record and where you post. I'll return a weekly cascade workflow the crew runs each time.\n",
         "prefill": "Set up a repeatable weekly repurposing cadence. I record [how often, e.g. 1 episode/week]. I post on [platforms]. Posting goal per week: [e.g. 7 posts + 1 newsletter]. Recurring constraints: [time I have, brand rules].\n",
-        "scenario": "recurring",
+        "scenario": "cold-start",
         "timeBucket": "morning"
       }
     ]
@@ -5363,22 +5340,21 @@
         "id": "winner-into-formulas",
         "text": "Want to turn one hook that worked into 12 more like it?\nPaste your best-performing hook and the crew reverse-engineers why it hit, then spins variants across proven formulas.\n",
         "prefill": "This hook performed well for me: [paste the hook + rough numbers if you have them]. Reverse-engineer why it worked, then give me 12 variants across different proven formulas (open loop, contrarian, confession, identity call, list tease).\n",
-        "scenario": "recent-work",
+        "scenario": "continuation-friendly",
         "timeBucket": "afternoon"
       },
       {
         "id": "week-of-hooks",
         "text": "Want a week of hooks batched in one pass?\nGive me your 5 video topics for the week and the crew returns 3 ranked, film-ready hooks for each.\n",
         "prefill": "Batch a week of hooks for me. Here are my 5 video topics: [topic 1], [topic 2], [topic 3], [topic 4], [topic 5]. Audience: [who]. Give me 3 ranked, film-ready hooks per video.\n",
-        "scenario": "recurring",
+        "scenario": "cold-start",
         "timeBucket": "morning"
       },
       {
         "id": "on-brand-hook-pass",
         "text": "Want hooks that actually sound like you, not generic viral bait?\nTell me your voice + 2-3 lines you've said before, and the crew writes hooks that pass the brand check.\n",
         "prefill": "Write hooks that sound like me, not generic clickbait. My voice/tone: [how you talk]. A few real lines I've used: [paste 2-3]. Topic for this video: [topic]. Give me 12 on-brand hooks the Brand check would approve.\n",
-        "scenario": "follow-up",
-        "timeBucket": "any"
+        "scenario": "continuation-friendly"
       }
     ]
   },
@@ -5421,28 +5397,28 @@
         "id": "triage-by-intent",
         "text": "Want the crew to sort today's inbox by what each person needs?\nConnect it; I'll split into Support / Buying-question / Warm-lead / Ignore and route a draft to each lane.\n",
         "prefill": "Triage my inbox by intent and route a draft to each lane. Buckets: support issue, buying question, warm lead, can-ignore. Here's the inbox: [paste or connect]. Flag anything that's been waiting over an hour.\n",
-        "scenario": "recent-work",
+        "scenario": "continuation-friendly",
         "timeBucket": "afternoon"
       },
       {
         "id": "objection-reply-pack",
         "text": "Want answer-ready replies for the objections piling up in DMs?\nTell me the offer and the doubt that keeps coming up; you get 3 reply variants ranked by which closes.\n",
         "prefill": "Build me a reply pack for the objection clogging my DMs. Offer: [what they buy]. The objection I keep hearing: [the doubt]. Give me 3 variants ranked by which one closes, plus the follow-up if they go quiet.\n",
-        "scenario": "follow-up",
+        "scenario": "continuation-friendly",
         "timeBucket": "afternoon"
       },
       {
         "id": "nurture-the-quiet-ones",
         "text": "Want me to re-warm the leads who went quiet?\nName the leads (or let me find the 48-hour-silent ones); you get a 3-message nurture sequence per person, spaced and ready to send.\n",
         "prefill": "Re-engage the warm leads who went quiet on me. Find the ones silent 48+ hours, then draft a 3-message nurture sequence for each, spaced a few days apart, leading back to: [my offer or next step].\n",
-        "scenario": "recurring",
+        "scenario": "cold-start",
         "timeBucket": "evening"
       },
       {
         "id": "questions-to-content",
         "text": "Want the research crew to turn my audience's questions into content?\nConnect recent comments and DMs; you get the top 5 recurring questions plus a hook + post angle for each.\n",
         "prefill": "Mine my recent comments and DMs for the questions people keep asking, then turn them into content. Give me the top 5 recurring questions, each with a hook and a post angle. My niche: [what I'm known for].\n",
-        "scenario": "recurring",
+        "scenario": "cold-start",
         "timeBucket": "evening"
       }
     ]
@@ -5486,28 +5462,27 @@
         "id": "slide-by-slide-in-my-voice",
         "text": "Want slide-by-slide body copy written in your voice?\nPaste your hook + raw notes; I'll return one clean idea per slide, swipe-baited end to end.\n",
         "prefill": "Write the slide-by-slide body copy in my voice. Cover hook: [slide 1 line]. My raw notes / points to cover: [dump them here]. My voice sounds like: [paste 2-3 sentences I've written]. One idea per slide, short and punchy, each slide baiting the next swipe so completion stays above 60%.\n",
-        "scenario": "follow-up",
+        "scenario": "continuation-friendly",
         "timeBucket": "afternoon"
       },
       {
         "id": "caption-plus-cta",
         "text": "Want a caption that deepens the hook plus a CTA that lands?\nTell me the post's payoff + the action you want; you get a 60-70 word caption and 3 ranked CTAs.\n",
         "prefill": "Write the caption and CTA for my carousel. What the post delivers: [the payoff/promise]. The action I want: [save / share / comment / DM a keyword / link in bio]. Caption should open by extending the hook (not repeating slide 1), run 60-70 words, and end with 3 CTA options ranked by fit.\n",
-        "scenario": "recent-work",
+        "scenario": "continuation-friendly",
         "timeBucket": "afternoon"
       },
       {
         "id": "discovery-terms-and-hashtags",
         "text": "Want discovery terms + hashtags tuned for search, not stuffing?\nTell me the topic + niche; you get caption keywords plus 3-5 hashtags sized for reach.\n",
         "prefill": "Build the discovery layer for a post about [topic] in the [niche] space. Give me searchable keywords to weave into the caption, plus 3-5 hashtags in the 10K-200K post range (with one broader category tag), and tell me which terms to put in the first line for search pickup.\n",
-        "scenario": "recurring",
-        "timeBucket": "any"
+        "scenario": "cold-start"
       },
       {
         "id": "repurpose-across-platforms",
         "text": "Want this carousel refitted for a second platform?\nPaste the slides + name the target; you get resized layout notes, a re-fitted caption, and platform-right CTA.\n",
         "prefill": "Repurpose this carousel for another platform. Original (built for [Instagram 4:5]): [paste slides or describe]. Target platform: [LinkedIn 1:1 / TikTok 9:16 / Stories]. Give me the new dimensions, what to crop or reflow per slide, a caption re-fitted to that platform's norms, and a CTA that matches how people act there.\n",
-        "scenario": "follow-up",
+        "scenario": "continuation-friendly",
         "timeBucket": "evening"
       }
     ]
@@ -5558,21 +5533,21 @@
         "id": "hook-batch",
         "text": "Want 8 scroll-stopping hooks for a trend you're already filming?\nDrop the trend + your product and I'll return 8 first-2-second hooks ranked by stopping power.\n",
         "prefill": "Spin 8 opening hooks for a trend video. Trend / format I'm using: [describe]. Product + the one thing it does for people: [benefit]. Audience: [who they are]. Return 8 hooks built for the first 2 seconds, ranked by stopping power, with the angle noted for each.\n",
-        "scenario": "follow-up",
+        "scenario": "continuation-friendly",
         "timeBucket": "afternoon"
       },
       {
         "id": "audio-coherence-fix",
         "text": "Want me to check a trending sound actually fits your video?\nTell me the sound + what you're showing and I'll flag coherence and rework the beat-by-beat if it's forced.\n",
         "prefill": "Check whether this trending sound fits my content or whether the algorithm will read it as forced. Sound / audio: [name or describe it]. What my video shows: [the footage / scene]. My brand: [what we sell]. If it's a mismatch, rework the beat-by-beat so the sound and visuals actually line up.\n",
-        "scenario": "follow-up",
+        "scenario": "continuation-friendly",
         "timeBucket": "afternoon"
       },
       {
         "id": "weekly-trend-slate",
         "text": "Want a fresh week of on-brand trend ideas every Monday?\nGive me your brand + posting cadence and I'll return a 5-slot weekly slate, each with sound, format, and hook.\n",
         "prefill": "Build my weekly trend slate. Brand + niche: [name + category]. How many posts a week: [e.g. 3-5]. Platforms: [TikTok / Reels / Shorts]. Return one filmable idea per slot, each with the trending sound, format, hook, and my on-brand spin, ordered by how soon each trend will peak.\n",
-        "scenario": "recurring",
+        "scenario": "cold-start",
         "timeBucket": "morning"
       }
     ]
@@ -5630,14 +5605,13 @@
         "id": "build-kill-pivot-verdict",
         "text": "Want the Analyst to read your results and call build / kill / pivot?\nPaste your signups, reply rates, and ad spend; you get one verdict with the numbers behind it.\n",
         "prefill": "Give me a build / kill / pivot verdict. Visitors: [number]. Signups: [number]. Spend: [amount]. Cold replies / interviews: [what people said]. Read the conversion against benchmark, tell me if the signal is real, and if it's pivot — tell me pivot to what.\n",
-        "scenario": "follow-up",
-        "timeBucket": "any"
+        "scenario": "continuation-friendly"
       },
       {
         "id": "paid-traffic-test-plan",
         "text": "Want the crew to plan a $500 paid-traffic test for the page?\nGive me the page + budget; you get audiences, ad angles, and the sample size that makes the result trustworthy.\n",
         "prefill": "Plan a paid-traffic test to drive real visitors to my validation page: [page URL or what it offers]. Budget: [amount, e.g. $500]. Pick the platform and 2-3 audience/angle combos to test, set the daily spend, and tell me how many visitors I need before the conversion number actually means something.\n",
-        "scenario": "recent-work",
+        "scenario": "continuation-friendly",
         "timeBucket": "afternoon"
       }
     ]
@@ -5681,28 +5655,27 @@
         "id": "optin-landing-copy",
         "text": "Want the Copy lead to write a high-converting opt-in page?\nName the asset and the visitor's awareness level; I'll return a headline, bullets, and a 3-field form CTA.\n",
         "prefill": "Write the opt-in landing page for my lead magnet. The asset: [what they download]. Who lands here: [cold traffic / my email list / warm referrals] and how aware they are of the problem: [unaware / problem-aware / solution-aware]. The one outcome it promises: [result].\n",
-        "scenario": "follow-up",
+        "scenario": "continuation-friendly",
         "timeBucket": "afternoon"
       },
       {
         "id": "delivery-nurture-sequence",
         "text": "Want me to wire the delivery email plus a 4-email nurture sequence?\nGive me the asset and your paid offer; I'll return deliver, value, story, and proof emails that lead to the ask.\n",
         "prefill": "Write the delivery email and a 4-part nurture sequence for new opt-ins. The asset they just got: [lead magnet]. The paid offer I'm nurturing toward: [offer + price]. One real win or proof point I can use: [result / testimonial / case study].\n",
-        "scenario": "follow-up",
+        "scenario": "continuation-friendly",
         "timeBucket": "afternoon"
       },
       {
         "id": "format-selection",
         "text": "Not sure what format to build? Let the crew pick the one that converts.\nTell me your niche and traffic source; I'll recommend a format (quiz, checklist, video+cheat sheet) with the why and a benchmark.\n",
         "prefill": "Recommend the best lead-magnet format for me. My niche: [industry/topic]. Where my traffic comes from: [social / SEO / ads / referrals]. What I want it to do: [grow list fast / attract buy-ready leads]. My capacity to produce: [quick + simple / I can do video / I have time for a full guide].\n",
-        "scenario": "cold-start",
-        "timeBucket": "any"
+        "scenario": "cold-start"
       },
       {
         "id": "refresh-underperformer",
         "text": "Want the team to rescue a lead magnet that's not converting?\nPaste the current opt-in copy + your opt-in rate; I'll diagnose the leak and return a rebranded, rewritten version.\n",
         "prefill": "My lead magnet is underperforming, fix it. Current opt-in rate: [%, or 'low / not sure']. The asset: [what it is]. Current opt-in page copy: [paste headline + bullets]. Where I think it's leaking: [traffic / headline / offer / I don't know].\n",
-        "scenario": "recent-work",
+        "scenario": "continuation-friendly",
         "timeBucket": "afternoon"
       }
     ]
@@ -5746,28 +5719,28 @@
         "id": "listing-copy-seo",
         "text": "Want Copy + Sales to write the full listing for a template you've already built?\nTell me the template + platform. I return a 140-char title, 13 tags, and a benefits-first description.\n",
         "prefill": "Write the listing for a template I already built. What it is: [template + what it does]. Selling on: [Etsy / Gumroad / Notion marketplace / Payhip]. Give me a keyword-led title, 13 non-repeating tags, and a description that says exactly what the buyer gets in the first three seconds.\n",
-        "scenario": "recent-work",
+        "scenario": "continuation-friendly",
         "timeBucket": "afternoon"
       },
       {
         "id": "brand-cover-mockups",
         "text": "Want Brand to design the cover and mockup set buyers actually click?\nDescribe the template + the vibe. I return a cover concept, mockup shot list, and a color + font direction.\n",
         "prefill": "Make this template look worth buying. Template: [what it is]. Vibe I want: [clean / bold / minimal / premium]. Give me a thumbnail cover concept, a shot list of mockups and GIFs to capture, and a color palette + font pairing that matches the buyer.\n",
-        "scenario": "follow-up",
+        "scenario": "continuation-friendly",
         "timeBucket": "afternoon"
       },
       {
         "id": "price-and-upsell",
         "text": "Want Sales to price the template and stack an upsell?\nTell me the template + what work it replaces. I return a tier, the anchor pitch, and one bundle or upsell.\n",
         "prefill": "Price this and find me more margin. Template: [what it is]. What it saves the buyer: [the SaaS / hours / hassle it replaces]. Recommend a price tier with the anchor pitch (e.g. replaces a $30/mo tool), plus one bundle or upsell I can sell alongside it.\n",
-        "scenario": "follow-up",
+        "scenario": "continuation-friendly",
         "timeBucket": "afternoon"
       },
       {
         "id": "weekly-ship-cadence",
         "text": "Want me to set you up to ship one template a week, not one a month?\nTell me last week's drop and this week's idea. I return a Mon-to-Fri production plan the crew runs with you.\n",
         "prefill": "Set up my weekly shipping cadence. Last thing I dropped: [the template]. This week's idea: [what's next]. Give me a Monday-to-Friday plan covering build, sample data, brand cover, listing copy, and launch so I ship one finished package by Friday.\n",
-        "scenario": "recurring",
+        "scenario": "cold-start",
         "timeBucket": "morning"
       }
     ]
@@ -5811,28 +5784,27 @@
         "id": "rambling-to-structure",
         "text": "Lessons ramble? Want Build to restructure this one concept-to-application?\nPaste your messy notes or transcript; I'll return a tight beat sheet: hook, teach, demo, recap, CTA, with each beat's purpose.\n",
         "prefill": "This lesson rambles and I need it restructured concept-to-application. Here are my raw notes/transcript: [paste]. The single outcome it should drive toward: [what they should be able to do].\n",
-        "scenario": "recent-work",
+        "scenario": "continuation-friendly",
         "timeBucket": "afternoon"
       },
       {
         "id": "humanize-stiff-draft",
         "text": "Got a script that reads stiff or AI-flat? Want Humanizer to make it sound like you on camera?\nPaste the draft; you get it rewritten in spoken cadence with contractions, breath beats, and de-jargoned lines.\n",
         "prefill": "This script reads stiff and robotic on camera. Rewrite it in my natural speaking voice. Draft: [paste]. How I actually talk: [casual and fast / calm and deliberate / a few signature phrases].\n",
-        "scenario": "follow-up",
-        "timeBucket": "any"
+        "scenario": "continuation-friendly"
       },
       {
         "id": "teleprompter-cues",
         "text": "Want Coach to turn your script into a teleprompter-ready shot list?\nPaste the script; you get it broken into one-phrase-per-line reads with [PAUSE], emphasis, and on-screen text / B-roll cues.\n",
         "prefill": "Turn this finished script into a teleprompter-ready, camera-ready shot list with delivery cues. Script: [paste]. Mark where I should pause, emphasize, and where on-screen text or B-roll should appear.\n",
-        "scenario": "follow-up",
+        "scenario": "continuation-friendly",
         "timeBucket": "afternoon"
       },
       {
         "id": "batch-module-scripts",
         "text": "Scripting a whole module? Want the crew to batch every lesson at once?\nGive me your module's lesson list + runtime per lesson; you get a consistent, camera-ready script for each, same voice throughout.\n",
         "prefill": "Batch-scripting a full module with the crew. Lessons (one per line, with the objective for each): [list]. Runtime per lesson: [e.g. 6-8 min]. Audience: [who they are + level]. Keep voice consistent across all.\n",
-        "scenario": "recurring",
+        "scenario": "cold-start",
         "timeBucket": "morning"
       }
     ]
@@ -5869,35 +5841,34 @@
         "id": "questions-into-help-docs",
         "text": "Want me to turn your repeat questions into permanent help docs?\nDrop the 10-15 questions you keep re-answering; I'll write skimmable, templated help-center articles plus a quick FAQ index.\n",
         "prefill": "Turn my recurring student questions into help docs. The ones I answer over and over: [list them, or paste a thread]. Product/course: [name]. Where these will live: [help center / Notion / inside the course].\n",
-        "scenario": "recurring",
+        "scenario": "cold-start",
         "timeBucket": "afternoon"
       },
       {
         "id": "build-macro-library",
         "text": "Want me to build your saved-reply macro library?\nTell me your 8-10 most common situations; I'll write reusable macros with [merge fields] and shortcut names so any reply is one click.\n",
         "prefill": "Build my macro library. Situations I handle most: [e.g. login issue, refund request, missed deadline, certificate request, payment failed]. Course/brand: [name]. Voice: [casual / formal]. Sign-off I use: [name/team].\n",
-        "scenario": "cold-start",
-        "timeBucket": "any"
+        "scenario": "cold-start"
       },
       {
         "id": "triage-escalations",
         "text": "Want me to triage today's escalations?\nPaste the hard ones; I'll sort them into refund / bug / personal lanes, flag what needs a human now, and draft each first response.\n",
         "prefill": "Triage my escalations. The tricky messages: [paste them]. My refund policy: [summary or link]. Who handles bugs: [person/channel]. What I want flagged for me personally: [e.g. anything emotional or threatening to leave].\n",
-        "scenario": "recent-work",
+        "scenario": "continuation-friendly",
         "timeBucket": "morning"
       },
       {
         "id": "spot-at-risk-students",
         "text": "Want me to catch the students about to drop off?\nShare who's gone quiet or fallen behind; I'll draft warm, personal check-in messages to win them back before they churn.\n",
         "prefill": "Find my at-risk students and draft outreach. Signals I'm seeing: [haven't logged in for X days / stuck on module Y / asked for refund]. Names or segment: [paste]. What I want the message to nudge them toward: [next lesson / a call / their goal].\n",
-        "scenario": "recurring",
+        "scenario": "cold-start",
         "timeBucket": "afternoon"
       },
       {
         "id": "weekly-support-readout",
         "text": "Want a weekly readout of what students keep struggling with?\nGive me this week's tickets or chats; I'll surface the top themes, response-time gaps, and the one fix that kills the most tickets.\n",
         "prefill": "Give me my weekly support readout. This week's tickets/chats: [paste or point me at them]. What I most want to know: [where students get stuck / what's slowing my replies / what to fix in the product or course first].\n",
-        "scenario": "follow-up",
+        "scenario": "continuation-friendly",
         "timeBucket": "evening"
       }
     ]
@@ -5948,21 +5919,20 @@
         "id": "reminder-nudge-sequence",
         "text": "Want me to set up the pre-session reminder nudges?\nTell me your session days and channels. I'll return a timed nudge sequence (T-24h, T-1h, post-session catch-up) so attendance doesn't leak.\n",
         "prefill": "Set up my reminder nudges. Live sessions on [day + time + timezone]. Channels I use: [email / Slack / SMS / Discord]. I want nudges at [e.g. 24h before, 1h before, and a catch-up if they miss it]. Assignment deadlines to remind on: [when].\n",
-        "scenario": "recurring",
+        "scenario": "cold-start",
         "timeBucket": "afternoon"
       },
       {
         "id": "at-risk-quiet-flags",
         "text": "Want the Analyst to flag who's going quiet before they drop?\nPaste your attendance and activity log. I'll rank students by risk and draft a personal re-engagement message for each one.\n",
         "prefill": "Flag my at-risk and quiet students. Here's the latest data (attendance, assignment submissions, last activity): [paste log or describe]. We're in week [number] of [number]. Rank by drop-out risk and draft a re-engagement message for the top flags.\n",
-        "scenario": "follow-up",
-        "timeBucket": "any"
+        "scenario": "continuation-friendly"
       },
       {
         "id": "weekly-ops-drumbeat",
         "text": "Running mid-cohort? Want this week's ops drumbeat in one shot?\nTell me the week number and what's due. You get the reminder schedule, the weekly email, and a fresh at-risk list together.\n",
         "prefill": "Run this week's drumbeat. We're in week [number] of [number]. This week's session topic: [topic], due this week: [assignment]. Last week's attendance: [number present / roster]. Ship the reminders, the weekly email, and an updated at-risk flag list.\n",
-        "scenario": "recurring",
+        "scenario": "cold-start",
         "timeBucket": "morning"
       }
     ]
@@ -6006,28 +5976,28 @@
         "id": "ignore-list-cut",
         "text": "Want a ruthless ignore list for the next 8 hours?\nPaste your to-do list and I'll sort it into do-now, delegate, defer, and delete with a one-line reason each.\n",
         "prefill": "Give me a ruthless ignore list for today. Here's everything I think I should do: [paste your to-do list]. Sort into do-now, delegate, defer, and delete, and tell me what's safe to drop.\n",
-        "scenario": "recent-work",
+        "scenario": "continuation-friendly",
         "timeBucket": "morning"
       },
       {
         "id": "calendar-vs-priorities",
         "text": "Want me to check if your calendar matches your real priority?\nPaste today's schedule plus your top goal. Coach flags the time that's working against you and what to move.\n",
         "prefill": "Check whether my calendar matches what actually matters today. My top goal: [the one outcome]. Today's schedule: [paste your meetings and blocks]. Flag the conflicts and tell me what to move or kill.\n",
-        "scenario": "follow-up",
+        "scenario": "continuation-friendly",
         "timeBucket": "morning"
       },
       {
         "id": "deal-pipeline-pull",
         "text": "Want the one deal or follow-up to chase before anything else?\nTell me who's in your pipeline and where each sits. Sales ranks them by close-likelihood and drafts your opening line.\n",
         "prefill": "Pick the one deal or follow-up I should chase first today. In my pipeline: [name each prospect, deal size, and last contact / where it stalled]. Rank by close-likelihood and draft my opening message.\n",
-        "scenario": "recurring",
+        "scenario": "cold-start",
         "timeBucket": "afternoon"
       },
       {
         "id": "risk-exposure-flag",
         "text": "Want Counsel to flag the thing that bites you if you ignore it?\nTell me what's pending — contracts, promises, deadlines, money owed. I'll surface the one exposure to handle today.\n",
         "prefill": "Flag the one risk that bites me if I let it slide today. Pending right now: [unsigned contracts, promises I made, deadlines, invoices owed, anything legal or financial hanging]. Tell me what to handle first and why.\n",
-        "scenario": "recurring",
+        "scenario": "cold-start",
         "timeBucket": "evening"
       }
     ]
@@ -6058,8 +6028,7 @@
         "id": "go-nogo-verdict",
         "text": "Want me to convene the war room on a decision?\nName the decision and the deadline. The crew returns a GO / NO-GO / GO-IF verdict with the three reasons behind it.\n",
         "prefill": "Convene the war room on this decision: [the call I'm trying to make]. I need to decide by [date]. What's at stake if I'm wrong: [money / time / reputation]. Give me GO / NO-GO / GO-IF and the three reasons.\n",
-        "scenario": "cold-start",
-        "timeBucket": "any"
+        "scenario": "cold-start"
       },
       {
         "id": "cfo-pricing-math",
@@ -6072,15 +6041,13 @@
         "id": "skeptic-premortem",
         "text": "First time? Let the Skeptic run a pre-mortem.\nDescribe the bet you're about to make. I'll imagine it's 12 months later and failed, then hand you the top 5 reasons why.\n",
         "prefill": "Run a pre-mortem on this bet: [what I'm about to commit to]. It's 12 months from now and it bombed. Walk me through the 5 most likely reasons it failed, ranked, and what would've caught each one early.\n",
-        "scenario": "cold-start",
-        "timeBucket": "any"
+        "scenario": "cold-start"
       },
       {
         "id": "one-way-door-check",
         "text": "Want me to tell you how reversible this really is?\nDescribe the move. The Operator classifies it one-way vs two-way door and says decide-fast or slow-down.\n",
         "prefill": "Is this a one-way or two-way door decision: [the move]. If I'm wrong, how hard is it to undo: [cost / time / who's affected]. Tell me whether to decide fast or analyze it hard, and what to nail down before I commit.\n",
-        "scenario": "cold-start",
-        "timeBucket": "any"
+        "scenario": "cold-start"
       },
       {
         "id": "growth-vs-customer-clash",
@@ -6093,8 +6060,7 @@
         "id": "go-if-conditions",
         "text": "Got a GO-IF and want the conditions made concrete?\nTell me the decision and what's still shaky. I'll return the exact tripwires that turn GO-IF into a clean GO.\n",
         "prefill": "The war room gave this a GO-IF: [the decision]. What still worries me: [the open risk]. Turn it into a checklist of specific conditions and kill-criteria — the tripwires that, if met, make this a clean GO, and the ones that mean walk away.\n",
-        "scenario": "follow-up",
-        "timeBucket": "any"
+        "scenario": "continuation-friendly"
       }
     ]
   },
@@ -6145,7 +6111,7 @@
         "id": "channel-reality-check",
         "text": "Want the Channel Realist to check if your launch actually reaches people?\nTell me your channels and audience size. I'll return where the reach math breaks and which channel is fantasy.\n",
         "prefill": "Have the Channel Realist stress-test my distribution. Channels I'm counting on: [email list / ads / launch partners / social / etc]. Audience numbers: [list size, followers, budget]. The traffic I'm assuming: [your reach guess].\n",
-        "scenario": "recent-work",
+        "scenario": "continuation-friendly",
         "timeBucket": "afternoon"
       },
       {
@@ -6159,7 +6125,7 @@
         "id": "killlist-to-checklist",
         "text": "Already have the kill-list? Have the Fix Writer turn it into a plan.\nPaste the ranked failure modes and your launch date. I'll return one mitigation per killer, sequenced into a dated pre-launch checklist.\n",
         "prefill": "Turn this kill-list into a dated pre-launch checklist. The ranked failure modes: [paste them]. Launch date: [date]. Who can act on these: [just me / small team]. The ones I most want closed first: [if any].\n",
-        "scenario": "follow-up",
+        "scenario": "continuation-friendly",
         "timeBucket": "morning"
       }
     ]
@@ -6189,43 +6155,37 @@
         "id": "full-threat-map",
         "text": "First time? Let the crew audit the whole contract.\nPaste the contract + which side you're on. You get a clause threat map (red/amber/green) plus ready-to-send redlines.\n",
         "prefill": "Audit this contract from my side and convene the full crew. I'm the [contractor / vendor / client / employee] here. Walk every dangerous clause, rank by severity, and hand me redlines I can send back. The contract:\n\n[paste the full contract text]\n",
-        "scenario": "cold-start",
-        "timeBucket": "any"
+        "scenario": "cold-start"
       },
       {
         "id": "wont-pay-clauses",
         "text": "Want me to find the clause that lets them not pay you?\nPaste the payment + termination sections. Payment-Risk returns the traps (Net-60/90, pay-when-paid, no kill fee) with fixes.\n",
         "prefill": "Run Payment-Risk on this deal. Hunt for ways they delay or dodge paying me: Net-60/90 terms, pay-when-paid clauses, milestones with no deposit, missing late fee, no kill fee if they cancel mid-project. Flag each and give me the redline. The relevant sections:\n\n[paste payment, invoicing, and termination clauses]\n",
-        "scenario": "cold-start",
-        "timeBucket": "any"
+        "scenario": "cold-start"
       },
       {
         "id": "own-my-work",
         "text": "Want me to check who really owns your work?\nPaste the IP + confidentiality clauses. Lock-In/IP flags work-for-hire overreach and background-IP grabs, then carves it back.\n",
         "prefill": "Run Lock-In/IP on this contract. Tell me exactly what they'd own: does work-for-hire sweep in my pre-existing tools, templates, and process? Does it claim anything I make during the term, even for other clients? Carve my background IP back out and give the client a license instead. The IP and confidentiality clauses:\n\n[paste IP, ownership, and confidentiality sections]\n",
-        "scenario": "cold-start",
-        "timeBucket": "any"
+        "scenario": "cold-start"
       },
       {
         "id": "unlimited-liability",
         "text": "Want me to cap your downside before you sign?\nPaste the liability + indemnification clauses. Adversarial Counterparty exposes uncapped exposure and broad indemnity, then bounds it.\n",
         "prefill": "Run Adversarial Counterparty on the risk-shifting clauses. Read them the way the other side's lawyer would and find where I'm exposed: missing or hollow liability cap, indemnity carved out from the cap, 'arising out of or relating to' catch-alls, broad data-breach obligations. Show worst-case exposure and give me redlines that bound it. The clauses:\n\n[paste limitation of liability and indemnification sections]\n",
-        "scenario": "cold-start",
-        "timeBucket": "any"
+        "scenario": "cold-start"
       },
       {
         "id": "trapped-in-deal",
         "text": "Want me to find what traps you in this deal?\nPaste the term, renewal, non-compete + exclusivity clauses. The crew flags auto-renew windows, exclusivity, and survival traps with exits.\n",
         "prefill": "Find every clause that locks me in or limits me afterward. Check the auto-renewal notice window (how few days do I get to cancel?), termination-for-convenience rights, exclusivity, non-compete, and which obligations survive after the contract ends. Give me redlines that add a clean exit. The relevant clauses:\n\n[paste term, renewal, termination, non-compete, and exclusivity sections]\n",
-        "scenario": "cold-start",
-        "timeBucket": "any"
+        "scenario": "cold-start"
       },
       {
         "id": "redline-counter-draft",
         "text": "Got their markup back? Want a counter-redline drafted?\nPaste their latest version + what they rejected. Redline Writer returns send-ready tracked-change language with a one-line rationale each.\n",
         "prefill": "They sent back a revised draft. Have Redline Writer produce my counter-redline: clean tracked-change language for each clause I still need fixed, plus a one-sentence justification I can paste in the email. Hold the line on [the must-win terms, e.g. liability cap, IP carve-back, payment timing]. Their latest version and what they pushed back on:\n\n[paste their revised clauses + their objections]\n",
-        "scenario": "follow-up",
-        "timeBucket": "any"
+        "scenario": "continuation-friendly"
       }
     ]
   },
@@ -6254,8 +6214,7 @@
         "id": "convene-full-tribunal",
         "text": "Want the full tribunal to put your offer on trial?\nPaste your current pricing and what you sell. The crew returns a verdict on every weak point plus one rewritten offer.\n",
         "prefill": "Convene the full pricing tribunal on my offer. What I sell: [product/service]. Current pricing: [tiers + prices, or single price]. Who buys it: [customer + the result they're paying for]. Go after every weak point and hand me a rewritten offer.\n",
-        "scenario": "cold-start",
-        "timeBucket": "any"
+        "scenario": "cold-start"
       },
       {
         "id": "discount-leak-audit",
@@ -6268,15 +6227,14 @@
         "id": "price-hike-churn-forecast",
         "text": "Thinking of raising prices? Want the Churn Forecaster to pressure-test it first?\nTell me the new price and who's on the old one. I'll return who walks, who stays, and net revenue.\n",
         "prefill": "Run the Churn Forecaster on a price increase. Current price: [old]. Proposed: [new]. Who's affected: [all customers / new only / a segment]. Contract type: [monthly / annual]. Tell me expected churn, who stays, and whether net revenue actually goes up.\n",
-        "scenario": "recent-work",
+        "scenario": "continuation-friendly",
         "timeBucket": "afternoon"
       },
       {
         "id": "anchor-and-decoy-rebuild",
         "text": "Want the Anchor Breaker to fix what your prices are compared against?\nPaste your tiers. I'll return a reordered lineup with an anchor and a decoy that pushes buyers to your best-margin plan.\n",
         "prefill": "Bring in the Anchor Breaker. My tiers right now: [name + price + what's included for each]. The plan I most want people to pick: [tier]. Restructure the lineup with a high anchor and a decoy so buyers land on that plan.\n",
-        "scenario": "cold-start",
-        "timeBucket": "any"
+        "scenario": "cold-start"
       },
       {
         "id": "value-gap-prosecution",
@@ -6289,7 +6247,7 @@
         "id": "repackage-into-tiers",
         "text": "Got one flat price and want it split into tiers that sell?\nList your features and your one price. The Packaging Engineer returns a Good/Better/Best lineup with price points to test.\n",
         "prefill": "Hand this to the Packaging Engineer. Today it's one price: [price] for [everything included]. Full feature list: [dump them all]. Who the cheap buyer is vs the premium buyer: [describe both]. Split it into Good/Better/Best with specific price points and what goes in each tier.\n",
-        "scenario": "follow-up",
+        "scenario": "continuation-friendly",
         "timeBucket": "afternoon"
       }
     ]
@@ -6333,28 +6291,28 @@
         "id": "opener-variants",
         "text": "Want the Closer to write 5 opening lines built on one real signal?\nPaste the signal or news and your offer. I'll return 5 openers ranked by relevance, all under one breath.\n",
         "prefill": "Write 5 cold opening lines for this prospect, each tied to one real signal. The signal: [the trigger event, news, or pain I found]. Prospect: [name + role]. My offer: [what I sell]. Keep them short — no 'I came across your profile' filler.\n",
-        "scenario": "recent-work",
+        "scenario": "continuation-friendly",
         "timeBucket": "afternoon"
       },
       {
         "id": "skeptic-teardown",
         "text": "Want the Skeptic to tear down a draft before you send it?\nPaste your cold email. I'll flag every line a busy buyer would delete on, and tell you the one reason it lands or dies.\n",
         "prefill": "Have the Skeptic tear down this cold email before I send it. The draft: [paste your email]. Who it's going to: [prospect name + role]. Be ruthless — flag fake personalization, forced compliments, premature calendar links, and tell me the single reason this lands or dies.\n",
-        "scenario": "follow-up",
+        "scenario": "continuation-friendly",
         "timeBucket": "afternoon"
       },
       {
         "id": "buyer-voice-reply",
         "text": "Want the Buyer Voice to react as if this hit their inbox?\nPaste your email and who you're targeting. I'll reply in their voice — open, ignore, or 'who is this?' — and why.\n",
         "prefill": "Have the Buyer Voice react to this email as the actual recipient. The email: [paste]. The buyer: [their role, what their day looks like, what they're measured on]. Tell me what they'd actually think, whether they'd reply, and what would change their mind.\n",
-        "scenario": "follow-up",
+        "scenario": "continuation-friendly",
         "timeBucket": "afternoon"
       },
       {
         "id": "value-add-followups",
         "text": "Want the crew to write follow-ups that aren't 'just bumping this'?\nTell me the offer and what happened so far. I'll return 3 value-add follow-ups, each handling a different silent objection.\n",
         "prefill": "Write 3 follow-up touches for a prospect who hasn't replied — no 'just bumping this.' Prospect: [name + role]. My offer: [what I sell]. What's happened so far: [first email sent / opened but no reply / two touches in]. Make each one add value and quietly answer an objection.\n",
-        "scenario": "recurring",
+        "scenario": "cold-start",
         "timeBucket": "morning"
       }
     ]
