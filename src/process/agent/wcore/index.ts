@@ -20,7 +20,7 @@ import type { WCoreEvent, WCoreCommand, WCoreCapabilities } from './protocol';
 
 const WCORE_PROJECT_CONFIG = '.wcore.toml';
 
-type StreamEventHandler = (event: { type: string; data: unknown; msg_id: string }) => void;
+type StreamEventHandler = (event: { type: string; data: unknown; msg_id: string; subject?: string }) => void;
 
 /**
  * Sanitize an existing `.wcore.toml` body and merge in the app's own provider
@@ -339,7 +339,7 @@ export class WCoreAgent {
         break;
 
       case 'thinking':
-        this.onStreamEvent({ type: 'thought', data: event.text, msg_id: event.msg_id });
+        this.onStreamEvent({ type: 'thought', data: event.text, msg_id: event.msg_id, subject: event.subject });
         break;
 
       case 'tool_request':

@@ -488,6 +488,13 @@ const ConversationMessageList: React.FC<{
         const steps = toolSummaryToSteps(item.messages);
         return [...steps].reverse().find((s) => s.status === 'running')?.label;
       }
+      // #318: during the live reasoning phase (no tool activity yet) prefer the
+      // engine's own per-turn reasoning subject for the orbit footer; PHRASES stays
+      // the fallback for reasoning turns the engine gives no subject for.
+      if ('type' in item && item.type === 'thinking') {
+        const c = (item as TMessage & { type: 'thinking' }).content;
+        if (c.status !== 'done' && c.subject) return c.subject;
+      }
     }
     return undefined;
   }, [processedList, isProcessing]);

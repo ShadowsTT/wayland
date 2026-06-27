@@ -192,6 +192,9 @@ export class WCoreManager extends BaseAgentManager<WCoreManagerData, string> {
    *  sending the full content every tick re-appended it and doubled the stored
    *  thought ("LetLet me think…"). */
   private lastFlushedThinkingLen = 0;
+  /** Per-turn reasoning subject (a short gerund phrase from the engine, #318).
+   *  Emitted once per reasoning turn; first one wins. Absent for non-reasoning turns. */
+  private thinkingSubject: string | undefined = undefined;
   private thinkingDbFlushTimer: ReturnType<typeof setTimeout> | null = null;
   private readonly streamDbFlushIntervalMs: number = 120;
 
@@ -547,12 +550,20 @@ export class WCoreManager extends BaseAgentManager<WCoreManagerData, string> {
     });
   }
 
-  private emitThinkingMessage(content: string, status: 'thinking' | 'done' = 'thinking'): void {
+  private emitThinkingMessage(content: string, status: 'thinking' | 'done' = 'thinking', subject?: string): void {
     if (!this.thinkingMsgId) {
       this.thinkingMsgId = uuid();
       this.thinkingStartTime = Date.now();
       this.thinkingContent = '';
       this.lastFlushedThinkingLen = 0;
+      this.thinkingSubject = undefined;
+    }
+
+    // Latest subject wins (#318 v2): Flux emits a generic header (Frame A) then a
+    // request-specific refinement (Frame B) within the same turn; replace in place
+    // so the refined subject upgrades the placeholder. Reset per turn (above).
+    if (subject) {
+      this.thinkingSubject = subject;
     }
 
     // The engine re-streams reasoning as cumulative restates, so emit/persist only
@@ -572,6 +583,7 @@ export class WCoreManager extends BaseAgentManager<WCoreManagerData, string> {
       msg_id: this.thinkingMsgId,
       data: {
         content: delta,
+        subject: this.thinkingSubject,
         duration,
         status,
       },
@@ -603,6 +615,7 @@ export class WCoreManager extends BaseAgentManager<WCoreManagerData, string> {
       conversation_id: this.conversation_id,
       content: {
         content: tail,
+        subject: this.thinkingSubject,
         duration,
         status,
       },
@@ -616,6 +629,7 @@ export class WCoreManager extends BaseAgentManager<WCoreManagerData, string> {
     this.thinkingStartTime = null;
     this.thinkingContent = '';
     this.lastFlushedThinkingLen = 0;
+    this.thinkingSubject = undefined;
   }
 
   private queueBufferedStreamText(message: Extract<TMessage, { type: 'text' }>): void {
@@ -1074,12 +1088,16 @@ export class WCoreManager extends BaseAgentManager<WCoreManagerData, string> {
         return;
       }
 
-      // Handle thought events - convert to thinking messages
+      // Handle thought events - convert to thinking messages.
+      // The engine emits an optional per-turn reasoning `subject` (a short gerund
+      // phrase) once, immediately before the first reasoning text. Thread it through
+      // so the live "Thinking" block header shows the model's own summary (#318).
       if (data.type === 'thought') {
         data.conversation_id = this.conversation_id;
         const content = typeof data.data === 'string' ? data.data : '';
-        if (content) {
-          this.emitThinkingMessage(content, 'thinking');
+        const subject = typeof data.subject === 'string' ? data.subject : undefined;
+        if (content || subject) {
+          this.emitThinkingMessage(content, 'thinking', subject);
         }
         return;
       }

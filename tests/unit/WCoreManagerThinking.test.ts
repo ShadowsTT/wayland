@@ -439,6 +439,95 @@ describe('GAP-1: WCoreManager Thinking Message Display & Persistence', () => {
     });
   });
 
+  // ── #318: per-turn reasoning subject ────────────────────────────
+
+  describe('#318: reasoning subject flows from thought event to thinking message', () => {
+    it('threads the subject from a thought event into the thinking emission', () => {
+      emitEvent(manager, { type: 'start', data: '', msg_id: 'msg-1' });
+      emitEvent(manager, {
+        type: 'thought',
+        data: 'reasoning text',
+        msg_id: 'msg-1',
+        subject: 'Reasoning through the problem',
+      });
+
+      const thinkingEmissions = findEmissions('thinking');
+      expect(thinkingEmissions[0]).toMatchObject({
+        type: 'thinking',
+        data: expect.objectContaining({
+          content: 'reasoning text',
+          subject: 'Reasoning through the problem',
+          status: 'thinking',
+        }),
+      });
+    });
+
+    it('upgrades to the latest subject within a turn, then preserves it (v2 placeholder-then-refine)', () => {
+      emitEvent(manager, { type: 'start', data: '', msg_id: 'msg-1' });
+      // Frame A: generic placeholder.
+      emitEvent(manager, { type: 'thought', data: 'a', msg_id: 'msg-1', subject: 'Planning the approach' });
+      // Frame B (a beat later): request-specific refinement REPLACES the placeholder.
+      emitEvent(manager, {
+        type: 'thought',
+        data: ' b',
+        msg_id: 'msg-1',
+        subject: 'Analyzing query performance regression',
+      });
+      // Subsequent subject-less thought events preserve the latest subject.
+      emitEvent(manager, { type: 'thought', data: ' c', msg_id: 'msg-1' });
+
+      const thinkingEmissions = findEmissions('thinking') as any[];
+      const last = thinkingEmissions[thinkingEmissions.length - 1];
+      expect(last.data.subject).toBe('Analyzing query performance regression');
+    });
+
+    it('accepts a subject-only thought event (no reasoning text yet)', () => {
+      emitEvent(manager, { type: 'start', data: '', msg_id: 'msg-1' });
+      emitEvent(manager, { type: 'thought', data: '', msg_id: 'msg-1', subject: 'Planning the approach' });
+
+      const thinkingEmissions = findEmissions('thinking');
+      expect(thinkingEmissions.length).toBeGreaterThanOrEqual(1);
+      expect(thinkingEmissions[0].data.subject).toBe('Planning the approach');
+    });
+
+    it('persists the subject to the DB thinking message', () => {
+      emitEvent(manager, { type: 'start', data: '', msg_id: 'msg-1' });
+      emitEvent(manager, { type: 'thought', data: 'reasoning', msg_id: 'msg-1', subject: 'Synthesizing' });
+      emitEvent(manager, { type: 'content', data: 'response', msg_id: 'msg-1' });
+
+      expect(mockAddOrUpdateMessage).toHaveBeenCalledWith(
+        'conv-think-1',
+        expect.objectContaining({
+          type: 'thinking',
+          content: expect.objectContaining({ subject: 'Synthesizing' }),
+        }),
+        'wcore'
+      );
+    });
+
+    it('leaves subject undefined for a reasoning turn with no subject (no regression)', () => {
+      emitEvent(manager, { type: 'start', data: '', msg_id: 'msg-1' });
+      emitEvent(manager, { type: 'thought', data: 'reasoning', msg_id: 'msg-1' });
+
+      const thinkingEmissions = findEmissions('thinking');
+      expect(thinkingEmissions[0].data.subject).toBeUndefined();
+    });
+
+    it('resets subject between turns', () => {
+      emitEvent(manager, { type: 'start', data: '', msg_id: 'msg-1' });
+      emitEvent(manager, { type: 'thought', data: 't1', msg_id: 'msg-1', subject: 'First subject' });
+      emitEvent(manager, { type: 'finish', data: '', msg_id: 'msg-1' });
+
+      vi.clearAllMocks();
+
+      emitEvent(manager, { type: 'start', data: '', msg_id: 'msg-2' });
+      emitEvent(manager, { type: 'thought', data: 't2', msg_id: 'msg-2' });
+
+      const thinkingEmissions = findEmissions('thinking');
+      expect(thinkingEmissions[0].data.subject).toBeUndefined();
+    });
+  });
+
   // ── White-box: boundary cases ───────────────────────────────────
 
   describe('Edge cases', () => {

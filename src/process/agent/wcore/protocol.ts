@@ -98,7 +98,7 @@ export type WCoreEvent =
     }
   | { type: 'stream_start'; msg_id: string }
   | { type: 'text_delta'; text: string; msg_id: string }
-  | { type: 'thinking'; text: string; msg_id: string }
+  | { type: 'thinking'; text: string; msg_id: string; subject?: string }
   | {
       type: 'tool_request';
       msg_id: string;
