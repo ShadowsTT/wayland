@@ -47,10 +47,7 @@ import {
  * would send the user's real OpenAI key to the attacker. For fixed-endpoint
  * providers we honor ONLY a base URL the USER explicitly typed into the card.
  */
-const SELF_HOSTED_PROVIDER_IDS: ReadonlySet<ProviderId> = new Set<ProviderId>([
-  'openai-compatible',
-  'ollama-local',
-]);
+const SELF_HOSTED_PROVIDER_IDS: ReadonlySet<ProviderId> = new Set<ProviderId>(['openai-compatible', 'ollama-local']);
 
 /**
  * Apply a confirmed proposal via the real MAIN-process write paths. Returns a
@@ -71,9 +68,7 @@ async function applyProposal(
       // (no fixed endpoint). For known fixed-endpoint providers, ignore
       // content.baseUrl entirely and honor only a USER-typed override.
       const providerId = content.providerId as ProviderId;
-      const baseUrl = SELF_HOSTED_PROVIDER_IDS.has(providerId)
-        ? secret?.baseUrl ?? content.baseUrl
-        : secret?.baseUrl;
+      const baseUrl = SELF_HOSTED_PROVIDER_IDS.has(providerId) ? (secret?.baseUrl ?? content.baseUrl) : secret?.baseUrl;
       const result = await connectModelRegistryProvider(providerId, {
         key: apiKey,
         baseUrl,
