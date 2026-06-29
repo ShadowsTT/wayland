@@ -25,5 +25,9 @@
   "config.parseError": "提案不完整",
   "config.apiKeyLabel": "API 密钥",
   "config.apiKeyPlaceholder": "粘贴你的 API 密钥（安全存储，不会显示）",
-  "config.baseUrlLabel": "自定义基础 URL（可选）"
+  "config.baseUrlLabel": "自定义基础 URL（可选）",
+  "config.error.mcp_name_exists": "已存在同名的 MCP 服务器。",
+  "config.error.rules_too_long": "该说明内容过长，无法应用。",
+  "config.error.secret_required": "请先输入你的 API 密钥。",
+  "config.error.already_resolved": "此操作已处理。"
 }

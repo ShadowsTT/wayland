@@ -25,5 +25,9 @@
   "config.parseError": "Incomplete proposal",
   "config.apiKeyLabel": "API key",
   "config.apiKeyPlaceholder": "Paste your API key (stored securely, never shown)",
-  "config.baseUrlLabel": "Custom base URL (optional)"
+  "config.baseUrlLabel": "Custom base URL (optional)",
+  "config.error.mcp_name_exists": "An MCP server with that name already exists.",
+  "config.error.rules_too_long": "Those instructions are too long to apply.",
+  "config.error.secret_required": "Enter your API key first.",
+  "config.error.already_resolved": "This was already handled."
 }

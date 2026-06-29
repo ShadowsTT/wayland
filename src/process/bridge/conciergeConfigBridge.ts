@@ -173,9 +173,11 @@ export function initConciergeConfigBridge(): void {
       return { ok: true, summary };
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
-      const errored: TMessage = { ...msg, content: { ...content, status: 'error', error: message } };
-      db.updateMessage(msg.id, errored);
-      emit(errored.content as IConciergeConfigContent);
+      // Revert to 'pending' (mirror cronBridge) so the card's buttons return and
+      // the user can retry - the most common failure (a wrong provider key) is
+      // recoverable in-place. The renderer surfaces the error as a toast.
+      db.updateMessage(msg.id, msg);
+      emit(content);
       return { ok: false, reason: message };
     }
   });

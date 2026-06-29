@@ -73,6 +73,14 @@ describe('detectConciergeProposals', () => {
     expect(tooBig).toEqual([]);
   });
 
+  it('rejects edit_assistant proposals with an unsafe (path-traversal) assistant id', () => {
+    for (const bad of ['../../../../etc/cron.d/evil', 'a/b', '..', '.hidden', 'C:\\x', 'a\\b']) {
+      expect(detectConciergeProposals(block(`kind: edit_assistant\nassistant: ${bad}\nlabel: X\nrules: hi`))).toEqual([]);
+    }
+    // A safe id still parses.
+    expect(detectConciergeProposals(block('kind: edit_assistant\nassistant: builtin-concierge\nlabel: X\nrules: hi'))).toHaveLength(1);
+  });
+
   it('omits blocks with an unknown kind or missing required fields', () => {
     expect(detectConciergeProposals(block('kind: nonsense\nfoo: bar'))).toEqual([]);
     expect(detectConciergeProposals(block('kind: provider_connect\nlabel: OpenAI'))).toEqual([]); // no provider

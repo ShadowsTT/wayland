@@ -56,6 +56,7 @@ import { app } from 'electron';
 import BaseAgentManager from './BaseAgentManager';
 import { IpcAgentEventEmitter } from './IpcAgentEventEmitter';
 import { hasCronCommands } from './CronCommandDetector';
+import { hasConciergeProposals } from './ConciergeProposeDetector';
 import { skillSuggestWatcher } from '@process/services/cron/SkillSuggestWatcher';
 import { getCostRecorder } from '@process/services/cost/CostRecorder';
 import { extractAndStripThinkTags } from './ThinkTagDetector';
@@ -372,7 +373,10 @@ class AcpAgentManager extends BaseAgentManager<AcpAgentManagerData, AcpPermissio
 
     skillSuggestWatcher.onFinish(this.conversation_id);
 
-    if (this.currentMsgContent && hasCronCommands(this.currentMsgContent)) {
+    if (
+      this.currentMsgContent &&
+      (hasCronCommands(this.currentMsgContent) || hasConciergeProposals(this.currentMsgContent))
+    ) {
       const cronMessage: TMessage = {
         id: this.currentMsgId || uuid(),
         msg_id: this.currentMsgId || uuid(),

@@ -32,6 +32,7 @@ import BaseAgentManager from './BaseAgentManager';
 import { IpcAgentEventEmitter } from './IpcAgentEventEmitter';
 import { mainError, mainLog, mainWarn } from '@process/utils/mainLogger';
 import { hasCronCommands } from './CronCommandDetector';
+import { hasConciergeProposals } from './ConciergeProposeDetector';
 import { processCronInMessage } from './MessageMiddleware';
 import { extractAndStripThinkTags } from './ThinkTagDetector';
 import { ConversationTurnCompletionService } from './ConversationTurnCompletionService';
@@ -1254,7 +1255,10 @@ export class WCoreManager extends BaseAgentManager<WCoreManagerData, string> {
     // Check for SKILL_SUGGEST.md updates (registered by cron executor)
     skillSuggestWatcher.onFinish(this.conversation_id);
 
-    if (!content || !hasCronCommands(content)) {
+    // Route the completed turn through the middleware when it contains EITHER a
+    // cron command OR a Concierge config proposal ([CONCIERGE_PROPOSE]). Without
+    // the concierge check the proposal block is never detected and leaks raw.
+    if (!content || (!hasCronCommands(content) && !hasConciergeProposals(content))) {
       return;
     }
 

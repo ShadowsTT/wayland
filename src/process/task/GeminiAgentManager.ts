@@ -38,6 +38,7 @@ import BaseAgentManager from './BaseAgentManager';
 import { IpcAgentEventEmitter } from './IpcAgentEventEmitter';
 import { mainLog, mainWarn, mainError } from '@process/utils/mainLogger';
 import { hasCronCommands } from './CronCommandDetector';
+import { hasConciergeProposals } from './ConciergeProposeDetector';
 import { extractTextFromMessage, processCronInMessage } from './MessageMiddleware';
 import { stripThinkTags, extractAndStripThinkTags } from './ThinkTagDetector';
 import { teamEventBus } from '@process/team/teamEventBus';
@@ -1057,8 +1058,8 @@ export class GeminiAgentManager extends BaseAgentManager<
         }
       }
 
-      // Detect cron commands
-      if (textContent && hasCronCommands(textContent)) {
+      // Detect cron commands OR Concierge config proposals ([CONCIERGE_PROPOSE]).
+      if (textContent && (hasCronCommands(textContent) || hasConciergeProposals(textContent))) {
         // Create a message with finish status for middleware
         const msgWithStatus = { ...latestMsg, status: 'finish' as const };
         await processCronInMessage(this.conversation_id, 'gemini', msgWithStatus, (sysMsg) => {

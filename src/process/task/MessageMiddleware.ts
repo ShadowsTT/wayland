@@ -10,7 +10,7 @@ import type { AgentBackend } from '@/common/types/acpTypes';
 import { uuid } from '@/common/utils';
 import { cronService } from '@process/services/cron/cronServiceSingleton';
 import { detectCronCommands, stripCronCommands, type CronCommand } from './CronCommandDetector';
-import { detectConciergeProposals, stripConciergeProposals } from './ConciergeProposeDetector';
+import { detectConciergeProposals, hasConciergeProposals, stripConciergeProposals } from './ConciergeProposeDetector';
 import type { ConciergeProposal } from '@/common/chat/conciergeConfig';
 import { addMessage } from '@process/utils/message';
 import { hasThinkTags, stripThinkTags } from './ThinkTagDetector';
@@ -85,9 +85,13 @@ export async function processAgentResponse(
   // render an inline confirmation card (concierge_propose message). No config
   // is mutated here; the change applies only when the user accepts the card
   // (conciergeConfigBridge.confirmProposal).
-  const conciergeProposals = detectConciergeProposals(displayContent);
-  if (conciergeProposals.length > 0) {
-    await handleConciergeProposals(conversationId, agentType, conciergeProposals);
+  if (hasConciergeProposals(displayContent)) {
+    const conciergeProposals = detectConciergeProposals(displayContent);
+    if (conciergeProposals.length > 0) {
+      await handleConciergeProposals(conversationId, agentType, conciergeProposals);
+    }
+    // Always strip the raw block - even when it was malformed and produced no
+    // card - so the [CONCIERGE_PROPOSE] tag never leaks verbatim into chat.
     displayContent = stripConciergeProposals(displayContent);
     needsDisplayMessage = true;
   }

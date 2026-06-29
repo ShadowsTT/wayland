@@ -228,9 +228,17 @@ async function writeAssistantResource(
   fileNamePattern: (id: string, loc: string) => string
 ): Promise<boolean> {
   try {
+    // SECURITY: the assistant id becomes part of the written filename, so a
+    // traversal id (e.g. `../../../etc/foo`) would escape the assistants dir.
+    // Confine it the same way skill names are sanitized; refuse anything unsafe.
+    const safeId = sanitizeSkillName(assistantId);
+    if (!safeId) {
+      console.error(`[fsBridge] Refused assistant ${resourceType} write: unsafe id`);
+      return false;
+    }
     const assistantsDir = getAssistantsDir();
     await fs.mkdir(assistantsDir, { recursive: true });
-    const fileName = fileNamePattern(assistantId, locale);
+    const fileName = fileNamePattern(safeId, locale);
     await fs.writeFile(path.join(assistantsDir, fileName), content, 'utf-8');
     console.log(`[fsBridge] Wrote assistant ${resourceType}: ${fileName}`);
     return true;

@@ -98,7 +98,11 @@ const ConciergeConfigCard: React.FC<ConciergeConfigCardProps> = ({ message }) =>
             : undefined,
       });
       if (result.ok === false) {
-        Message.error(t('concierge.config.error'));
+        // Map known machine reasons to actionable text; fall back to generic.
+        const reason = result.reason;
+        const i18nKey = reason ? `concierge.config.error.${reason}` : 'concierge.config.error';
+        const translated = t(i18nKey as never);
+        Message.error(translated === i18nKey ? t('concierge.config.error') : translated);
         setResolving(false);
         return;
       }
