@@ -410,7 +410,14 @@ class AutoUpdaterService extends EventEmitter {
     // NOTE: behavioral change to the quit/relaunch path — must be live-verified
     // through a real macOS update cycle before merge (see PR description).
     setTimeout(() => {
-      app.relaunch();
+      // Only macOS needs Electron's own relaunch: Squirrel.Mac's launchAfterInstallation
+      // is the leg that's broken here, whereas the NSIS (Windows) and AppImage (Linux)
+      // updaters already relaunch themselves — so gate relaunch to darwin to avoid a
+      // redundant second spawn off-mac (#286 audit nit). app.quit() runs everywhere so
+      // the process still tears down cleanly for the install handoff.
+      if (process.platform === 'darwin') {
+        app.relaunch();
+      }
       app.quit();
     }, 1000);
   }

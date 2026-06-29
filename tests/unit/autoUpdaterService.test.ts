@@ -59,6 +59,13 @@ vi.mock('electron-log', () => ({
   },
 }));
 
+/** Temporarily override process.platform for a test; returns a restore fn. */
+function setPlatform(value: NodeJS.Platform): () => void {
+  const original = process.platform;
+  Object.defineProperty(process, 'platform', { value, configurable: true });
+  return () => Object.defineProperty(process, 'platform', { value: original, configurable: true });
+}
+
 describe('AutoUpdaterService', () => {
   let autoUpdaterService: any;
   let mockStatusBroadcast: ReturnType<typeof vi.fn>;
@@ -244,7 +251,8 @@ describe('AutoUpdaterService', () => {
   });
 
   describe('quitAndInstall', () => {
-    it('marks the quit intentional, stages the install, then relaunches + quits cleanly (#286)', async () => {
+    it('on macOS: marks the quit intentional, stages the install, then relaunches + quits cleanly (#286)', async () => {
+      const restore = setPlatform('darwin');
       vi.useFakeTimers();
       const { app } = vi.mocked(await import('electron'));
       const { setIsQuitting } = vi.mocked(await import('@process/utils/quitState'));
@@ -268,6 +276,26 @@ describe('AutoUpdaterService', () => {
       expect(app.quit).toHaveBeenCalledTimes(1);
       expect(app.exit).not.toHaveBeenCalled();
       vi.useRealTimers();
+      restore();
+    });
+
+    it('off macOS: quits cleanly but does NOT self-relaunch (NSIS/AppImage relaunch themselves) (#286)', async () => {
+      const restore = setPlatform('linux');
+      vi.useFakeTimers();
+      const { app } = vi.mocked(await import('electron'));
+
+      autoUpdaterService.quitAndInstall();
+      expect(autoUpdater.quitAndInstall).toHaveBeenCalledWith(true, true);
+
+      vi.advanceTimersByTime(1000);
+
+      // Audit nit: gate the backstop relaunch to darwin so Win/Linux get no
+      // redundant double-spawn — quit still fires so the process tears down.
+      expect(app.relaunch).not.toHaveBeenCalled();
+      expect(app.quit).toHaveBeenCalledTimes(1);
+      expect(app.exit).not.toHaveBeenCalled();
+      vi.useRealTimers();
+      restore();
     });
   });
 
