@@ -148,9 +148,21 @@ const UpdateModal: React.FC = () => {
     if (!updateInfo && !autoUpdateAvailable) return;
     setStatus('downloading');
     try {
-      // Prefer the manual path so the URL is the CDN-rewritten asset.url.
-      // Fall back to electron-updater (GitHub) only when the GitHub API manual check failed
-      // but the yml-based auto-update check succeeded - a rare edge case.
+      // Prefer electron-updater whenever auto-update is available: it is the ONLY
+      // path that reaches quit + install + relaunch (via the 'downloaded' status
+      // event -> Install now -> quitAndInstall). The manual asset download only
+      // lands a file in the download folder with no in-place install/relaunch, so
+      // on macOS (where a .dmg recommendedAsset is always present) preferring the
+      // manual path left quitAndInstall as dead code (#286). Fall back to the
+      // manual CDN-rewritten asset ONLY when auto-update is unavailable.
+      if (autoUpdateAvailable) {
+        const res = await ipcBridge.autoUpdate.download.invoke();
+        if (!res?.success) {
+          throw new Error(res?.msg || t('update.downloadStartFailed'));
+        }
+        return;
+      }
+
       if (updateInfo?.recommendedAsset) {
         const asset = updateInfo.recommendedAsset;
         const res = await ipcBridge.update.download.invoke({
@@ -167,14 +179,6 @@ const UpdateModal: React.FC = () => {
         }
         setDownloadId(res.data.downloadId);
         setDownloadPath(res.data.filePath);
-        return;
-      }
-
-      if (autoUpdateAvailable) {
-        const res = await ipcBridge.autoUpdate.download.invoke();
-        if (!res?.success) {
-          throw new Error(res?.msg || t('update.downloadStartFailed'));
-        }
         return;
       }
 
