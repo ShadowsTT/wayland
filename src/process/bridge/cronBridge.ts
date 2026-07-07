@@ -167,7 +167,7 @@ export function initCronBridge(): void {
 
     // Validate agentType against the AgentBackend enum (C-S-02). The accepted
     // backends list must stay in sync with `AgentBackend` in acpTypes.
-    const VALID_BACKENDS: ReadonlyArray<string> = new Set(['claude', 'codex', 'gemini', 'wcore', 'qwen', 'kimi']);
+    const VALID_BACKENDS: ReadonlySet<string> = new Set(['claude', 'codex', 'gemini', 'wcore', 'qwen', 'kimi']);
     const resolvedAgentType: AgentBackend = (() => {
       if (content.agentType && VALID_BACKENDS.has(content.agentType)) {
         return content.agentType as AgentBackend;
