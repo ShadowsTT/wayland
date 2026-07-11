@@ -145,7 +145,11 @@ const CLI_UNDERLYING_PROVIDER: Record<CliAgentKey, ProviderId> = {
  * which made the Codex picker fall back to Flux-only for subscription users.
  */
 const CLI_OAUTH_PROVIDERS: Record<CliAgentKey, ProviderId[]> = {
-  claude: [],
+  // Claude Code authenticates via a Claude subscription (`claude-subscription`,
+  // OAuth) far more often than an `anthropic` API key - symmetric with Codex
+  // below. Without this the picker synthesizes the (unconnected) `anthropic`
+  // provider and never surfaces the subscription user's real, enabled models.
+  claude: [CLAUDE_SUBSCRIPTION_PROVIDER_ID],
   codex: [CHATGPT_SUBSCRIPTION_PROVIDER_ID],
   gemini: [],
 };

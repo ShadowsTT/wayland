@@ -462,6 +462,10 @@ describe('GuidModelSelector home picker', () => {
     // like `sonnet`/`haiku`/`opus` that never equal a curated model id like
     // `claude-sonnet-4-5`. The tier resolver must fuzzy-match on family /
     // displayName tokens so the $ / $$ / $$$ badge actually renders.
+    // The curated models here are `enabled: false`: they exist only as tier-
+    // lookup data (family/cost), NOT a connected catalog - so the picker stays
+    // on the native ACP menu (an *enabled* curated set now routes to the shared
+    // flyout instead; see the Option-2 test below).
     mockCuratedForAgent.mockResolvedValue([
       curated({
         id: 'claude-sonnet-4-5',
@@ -470,6 +474,7 @@ describe('GuidModelSelector home picker', () => {
         family: 'claude-sonnet',
         costInPerM: 3,
         costOutPerM: 15,
+        enabled: false,
       }),
       curated({
         id: 'claude-haiku-4-5',
@@ -478,6 +483,7 @@ describe('GuidModelSelector home picker', () => {
         family: 'claude-haiku',
         costInPerM: 0.8,
         costOutPerM: 4,
+        enabled: false,
       }),
       curated({
         id: 'claude-opus-4-5',
@@ -486,6 +492,7 @@ describe('GuidModelSelector home picker', () => {
         family: 'claude-opus',
         costInPerM: 5,
         costOutPerM: 25,
+        enabled: false,
       }),
     ]);
     const acpInfo = {
@@ -516,6 +523,37 @@ describe('GuidModelSelector home picker', () => {
     await screen.findByText('Sonnet');
     expect(screen.getAllByText('$$').length).toBeGreaterThanOrEqual(2);
     expect(screen.getByText('$')).toBeInTheDocument();
+  });
+
+  it('renders the full connected catalog through the shared flyout for a CLI agent (Option 2)', async () => {
+    // Option 2: a CLI agent (Claude Code / Codex) backed by an ENABLED connected
+    // catalog surfaces that whole catalog via the same ModelSelectorFlyout Wayland
+    // Core uses - NOT the CLI's own short native model set. Distinct from the tier
+    // test above, whose curated set is `enabled: false` and stays on the native menu.
+    mockCuratedForAgent.mockResolvedValue(CLAUDE_MODELS);
+
+    render(
+      <GuidModelSelector
+        {...baseProps}
+        isGeminiMode={false}
+        agentKey='claude'
+        currentAcpCachedModelInfo={{
+          // A native CLI model set is present, but the enabled connected catalog
+          // wins: the flyout replaces these short native rows.
+          currentModelId: 'sonnet',
+          currentModelLabel: 'Sonnet',
+          availableModels: [{ id: 'sonnet', label: 'Sonnet' }],
+          canSwitch: true,
+          source: 'models',
+          sourceDetail: 'acp-models',
+        }}
+      />
+    );
+
+    // The flyout (its title + a real catalog displayName) renders instead of the
+    // native CLI menu, confirming the CLI picker now shows the connected catalog.
+    expect(await screen.findByText('Claude Opus 4.7')).toBeInTheDocument();
+    expect(screen.getByText('conversation.modelSelector.title')).toBeInTheDocument();
   });
 
   it('passes the non-secret chat-start handle through to setCurrentModel (audit C4)', async () => {
