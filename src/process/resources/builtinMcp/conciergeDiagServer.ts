@@ -186,6 +186,14 @@ const SHAPE_REGEXES: readonly RegExp[] = [
   // names like `com.acme-something-mcp`) do not — masking those garbled the
   // Doctor report's section labels and the very server names it exists to name.
   /(?=[A-Za-z0-9_-]*[A-Z0-9])[A-Za-z0-9_-]{24,}={0,2}/g,
+  // ...but an all-lowercase run is only an identifier if it is BROKEN UP by a
+  // separator: `model_registry_providers`, `com.acme-…-mcp`. An unbroken
+  // lowercase run of 24+ is token-shaped, not name-shaped, so the entropy
+  // lookahead above must not exempt it — otherwise a bare lowercase secret in
+  // free-text (an error string with no `key=` and no `:`/`=`/`@` in front, which
+  // is all that KEY_VALUE_REGEX and DELIM_TOKEN_REGEX key off) would print in
+  // the clear. `_`/`-` are excluded from the class, so identifiers never match.
+  /\b[a-z0-9]{24,}\b/g,
   // Long hex runs (keys, hashes, signatures).
   /\b[A-Fa-f0-9]{32,}\b/g,
 ];

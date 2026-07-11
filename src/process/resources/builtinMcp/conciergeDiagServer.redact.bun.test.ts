@@ -37,3 +37,33 @@ describe('redact - real secrets are still masked', () => {
     });
   }
 });
+
+// The entropy lookahead ("must contain an uppercase letter or a digit") exempts
+// every all-lowercase run — including token-shaped ones. These are the cases the
+// other layers do NOT catch: no `key=` prefix (KEY_VALUE_REGEX), no `:`/`=`/`@`
+// in front (DELIM_TOKEN_REGEX), under the 32-char hex floor. Before the
+// unbroken-lowercase-run rule they printed in the clear.
+describe('redact - bare all-lowercase tokens are still masked', () => {
+  const secrets = [
+    'zzzytqwerlkjhgfdsamnbvcxsw', // 26 lowercase letters, no separator
+    'abcdefghijklmnopqrstuvwxyz', // 26 lowercase letters, no separator
+    'deadbeefcafebabedeadbeefca', // 26 hex letters, below the 32-char hex floor
+  ];
+  for (const s of secrets) {
+    it(`masks bare lowercase run ${s.slice(0, 8)}…`, () => {
+      const out = redact(s);
+      expect(out).not.toBe(s);
+      expect(out).toContain('••••');
+    });
+  }
+
+  it('masks a bare lowercase token in free text, where no key name precedes it', () => {
+    const out = redact(`auth failed for ${'zzzytqwerlkjhgfdsamnbvcxsw'}, retrying`);
+    expect(out).not.toContain('zzzytqwerlkjhgfdsamnbvcxsw');
+    expect(out).toContain('••••');
+  });
+
+  it('still keeps a separator-broken lowercase identifier of the same length', () => {
+    expect(redact('projects-and-conversations-store')).toBe('projects-and-conversations-store');
+  });
+});
