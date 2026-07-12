@@ -949,6 +949,52 @@ describe('AcpAgentV2 - Config/Model/Mode Methods', () => {
       expect(agent.getModelInfo()?.currentModelId).toBe('gpt-5.5');
     });
 
+    it('rejects when provider reverts to the seeded baseline after exact confirmation before dispatch settles', async () => {
+      const agent = await createStartedAgent();
+      let resolveDispatch!: () => void;
+      mockSessionMethods.setModel.mockReturnValueOnce(
+        new Promise<void>((resolve) => {
+          resolveDispatch = resolve;
+        })
+      );
+      const availableModels = [
+        { modelId: 'gpt-5.5', name: 'GPT-5.5' },
+        { modelId: 'gpt-5.6-sol', name: 'GPT-5.6 SOL' },
+      ];
+      capturedCallbacks.onModelUpdate({
+        currentModelId: 'gpt-5.5',
+        availableModels,
+        confirmationSource: 'session-models',
+      });
+
+      const change = agent.setModelByConfigOption('gpt-5.6-sol');
+      const outcome = change.then(
+        (value) => ({ value, error: null }),
+        (error: unknown) => ({ value: null, error })
+      );
+      capturedCallbacks.onModelUpdate({
+        currentModelId: 'gpt-5.6-sol',
+        availableModels,
+        confirmationSource: 'config-option-update',
+      });
+      capturedCallbacks.onModelUpdate({
+        currentModelId: 'gpt-5.5',
+        availableModels,
+        confirmationSource: 'config-option-update',
+      });
+
+      resolveDispatch();
+
+      expect(await outcome).toMatchObject({
+        value: null,
+        error: { code: 'model_mismatch' },
+      });
+      expect(
+        (agent as unknown as { userModelOverride: string | null }).userModelOverride
+      ).toBeNull();
+      expect(agent.getModelInfo()?.currentModelId).toBe('gpt-5.5');
+    });
+
     it('uses an advertised model config option and waits for provider currentValue', async () => {
       const agent = await createStartedAgent();
       const availableModels = [

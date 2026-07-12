@@ -449,7 +449,12 @@ export class AcpAgentV2 {
         this.cachedModelInfo = next;
 
         const op = this.modelOp;
-        if (op && reportedModelId !== op.baselineModelId) {
+        // An unchanged baseline before any exact confirmation is only the
+        // provider's pre-switch snapshot, so keep waiting. Once an exact
+        // confirmation has arrived, however, every later non-exact update is
+        // authoritative evidence that the provider moved away again — even
+        // when it moved back to that same baseline.
+        if (op && (reportedModelId !== op.baselineModelId || op.exactConfirmation !== null)) {
           const catalog = next.availableModels;
           if (
             catalog.length > 0 &&
