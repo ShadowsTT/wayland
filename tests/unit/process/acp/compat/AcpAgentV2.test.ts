@@ -1173,6 +1173,41 @@ describe('AcpAgentV2 - Config/Model/Mode Methods', () => {
       expect(mockSessionMethods.setModel).not.toHaveBeenCalled();
     });
 
+    it('publishes the provider snapshot that removes a requested model during selection', async () => {
+      const agent = await createStartedAgent();
+      capturedCallbacks.onModelUpdate({
+        currentModelId: 'gpt-5.5',
+        availableModels: [
+          { modelId: 'gpt-5.5', name: 'GPT-5.5' },
+          { modelId: 'gpt-5.6-sol', name: 'GPT-5.6 SOL' },
+        ],
+        confirmationSource: 'session-models',
+      });
+
+      const change = agent.setModelByConfigOption('gpt-5.6-sol');
+      const outcome = change.then(
+        () => null,
+        (error: unknown) => error
+      );
+      capturedCallbacks.onModelUpdate({
+        currentModelId: 'gpt-5.4',
+        availableModels: [
+          { modelId: 'gpt-5.4', name: 'GPT-5.4' },
+          { modelId: 'gpt-5.5', name: 'GPT-5.5' },
+        ],
+        confirmationSource: 'config-option-update',
+      });
+
+      expect(await outcome).toMatchObject({ code: 'unsupported_model' });
+      expect(agent.getModelInfo()).toMatchObject({
+        currentModelId: 'gpt-5.4',
+        availableModels: [
+          { id: 'gpt-5.4', label: 'GPT-5.4' },
+          { id: 'gpt-5.5', label: 'GPT-5.5' },
+        ],
+      });
+    });
+
     it('ignores a null/empty provider snapshot and times out without confirmation', async () => {
       const agent = await createStartedAgent();
       vi.useFakeTimers();

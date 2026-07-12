@@ -460,6 +460,10 @@ export class AcpAgentV2 {
           ) {
             this.supersededModelIds.set(op.requestedModelId, op.generation);
             this.modelOp = null;
+            // The provider's replacement catalog/current model are
+            // authoritative even though the requested ID is no longer
+            // supported. Publish the actual snapshot, then reject the request.
+            this.publishModelInfo(next);
             this.rejectOp(
               op,
               modelSelectionError(
