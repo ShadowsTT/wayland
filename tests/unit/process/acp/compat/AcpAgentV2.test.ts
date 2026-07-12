@@ -1217,6 +1217,45 @@ describe('AcpAgentV2 - Config/Model/Mode Methods', () => {
       expect((await outcome).error).toMatchObject({ code: 'model_switch_timeout' });
     });
 
+    it('ignores a late exact provider update after the selection transaction times out', async () => {
+      const onStreamEvent = vi.fn();
+      const agent = await createStartedAgent({ onStreamEvent });
+      const availableModels = [
+        { modelId: 'gpt-5.5', name: 'GPT-5.5' },
+        { modelId: 'gpt-5.6-sol', name: 'GPT-5.6 SOL' },
+      ];
+      capturedCallbacks.onModelUpdate({
+        currentModelId: 'gpt-5.5',
+        availableModels,
+        confirmationSource: 'session-models',
+      });
+      const persistCapabilities = vi.spyOn(
+        agent as unknown as { persistSessionCapabilities: () => void },
+        'persistSessionCapabilities'
+      );
+      onStreamEvent.mockClear();
+      persistCapabilities.mockClear();
+      vi.useFakeTimers();
+
+      const change = agent.setModelByConfigOption('gpt-5.6-sol');
+      const outcome = change.then(
+        (value) => ({ value, error: null }),
+        (error: unknown) => ({ value: null, error })
+      );
+      await vi.advanceTimersByTimeAsync(60_000);
+      expect((await outcome).error).toMatchObject({ code: 'model_switch_timeout' });
+
+      capturedCallbacks.onModelUpdate({
+        currentModelId: 'gpt-5.6-sol',
+        availableModels,
+        confirmationSource: 'config-option-update',
+      });
+
+      expect(agent.getModelInfo()?.currentModelId).toBe('gpt-5.5');
+      expect(onStreamEvent).not.toHaveBeenCalled();
+      expect(persistCapabilities).not.toHaveBeenCalled();
+    });
+
     it('ignores an unchanged provider baseline until an exact confirmation arrives', async () => {
       const agent = await createStartedAgent();
       const availableModels = [

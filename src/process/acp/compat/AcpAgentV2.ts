@@ -460,6 +460,7 @@ export class AcpAgentV2 {
             catalog.length > 0 &&
             !catalog.some((candidate) => candidate.id === op.requestedModelId)
           ) {
+            this.supersededModelIds.set(op.requestedModelId, op.generation);
             this.modelOp = null;
             this.rejectOp(
               op,
@@ -472,6 +473,7 @@ export class AcpAgentV2 {
             op.exactConfirmation = next;
             if (op.dispatchComplete) this.resolveOp(op, next);
           } else {
+            this.supersededModelIds.set(op.requestedModelId, op.generation);
             this.modelOp = null;
             this.rejectOp(
               op,
@@ -1012,6 +1014,7 @@ export class AcpAgentV2 {
     const confirmation = new Promise<AcpModelInfo>((resolve, reject) => {
       const timer = setTimeout(() => {
         if (this.modelOp?.generation !== generation) return;
+        this.supersededModelIds.set(modelId, generation);
         this.modelOp = null;
         reject(
           modelSelectionError(
@@ -1048,6 +1051,7 @@ export class AcpAgentV2 {
         );
         if (this.modelOp?.generation === generation) {
           const op = this.modelOp;
+          this.supersededModelIds.set(op.requestedModelId, op.generation);
           this.modelOp = null;
           this.rejectOp(op, failure);
         }
