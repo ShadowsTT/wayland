@@ -446,8 +446,6 @@ export class AcpAgentV2 {
             canSwitch: this.cachedModelInfo.canSwitch,
           };
         }
-        this.cachedModelInfo = next;
-
         const op = this.modelOp;
         // An unchanged baseline before any exact confirmation is only the
         // provider's pre-switch snapshot, so keep waiting. Once an exact
@@ -471,10 +469,18 @@ export class AcpAgentV2 {
             );
           } else if (reportedModelId === op.requestedModelId) {
             op.exactConfirmation = next;
-            if (op.dispatchComplete) this.resolveOp(op, next);
+            if (op.dispatchComplete) {
+              this.modelOp = null;
+              this.publishModelInfo(next);
+              this.resolveOp(op, next);
+            }
           } else {
             this.supersededModelIds.set(op.requestedModelId, op.generation);
             this.modelOp = null;
+            // A mismatch is still an authoritative provider snapshot. Publish
+            // the actual non-requested model while rejecting the transaction;
+            // only the staged requested model is withheld until joint success.
+            this.publishModelInfo(next);
             this.rejectOp(
               op,
               modelSelectionError(
@@ -484,16 +490,11 @@ export class AcpAgentV2 {
             );
           }
         }
-
-        // Emit to old stream event
-        this.onStreamEvent({
-          type: 'acp_model_info',
-          conversation_id: this.conversationId,
-          msg_id: `model_${Date.now()}`,
-          data: this.cachedModelInfo,
-        });
-
-        this.persistSessionCapabilities();
+        // Provider state remains staged while a selection transaction is
+        // waiting for dispatch. Only joint dispatch + exact confirmation can
+        // become visible or persistent.
+        if (op) return;
+        this.publishModelInfo(next);
       },
 
       onModeUpdate: (mode: ModeSnapshot) => {
@@ -1041,7 +1042,10 @@ export class AcpAgentV2 {
         if (op?.generation !== generation) return;
         op.dispatchComplete = true;
         if (op.exactConfirmation) {
-          this.resolveOp(op, op.exactConfirmation);
+          const confirmed = op.exactConfirmation;
+          this.modelOp = null;
+          this.publishModelInfo(confirmed);
+          this.resolveOp(op, confirmed);
         }
       })
       .catch((error) => {
@@ -1174,6 +1178,17 @@ export class AcpAgentV2 {
   private resolveOp<T>(op: PendingOp<T>, value: T): void {
     clearTimeout(op.timer);
     op.resolve(value);
+  }
+
+  private publishModelInfo(modelInfo: AcpModelInfo): void {
+    this.cachedModelInfo = modelInfo;
+    this.onStreamEvent({
+      type: 'acp_model_info',
+      conversation_id: this.conversationId,
+      msg_id: 'model_' + Date.now(),
+      data: modelInfo,
+    });
+    this.persistSessionCapabilities();
   }
 
   private rejectOp<T>(op: PendingOp<T>, err: Error): void {
