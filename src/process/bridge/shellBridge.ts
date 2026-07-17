@@ -49,14 +49,18 @@ function getWindowsVSCodeExecutablePaths(): string[] {
   const programFiles = process.env['ProgramFiles'];
   const programFilesX86 = process.env['ProgramFiles(x86)'];
 
+  // Use path.win32.join so these Windows executable paths always use backslash
+  // separators regardless of the host OS. path.join would emit POSIX separators
+  // when the process runs on Linux/macOS (e.g. under `vitest` in CI), producing a
+  // path that never matches the real Windows install location.
   if (localAppData) {
-    possiblePaths.push(path.join(localAppData, 'Programs', 'Microsoft VS Code', 'Code.exe'));
+    possiblePaths.push(path.win32.join(localAppData, 'Programs', 'Microsoft VS Code', 'Code.exe'));
   }
   if (programFiles) {
-    possiblePaths.push(path.join(programFiles, 'Microsoft VS Code', 'Code.exe'));
+    possiblePaths.push(path.win32.join(programFiles, 'Microsoft VS Code', 'Code.exe'));
   }
   if (programFilesX86) {
-    possiblePaths.push(path.join(programFilesX86, 'Microsoft VS Code', 'Code.exe'));
+    possiblePaths.push(path.win32.join(programFilesX86, 'Microsoft VS Code', 'Code.exe'));
   }
 
   return possiblePaths;
