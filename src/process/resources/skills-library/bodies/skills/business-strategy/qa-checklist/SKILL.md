@@ -489,7 +489,7 @@ before the file is transmitted to the bank. This is the final gate._
 [ ] **PASS** -- All checks passed. Bank file transmission authorized.
 [ ] **CONDITIONAL PASS** -- Major failures only, within acceptable limits.
 Waiver granted by Finance Manager: **\*\*\*\***\_**\*\*\*\*** Date: \***\*\_\*\***
-Waiver details: ****\*\*****\*\*****\*\*****\_\_\_\_****\*\*****\*\*****\*\*****
+Waiver details: \***\*\*\*\*\***\*\*\***\*\*\*\*\***\_\_\_\_\***\*\*\*\*\***\*\*\***\*\*\*\*\***
 [ ] **FAIL** -- Critical failure(s) present. Bank file transmission BLOCKED.
 
 **Inspector (Finance Manager):** \***\*\*\*\*\*\*\***\_\***\*\*\*\*\*\*\*** Date: \***\*\_\*\*** Time: \***\*\_\*\***
