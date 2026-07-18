@@ -12,6 +12,7 @@ import { ipcBridge } from '@/common';
 import { useIsPopoutMode } from '@/renderer/hooks/system/useIsPopoutMode';
 import { useMissionControl } from './useMissionControl';
 import { CostTab } from './cost/CostTab';
+import { UsageTab } from './usage/UsageTab';
 import PageShell from '@/renderer/components/layout/PageShell';
 import type { LedgerCounts, LedgerEntry, LedgerStatus } from '@/common/types/missionControl';
 import styles from './MissionControl.module.css';
@@ -254,6 +255,9 @@ const MissionControlPage: React.FC = () => {
         </Tabs.TabPane>
         <Tabs.TabPane key='cost' title={t('missionControl.tabs.cost')}>
           <CostTab />
+        </Tabs.TabPane>
+        <Tabs.TabPane key='usage' title={t('missionControl.tabs.usage')}>
+          <UsageTab />
         </Tabs.TabPane>
       </Tabs>
     </PageShell>

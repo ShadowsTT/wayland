@@ -29,6 +29,8 @@ import { SqliteUsageEventRepository } from '@process/services/usage/SqliteUsageE
 import { UsageEventLogger } from '@process/services/usage/UsageEventLogger';
 import { ensureUsageProviderRegistered, initUsageBridge } from '@process/bridge/usageBridge';
 import { initWorkflowBridge, registerWorkflowBridge } from '@process/bridge/workflowBridge';
+import { initSubscriptionUsageBridge } from '@process/bridge/subscriptionUsageBridge';
+import { subscriptionUsagePoller } from '@process/services/subscriptionUsage/subscriptionUsageSingleton';
 import { WorkflowSessionRepository } from '@process/services/workflow/WorkflowSessionRepository';
 import { WorkflowSessionService, type DefaultModelProvider } from '@process/services/workflow/WorkflowSessionService';
 import {
@@ -150,6 +152,10 @@ ensureUsageProviderRegistered();
 // handler currently throws "not yet implemented" - real implementations land
 // in W2 (state endpoints) and W5 (autonomous dispatch). See SPEC §6.
 registerWorkflowBridge();
+// Subscription usage (Claude Code + Codex CLI 5h/weekly windows). No DB - reads
+// the Claude OAuth usage endpoint + local Codex session rollouts. Wire + start
+// the poller eagerly so the usage tab / sidebar badge have data on first open.
+initSubscriptionUsageBridge(subscriptionUsagePoller);
 // Cross-audit MED-4: usage_events is append-only, so prune rows older than
 // the aggregator's lookback window on startup to keep the table bounded on
 // long-lived installs. Aggregator only queries the last 7 days; 90 days is

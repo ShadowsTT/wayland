@@ -42,7 +42,26 @@
   },
   "tabs": {
     "operations": "Operations",
-    "cost": "Cost"
+    "cost": "Cost",
+    "usage": "Usage"
+  },
+  "usage": {
+    "title": "Subscription usage",
+    "resetsIn": "Resets in {{time}}",
+    "sidebarTooltip": "{{percent}}% used",
+    "provider": {
+      "claude": "Claude Code",
+      "codex": "Codex CLI"
+    },
+    "window": {
+      "fiveHour": "5-hour",
+      "weekly": "Weekly",
+      "weeklySonnet": "Weekly (Sonnet)"
+    },
+    "unavailable": {
+      "claude": "Unavailable - sign in to Claude Code to see usage.",
+      "codex": "Unavailable - run Codex to see usage."
+    }
   },
   "cost": {
     "periodLabel": "Period",
