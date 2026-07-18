@@ -176,6 +176,39 @@ describe('suggestRoster', () => {
     expect(result.leader!.backend).toBe('wayland-core');
   });
 
+  it('populates matchedTerms with the goal tokens that hit each pick', () => {
+    const result = suggestRoster({
+      goalText: 'launch a paid book funnel',
+      specialists: specs,
+      detectedBackends: ['claude', 'gemini', 'codex'],
+      targetSize: 5,
+    });
+    expect(result.fellBackToDefaults).toBe(false);
+    // Launch Strategist matches "launch", "book", "funnel" via its name+desc.
+    const launch = [result.leader, ...result.teammates].find((e) => e?.specialistId === 'ext-launch');
+    expect(launch).toBeDefined();
+    expect(launch!.matchedTerms.length).toBeGreaterThan(0);
+    // Every listed term is a real goal token (deduped, lower-cased).
+    for (const term of launch!.matchedTerms) {
+      expect(['launch', 'paid', 'book', 'funnel']).toContain(term);
+    }
+    // matchedTerms is deduped.
+    expect(new Set(launch!.matchedTerms).size).toBe(launch!.matchedTerms.length);
+  });
+
+  it('returns empty matchedTerms for every pick on fallback (default pick)', () => {
+    const result = suggestRoster({
+      goalText: 'xyzzyplugh nonexistentword',
+      specialists: specs,
+      detectedBackends: ['claude'],
+      targetSize: 5,
+    });
+    expect(result.fellBackToDefaults).toBe(true);
+    for (const entry of [result.leader, ...result.teammates]) {
+      expect(entry!.matchedTerms).toEqual([]);
+    }
+  });
+
   it('filters stopwords from the goal so common words do not dominate', () => {
     // "I want to build a team" - every word is a stopword. Should fall back.
     const result = suggestRoster({

@@ -18,9 +18,13 @@ export type TeamCardProps = {
   team: AssistantListItem;
   localeKey: string;
   onLaunch: (team: AssistantListItem) => void;
+  /** Resolved teammate role names for the roster preview (F4). */
+  teammateNames?: string[];
 };
 
-const TeamCard: React.FC<TeamCardProps> = ({ team, localeKey, onLaunch }) => {
+const ROLE_PREVIEW_LIMIT = 3;
+
+const TeamCard: React.FC<TeamCardProps> = ({ team, localeKey, onLaunch, teammateNames }) => {
   const { t } = useTranslation();
   const isStanding = team._standing === true;
   const name = team.nameI18n?.[localeKey] || team.nameI18n?.['en-US'] || team.name || team.id;
@@ -87,6 +91,17 @@ const TeamCard: React.FC<TeamCardProps> = ({ team, localeKey, onLaunch }) => {
             })}
           {teammateCount > 0 && firstRitual ? ' · ' : ''}
           {firstRitual?.cadence ?? ''}
+        </div>
+      )}
+      {teammateNames && teammateNames.length > 0 && (
+        <div className={styles.roles} title={teammateNames.join(', ')}>
+          {teammateNames.slice(0, ROLE_PREVIEW_LIMIT).join(' · ')}
+          {teammateNames.length > ROLE_PREVIEW_LIMIT
+            ? ` · ${t('teams.card.moreRoles', {
+                count: teammateNames.length - ROLE_PREVIEW_LIMIT,
+                defaultValue: '+{{count}} more',
+              })}`
+            : ''}
         </div>
       )}
       {description && <div className={styles.description}>{description}</div>}

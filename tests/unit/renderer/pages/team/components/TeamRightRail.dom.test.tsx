@@ -17,6 +17,8 @@ vi.mock('@/common', () => ({
   ipcBridge: {
     team: {
       restartAgent: { invoke: vi.fn() },
+      // TeamStatusProvider subscribes to status events on mount.
+      agentStatusChanged: { on: vi.fn(() => vi.fn()) },
     },
   },
 }));
@@ -44,7 +46,8 @@ vi.mock('@/renderer/pages/teams/components/teamPalette', () => ({
 }));
 
 import TeamRightRail from '@renderer/pages/team/components/TeamRightRail';
-import type { TeamAgent, TeammateStatus } from '@/common/types/teamTypes';
+import { TeamStatusProvider } from '@renderer/pages/team/hooks/TeamStatusContext';
+import type { TeamAgent } from '@/common/types/teamTypes';
 
 const STORAGE_KEY = 'wayland.teamRightRail.collapsed';
 
@@ -65,17 +68,13 @@ function makeAgent(overrides: Partial<TeamAgent> = {}): TeamAgent {
 function renderRail(
   props: {
     agents?: TeamAgent[];
-    statusMap?: Map<string, { status: TeammateStatus }>;
   } = {}
 ) {
+  const agents = props.agents ?? [makeAgent()];
   return render(
-    <TeamRightRail
-      agents={props.agents ?? [makeAgent()]}
-      statusMap={props.statusMap ?? new Map()}
-      launcher={null}
-      workspacePath=''
-      teamId='team-1'
-    />
+    <TeamStatusProvider teamId='team-1' agents={agents}>
+      <TeamRightRail agents={agents} launcher={null} workspacePath='' teamId='team-1' />
+    </TeamStatusProvider>
   );
 }
 

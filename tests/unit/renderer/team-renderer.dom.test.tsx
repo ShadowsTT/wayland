@@ -277,7 +277,13 @@ vi.mock('@/renderer/pages/team/hooks/useTeamSession', () => ({
 // ---------------------------------------------------------------------------
 
 import { TeamTabsProvider, useTeamTabs } from '@renderer/pages/team/hooks/TeamTabsContext';
+import { TeamStatusProvider } from '@renderer/pages/team/hooks/TeamStatusContext';
 import type { TeamAgent, TTeam } from '@/common/types/teamTypes';
+
+// TeamTabs now reads live status from TeamStatusProvider (perf split). Wrap any
+// TeamTabs render in the status provider seeded from the same agents.
+const withStatus = (agents: TeamAgent[], node: React.ReactElement): React.ReactElement =>
+  React.createElement(TeamStatusProvider, { teamId: 'team-1', agents }, node);
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -345,7 +351,6 @@ describe('TeamTabsContext', () => {
         TeamTabsProvider,
         {
           agents: makeAgents(),
-          statusMap: new Map(),
           defaultActiveSlotId: 'slot-lead',
           teamId: 'team-1',
           removeAgent: mockRemove,
@@ -371,7 +376,6 @@ describe('TeamTabsContext', () => {
         TeamTabsProvider,
         {
           agents: makeAgents(),
-          statusMap: new Map(),
           defaultActiveSlotId: 'slot-lead',
           teamId: 'team-1',
         },
@@ -402,15 +406,17 @@ describe('TeamTabsContext', () => {
     const TeamTabs = (await import('@renderer/pages/team/components/TeamTabs')).default;
 
     render(
-      React.createElement(
-        TeamTabsProvider,
-        {
-          agents,
-          statusMap: new Map(),
-          defaultActiveSlotId: 'slot-lead',
-          teamId: 'team-1',
-        },
-        React.createElement(TeamTabs, {})
+      withStatus(
+        agents,
+        React.createElement(
+          TeamTabsProvider,
+          {
+            agents,
+            defaultActiveSlotId: 'slot-lead',
+            teamId: 'team-1',
+          },
+          React.createElement(TeamTabs, {})
+        )
       )
     );
 
@@ -445,7 +451,6 @@ describe('TeamTabsContext', () => {
               status: 'idle',
             },
           ],
-          statusMap: new Map(),
           defaultActiveSlotId: 'slot-lead',
           teamId: 'team-1',
         },
@@ -483,16 +488,18 @@ describe('TeamTabs close button', () => {
     const TeamTabs = (await import('@renderer/pages/team/components/TeamTabs')).default;
 
     render(
-      React.createElement(
-        TeamTabsProvider,
-        {
-          agents: makeAgents(),
-          statusMap: new Map(),
-          defaultActiveSlotId: 'slot-lead',
-          teamId: 'team-1',
-          removeAgent: mockRemove,
-        },
-        React.createElement(TeamTabs, {})
+      withStatus(
+        makeAgents(),
+        React.createElement(
+          TeamTabsProvider,
+          {
+            agents: makeAgents(),
+            defaultActiveSlotId: 'slot-lead',
+            teamId: 'team-1',
+            removeAgent: mockRemove,
+          },
+          React.createElement(TeamTabs, {})
+        )
       )
     );
 
@@ -505,16 +512,18 @@ describe('TeamTabs close button', () => {
     const TeamTabs = (await import('@renderer/pages/team/components/TeamTabs')).default;
 
     render(
-      React.createElement(
-        TeamTabsProvider,
-        {
-          agents: makeAgents(),
-          statusMap: new Map(),
-          defaultActiveSlotId: 'slot-lead',
-          teamId: 'team-1',
-          removeAgent: mockRemove,
-        },
-        React.createElement(TeamTabs, {})
+      withStatus(
+        makeAgents(),
+        React.createElement(
+          TeamTabsProvider,
+          {
+            agents: makeAgents(),
+            defaultActiveSlotId: 'slot-lead',
+            teamId: 'team-1',
+            removeAgent: mockRemove,
+          },
+          React.createElement(TeamTabs, {})
+        )
       )
     );
 
@@ -530,16 +539,18 @@ describe('TeamTabs close button', () => {
     const TeamTabs = (await import('@renderer/pages/team/components/TeamTabs')).default;
 
     render(
-      React.createElement(
-        TeamTabsProvider,
-        {
-          agents: makeAgents(),
-          statusMap: new Map(),
-          defaultActiveSlotId: 'slot-lead',
-          teamId: 'team-1',
-          removeAgent: mockRemove,
-        },
-        React.createElement(TeamTabs, {})
+      withStatus(
+        makeAgents(),
+        React.createElement(
+          TeamTabsProvider,
+          {
+            agents: makeAgents(),
+            defaultActiveSlotId: 'slot-lead',
+            teamId: 'team-1',
+            removeAgent: mockRemove,
+          },
+          React.createElement(TeamTabs, {})
+        )
       )
     );
 
@@ -555,15 +566,17 @@ describe('TeamTabs close button', () => {
     const TeamTabs = (await import('@renderer/pages/team/components/TeamTabs')).default;
 
     render(
-      React.createElement(
-        TeamTabsProvider,
-        {
-          agents: makeAgents(),
-          statusMap: new Map(),
-          defaultActiveSlotId: 'slot-lead',
-          teamId: 'team-1',
-        },
-        React.createElement(TeamTabs, {})
+      withStatus(
+        makeAgents(),
+        React.createElement(
+          TeamTabsProvider,
+          {
+            agents: makeAgents(),
+            defaultActiveSlotId: 'slot-lead',
+            teamId: 'team-1',
+          },
+          React.createElement(TeamTabs, {})
+        )
       )
     );
 
@@ -617,12 +630,15 @@ describe('TeamPage remove agent', () => {
   });
 
   it('shows confirm modal when removing an active agent', async () => {
-    mockUseTeamSessionReturn.statusMap = new Map([['slot-member', { slotId: 'slot-member', status: 'active' }]]);
+    // Status now seeds from team.agents via TeamStatusProvider; mark the member
+    // active there so the remove path takes the confirm branch.
+    const activeTeam = makeTeam();
+    activeTeam.agents = activeTeam.agents.map((a) => (a.slotId === 'slot-member' ? { ...a, status: 'active' } : a));
 
     const TeamPage = (await import('@renderer/pages/team/TeamPage')).default;
     const { Modal } = await import('@arco-design/web-react');
 
-    render(React.createElement(TeamPage, { team: makeTeam() }));
+    render(React.createElement(TeamPage, { team: activeTeam }));
 
     const closeIcons = screen.getAllByTestId('close-icon');
     for (const icon of closeIcons) {
@@ -637,8 +653,6 @@ describe('TeamPage remove agent', () => {
         })
       );
     });
-
-    mockUseTeamSessionReturn.statusMap = new Map();
   });
 
   it('shows error message when remove fails', async () => {

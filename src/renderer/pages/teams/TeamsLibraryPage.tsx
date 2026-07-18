@@ -23,8 +23,8 @@
  * (shared with /assistants); tracked for next bundle-rendering refactor.
  */
 
-import { Button, Input, Message, Select } from '@arco-design/web-react';
-import { Plus, Search, Upload, Users } from 'lucide-react';
+import { Button, Dropdown, Input, Menu, Message, Select } from '@arco-design/web-react';
+import { MoreHorizontal, Plus, Search, Upload, Users } from 'lucide-react';
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
@@ -108,8 +108,29 @@ const TeamsLibraryPage: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { assistants, localeKey } = useAssistantList();
+  const { assistants, localeKey, isLoading } = useAssistantList();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  // Resolve a team's teammate ids to friendly role names for the card preview
+  // (F4). Ids may be bare slugs or stored as `builtin-`/`ext-` records.
+  const specialistsById = useMemo(() => {
+    const map = new Map<string, AssistantListItem>();
+    for (const a of assistants) map.set(a.id, a);
+    return map;
+  }, [assistants]);
+  const resolveTeammateNames = useCallback(
+    (team: AssistantListItem): string[] => {
+      const names: string[] = [];
+      for (const raw of team._teammates ?? []) {
+        const spec =
+          specialistsById.get(raw) ?? specialistsById.get(`builtin-${raw}`) ?? specialistsById.get(`ext-${raw}`);
+        const name = spec ? spec.nameI18n?.[localeKey] || spec.nameI18n?.['en-US'] || spec.name || spec.id : raw;
+        if (name) names.push(name);
+      }
+      return names;
+    },
+    [specialistsById, localeKey]
+  );
   const [importPreview, setImportPreview] = useState<ImportPreviewState | null>(null);
   const [importLoading, setImportLoading] = useState(false);
   const [query, setQuery] = useState('');
@@ -279,20 +300,30 @@ const TeamsLibraryPage: React.FC = () => {
         <>
           <Button
             type='secondary'
-            icon={<Upload size={14} />}
-            onClick={triggerImportPicker}
-            data-testid='teams-import-cta'
-          >
-            {t('teams.import.button', { defaultValue: 'Import team' })}
-          </Button>
-          <Button
-            type='primary'
             icon={<Plus size={14} />}
             onClick={handleBuildMyOwn}
             data-testid='teams-build-my-own-cta'
           >
             {t('teams.buildMyOwn.cta', { defaultValue: 'Build my own team' })}
           </Button>
+          <Dropdown
+            trigger='click'
+            droplist={
+              <Menu>
+                <Menu.Item key='import' onClick={triggerImportPicker} data-testid='teams-import-cta'>
+                  <Upload size={14} className='mr-8px inline-block align-text-bottom' />
+                  {t('teams.import.button', { defaultValue: 'Import team' })}
+                </Menu.Item>
+              </Menu>
+            }
+          >
+            <Button
+              type='text'
+              icon={<MoreHorizontal size={16} />}
+              aria-label={t('teams.moreActions', { defaultValue: 'More actions' })}
+              data-testid='teams-overflow-menu'
+            />
+          </Dropdown>
         </>
       }
     >
@@ -334,7 +365,15 @@ const TeamsLibraryPage: React.FC = () => {
           </div>
         )}
 
-        {!hasAnyTeams && (
+        {!hasAnyTeams && isLoading && (
+          <div className={styles.gridTeams} data-testid='teams-loading-skeleton' aria-hidden='true'>
+            {[0, 1, 2, 3, 4, 5].map((i) => (
+              <div key={i} className={styles.skeletonCard} />
+            ))}
+          </div>
+        )}
+
+        {!hasAnyTeams && !isLoading && (
           <div className={styles.emptyState} data-testid='teams-empty-state'>
             {t('teams.emptyState', { defaultValue: 'No teams available yet.' })}
           </div>
@@ -358,7 +397,13 @@ const TeamsLibraryPage: React.FC = () => {
             />
             <div className={styles.gridStanding}>
               {standing.map((team) => (
-                <TeamCard key={team.id} team={team} localeKey={localeKey} onLaunch={handleLaunchTeam} />
+                <TeamCard
+                  key={team.id}
+                  team={team}
+                  localeKey={localeKey}
+                  onLaunch={handleLaunchTeam}
+                  teammateNames={resolveTeammateNames(team)}
+                />
               ))}
             </div>
           </section>
@@ -383,7 +428,13 @@ const TeamsLibraryPage: React.FC = () => {
             />
             <div className={styles.gridTeams}>
               {teams.map((team) => (
-                <TeamCard key={team.id} team={team} localeKey={localeKey} onLaunch={handleLaunchTeam} />
+                <TeamCard
+                  key={team.id}
+                  team={team}
+                  localeKey={localeKey}
+                  onLaunch={handleLaunchTeam}
+                  teammateNames={resolveTeammateNames(team)}
+                />
               ))}
               {!isSearching && <BuildMyOwnTeamCard onClick={handleBuildMyOwn} />}
             </div>

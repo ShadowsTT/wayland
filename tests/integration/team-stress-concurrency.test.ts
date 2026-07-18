@@ -79,6 +79,15 @@ class InMemoryTeamRepository implements ITeamRepository {
     }
   }
 
+  async markReadByIds(ids: string[]): Promise<void> {
+    for (const id of ids) {
+      const msg = this.messages.get(id);
+      if (msg) {
+        this.messages.set(id, { ...msg, read: true });
+      }
+    }
+  }
+
   async getMailboxHistory(teamId: string, agentId: string, limit?: number): Promise<MailboxMessage[]> {
     const all = [...this.messages.values()]
       .filter((m) => m.teamId === teamId && m.toAgentId === agentId)

@@ -1,10 +1,10 @@
 import { ipcBridge } from '@/common';
 import type { IProvider, TChatConversation, TProviderWithModel } from '@/common/config/storage';
-import { Spin } from '@arco-design/web-react';
 import React, { Suspense, useCallback } from 'react';
 import { useGeminiModelSelection } from '@/renderer/pages/conversation/platforms/gemini/useGeminiModelSelection';
 import { useWCoreModelSelection } from '@/renderer/pages/conversation/platforms/wcore/useWCoreModelSelection';
 import TeamChatEmptyState from './TeamChatEmptyState';
+import TeamChatSkeleton from './TeamChatSkeleton';
 
 const AcpChat = React.lazy(() => import('@/renderer/pages/conversation/platforms/acp/AcpChat'));
 const WCoreChat = React.lazy(() => import('@/renderer/pages/conversation/platforms/wcore/WCoreChat'));
@@ -192,7 +192,7 @@ const TeamChatView: React.FC<TeamChatViewProps> = ({ conversation, hideSendBox, 
     }
   })();
 
-  return <Suspense fallback={<Spin loading className='flex flex-1 items-center justify-center' />}>{content}</Suspense>;
+  return <Suspense fallback={<TeamChatSkeleton />}>{content}</Suspense>;
 };
 
 export default TeamChatView;

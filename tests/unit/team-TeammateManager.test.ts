@@ -39,6 +39,7 @@ vi.mock('@process/services/database', () => ({
 
 import { TeammateManager, computeUsageDelta } from '@process/team/TeammateManager';
 import { teamEventBus } from '@process/team/teamEventBus';
+import { getDatabase } from '@process/services/database';
 import type { TeamAgent } from '@process/team/types';
 import type { Mailbox } from '@process/team/Mailbox';
 import type { TaskManager } from '@process/team/TaskManager';
@@ -62,19 +63,24 @@ function makeAgent(overrides: Partial<TeamAgent> = {}): TeamAgent {
 }
 
 function makeMailbox(): Mailbox {
+  const wakeTrigger = [
+    {
+      id: 'msg-1',
+      teamId: 'team-1',
+      toAgentId: 'slot-1',
+      fromAgentId: 'system',
+      content: 'Wake trigger',
+      type: 'message',
+    },
+  ];
   return {
     write: vi.fn().mockResolvedValue({ id: 'msg-1', type: 'message', read: false, createdAt: 1000 }),
-    readUnread: vi.fn().mockResolvedValue([
-      {
-        id: 'msg-1',
-        teamId: 'team-1',
-        toAgentId: 'slot-1',
-        fromAgentId: 'system',
-        content: 'Wake trigger',
-        type: 'message',
-      },
-    ]),
-    peekUnread: vi.fn().mockResolvedValue([]),
+    // #1: wake() now PEEKS the mailbox (does not mark) and marks read only after
+    // a successful dispatch, so the default unread set lives on peekUnread.
+    // readUnread is kept for any legacy assertions/overrides.
+    readUnread: vi.fn().mockResolvedValue([...wakeTrigger]),
+    peekUnread: vi.fn().mockResolvedValue([...wakeTrigger]),
+    markRead: vi.fn().mockResolvedValue(undefined),
     getHistory: vi.fn().mockResolvedValue([]),
   } as unknown as Mailbox;
 }
@@ -93,6 +99,10 @@ function makeWorkerTaskManager(): IWorkerTaskManager {
   const mockSendMessage = vi.fn().mockResolvedValue(undefined);
   return {
     getOrBuildTask: vi.fn().mockResolvedValue({ sendMessage: mockSendMessage }),
+    // #4: getTask lets the inactivity watchdog check whether the process is
+    // still alive. Default returns undefined (no cached task => not alive),
+    // which keeps the existing 'failed'-on-stall tests unchanged.
+    getTask: vi.fn(),
     kill: vi.fn(),
   } as unknown as IWorkerTaskManager;
 }
@@ -564,7 +574,7 @@ describe('TeammateManager', () => {
 
       await mgr.wake('slot-1');
 
-      expect(mailbox.readUnread).toHaveBeenCalledWith('team-1', 'slot-1');
+      expect(mailbox.peekUnread).toHaveBeenCalledWith('team-1', 'slot-1');
       mgr.dispose();
     });
 
@@ -575,7 +585,7 @@ describe('TeammateManager', () => {
       vi.mocked(workerTaskManager.getOrBuildTask).mockResolvedValue({
         sendMessage: mockSendMessage,
       } as never);
-      vi.mocked(mailbox.readUnread).mockResolvedValue([
+      vi.mocked(mailbox.peekUnread).mockResolvedValue([
         {
           id: 'msg-1',
           teamId: 'team-1',
@@ -603,7 +613,7 @@ describe('TeammateManager', () => {
       vi.mocked(workerTaskManager.getOrBuildTask).mockResolvedValue({
         sendMessage: mockSendMessage,
       } as never);
-      vi.mocked(mailbox.readUnread).mockResolvedValue([
+      vi.mocked(mailbox.peekUnread).mockResolvedValue([
         {
           id: 'msg-1',
           teamId: 'team-1',
@@ -630,7 +640,7 @@ describe('TeammateManager', () => {
       vi.mocked(workerTaskManager.getOrBuildTask).mockResolvedValue({
         sendMessage: mockSendMessage,
       } as never);
-      vi.mocked(mailbox.readUnread).mockResolvedValue([
+      vi.mocked(mailbox.peekUnread).mockResolvedValue([
         {
           id: 'msg-1',
           teamId: 'team-1',
@@ -658,7 +668,7 @@ describe('TeammateManager', () => {
       vi.mocked(workerTaskManager.getOrBuildTask).mockResolvedValue({
         sendMessage: mockSendMessage,
       } as never);
-      vi.mocked(mailbox.readUnread).mockResolvedValue([
+      vi.mocked(mailbox.peekUnread).mockResolvedValue([
         {
           id: 'msg-1',
           teamId: 'team-1',
@@ -689,6 +699,51 @@ describe('TeammateManager', () => {
       expect(callArg.files).toEqual(['/tmp/a.png', '/tmp/b.pdf', '/tmp/c.txt']);
       // Gemini uses 'input' key
       expect(callArg).toHaveProperty('input');
+      mgr.dispose();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // #1 (CRITICAL) peek-then-mark: a failed dispatch must NOT consume the mailbox
+  // -------------------------------------------------------------------------
+
+  describe('#1 peek-then-mark redelivery', () => {
+    it('does not mark messages read when dispatch fails, then marks them on a successful redelivery', async () => {
+      const agent = makeAgent({ slotId: 'slot-1', status: 'idle', conversationType: 'acp' });
+      const { mgr, mailbox, workerTaskManager } = makeTeammateManager([agent]);
+
+      const unread = [
+        {
+          id: 'm-1',
+          teamId: 'team-1',
+          toAgentId: 'slot-1',
+          fromAgentId: 'user',
+          type: 'message',
+          content: 'do the thing',
+          read: false,
+          createdAt: 1000,
+        },
+      ];
+      // peekUnread keeps returning the SAME message: mimics a row that stays
+      // unread until it is explicitly acked via markRead.
+      vi.mocked(mailbox.peekUnread).mockResolvedValue(unread as never);
+
+      // First dispatch throws -> wake must rethrow and NOT mark the message read.
+      const failingSend = vi.fn().mockRejectedValue(new Error('dispatch boom'));
+      vi.mocked(workerTaskManager.getOrBuildTask).mockResolvedValueOnce({ sendMessage: failingSend } as never);
+
+      await expect(mgr.wake('slot-1')).rejects.toThrow('dispatch boom');
+      expect(mailbox.markRead).not.toHaveBeenCalled();
+
+      // Second wake redelivers the still-unread message; dispatch succeeds and
+      // only now are the peeked ids marked read.
+      const okSend = vi.fn().mockResolvedValue(undefined);
+      vi.mocked(workerTaskManager.getOrBuildTask).mockResolvedValue({ sendMessage: okSend } as never);
+
+      await mgr.wake('slot-1');
+
+      expect(okSend).toHaveBeenCalledOnce();
+      expect(mailbox.markRead).toHaveBeenCalledWith(['m-1']);
       mgr.dispose();
     });
   });
@@ -910,6 +965,92 @@ describe('TeammateManager', () => {
         vi.unstubAllEnvs();
       }
     });
+
+    // #4: a member that FINISHED but whose `finish` frame was dropped sits
+    // `active` until the watchdog fires. When its process is still alive AND its
+    // last output looks like a completed answer, treat it as completed (idle) and
+    // notify the leader with the real output - instead of a 3-min false-fail.
+    it('#4: finalizes a silent-but-alive member with a completed answer as idle (not failed)', async () => {
+      vi.useFakeTimers();
+      try {
+        const leadAgent = makeAgent({
+          slotId: 'slot-lead',
+          conversationId: 'conv-lead',
+          role: 'leader',
+          status: 'idle',
+          agentName: 'Leader',
+        });
+        const teammate = makeAgent({
+          slotId: 'slot-member',
+          conversationId: 'conv-member',
+          role: 'teammate',
+          status: 'idle',
+          agentName: 'Codex',
+          agentType: 'codex',
+        });
+        const mockSendMessage = vi.fn().mockResolvedValue(undefined);
+        const { mgr, mailbox, workerTaskManager } = makeTeammateManager([leadAgent, teammate]);
+        vi.mocked(workerTaskManager.getOrBuildTask).mockResolvedValue({ sendMessage: mockSendMessage } as never);
+        // A message triggers the initial wake; afterwards the inbox is empty so
+        // finalizeTurn's redrain does not re-wake the member back to 'active'.
+        vi.mocked(mailbox.peekUnread)
+          .mockResolvedValueOnce([
+            {
+              id: 'msg-1',
+              teamId: 'team-1',
+              toAgentId: 'slot-member',
+              fromAgentId: 'slot-lead',
+              type: 'message',
+              content: 'go',
+              read: false,
+              createdAt: 1000,
+            },
+          ] as never)
+          .mockResolvedValue([] as never);
+        // Process still alive: getTask returns a cached manager (a crash would
+        // have killed + removed it).
+        vi.mocked(workerTaskManager.getTask).mockReturnValue({} as never);
+        // ...and the last assistant message reads like a real, completed answer.
+        vi.mocked(getDatabase).mockResolvedValue({
+          getConversationMessages: () => ({
+            data: [
+              {
+                position: 'left',
+                type: 'text',
+                content: { content: 'All done — I fixed the bug, added tests, and everything passes now.' },
+              },
+            ],
+          }),
+        } as never);
+
+        await mgr.wake('slot-member');
+        expect(mgr.getAgents().find((a) => a.slotId === 'slot-member')?.status).toBe('active');
+
+        await vi.advanceTimersByTimeAsync(181_000);
+
+        // Treated as a completed turn: idle, NOT failed.
+        expect(mgr.getAgents().find((a) => a.slotId === 'slot-member')?.status).toBe('idle');
+        // Leader got the member's actual output as a completion notification...
+        expect(mailbox.write).toHaveBeenCalledWith(
+          expect.objectContaining({
+            toAgentId: 'slot-lead',
+            type: 'idle_notification',
+            content: expect.stringContaining('fixed the bug'),
+          })
+        );
+        // ...and NOT the "may be stalled" failure note.
+        const stalledWrites = vi
+          .mocked(mailbox.write)
+          .mock.calls.filter(([m]) => String((m as { content?: string }).content ?? '').includes('may be stalled'));
+        expect(stalledWrites).toHaveLength(0);
+
+        mgr.dispose();
+      } finally {
+        // Restore the default empty-DB stub so later tests see the bare notification.
+        vi.mocked(getDatabase).mockResolvedValue({ getConversationMessages: () => ({ data: [] }) } as never);
+        vi.useRealTimers();
+      }
+    });
   });
 
   // -------------------------------------------------------------------------
@@ -1017,6 +1158,87 @@ describe('TeammateManager', () => {
       await drain();
       expect(idleWrites(mailbox)).toBe(2);
 
+      mgr.dispose();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // #8: finalizeTurn skips the auto-forward when the member already reported
+  // -------------------------------------------------------------------------
+
+  describe('#8 auto-forward vs explicit report', () => {
+    const drain = async (): Promise<void> => {
+      for (let i = 0; i < 6; i++) await new Promise((r) => setTimeout(r, 0));
+    };
+    const idleWrites = (mailbox: Mailbox): number =>
+      (mailbox.write as ReturnType<typeof vi.fn>).mock.calls.filter(
+        ([m]) =>
+          (m as { type?: string; toAgentId?: string }).type === 'idle_notification' && m.toAgentId === 'slot-lead'
+      ).length;
+
+    function setup() {
+      const leadAgent = makeAgent({
+        slotId: 'slot-lead',
+        conversationId: 'conv-lead',
+        role: 'leader',
+        status: 'idle',
+      });
+      const teammate = makeAgent({
+        slotId: 'slot-member',
+        conversationId: 'conv-member',
+        role: 'teammate',
+        status: 'idle',
+        agentName: 'Codex',
+      });
+      const harness = makeTeammateManager([leadAgent, teammate]);
+      vi.mocked(harness.workerTaskManager.getOrBuildTask).mockResolvedValue({
+        sendMessage: vi.fn().mockResolvedValue(undefined),
+      } as never);
+      return harness;
+    }
+
+    const finish = (conversationId: string, msgId: string, turnId: number) =>
+      teamEventBus.emit('responseStream', {
+        type: 'finish',
+        conversation_id: conversationId,
+        msg_id: msgId,
+        data: null,
+        turnId,
+      });
+
+    it('auto-forwards an idle_notification by default (member never reported)', async () => {
+      const { mgr, mailbox } = setup();
+      await mgr.wake('slot-member');
+      finish('conv-member', 'm1', 1);
+      await drain();
+      expect(idleWrites(mailbox)).toBe(1);
+      mgr.dispose();
+    });
+
+    it('skips the auto-forward when the member already reported to the leader this turn', async () => {
+      const { mgr, mailbox } = setup();
+      await mgr.wake('slot-member');
+      // Simulate the MCP send handler recording an explicit member->leader report.
+      mgr.markReportedToLeader('slot-member');
+      finish('conv-member', 'm1', 1);
+      await drain();
+      expect(idleWrites(mailbox)).toBe(0);
+      mgr.dispose();
+    });
+
+    it('resets the report flag per turn (a later turn without a report auto-forwards again)', async () => {
+      const { mgr, mailbox } = setup();
+      await mgr.wake('slot-member');
+      mgr.markReportedToLeader('slot-member');
+      finish('conv-member', 'm1', 1);
+      await drain();
+      expect(idleWrites(mailbox)).toBe(0);
+
+      // New turn, no explicit report -> auto-forward fires again.
+      await mgr.wake('slot-member');
+      finish('conv-member', 'm2', 2);
+      await drain();
+      expect(idleWrites(mailbox)).toBe(1);
       mgr.dispose();
     });
   });
@@ -1214,10 +1436,14 @@ describe('TeammateManager', () => {
           agentName: 'Member',
         });
         const mockSendMessage = vi.fn().mockResolvedValue(undefined);
-        const { mgr, workerTaskManager } = makeTeammateManager([leadAgent, member]);
+        const { mgr, workerTaskManager, mailbox } = makeTeammateManager([leadAgent, member]);
         vi.mocked(workerTaskManager.getOrBuildTask).mockResolvedValue({
           sendMessage: mockSendMessage,
         } as never);
+        // #1: the default mailbox peek returns a wake trigger. Force an empty
+        // mailbox so finalizeTurn's re-drain does not re-wake the member (which
+        // would flip it back to 'active' and mask the dedup behaviour under test).
+        vi.mocked(mailbox.peekUnread).mockResolvedValue([]);
 
         // First turn completes
         teamEventBus.emit('responseStream', {
@@ -1275,10 +1501,14 @@ describe('TeammateManager', () => {
           agentName: 'Member',
         });
         const mockSendMessage = vi.fn().mockResolvedValue(undefined);
-        const { mgr, workerTaskManager } = makeTeammateManager([leadAgent, member]);
+        const { mgr, workerTaskManager, mailbox } = makeTeammateManager([leadAgent, member]);
         vi.mocked(workerTaskManager.getOrBuildTask).mockResolvedValue({
           sendMessage: mockSendMessage,
         } as never);
+        // #1: the default mailbox peek returns a wake trigger. Force an empty
+        // mailbox so finalizeTurn's re-drain does not re-wake the member (which
+        // would flip it back to 'active' and mask the dedup behaviour under test).
+        vi.mocked(mailbox.peekUnread).mockResolvedValue([]);
 
         // First turn completes - adds conv-member to finalizedTurns (5s dedup)
         teamEventBus.emit('responseStream', {

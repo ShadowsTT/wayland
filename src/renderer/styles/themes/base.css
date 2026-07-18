@@ -51,19 +51,14 @@ body {
   }
 }
 
-@keyframes team-tab-breathe {
-  0%,
-  100% {
-    opacity: 1;
-    background-color: transparent;
-    box-shadow: none;
-  }
-  50% {
-    opacity: 0.85;
-    background-color: color-mix(in srgb, var(--color-primary-6) 18%, transparent);
-    box-shadow:
-      0 0 8px 2px color-mix(in srgb, var(--color-primary-6) 30%, transparent),
-      inset 0 0 6px 0 color-mix(in srgb, var(--color-primary-6) 15%, transparent);
+/* Respect reduced-motion: silence the looping status/pending indicators so the
+   UI settles instead of pulsing continuously. Progress spinners are kept — they
+   communicate ongoing work, not decoration. */
+@media (prefers-reduced-motion: reduce) {
+  .animate-pulse,
+  .animate-wiggle,
+  .bg-animate {
+    animation: none !important;
   }
 }
 

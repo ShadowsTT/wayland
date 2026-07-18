@@ -21,7 +21,8 @@
     "demoteError": "Failed to demote team"
   },
   "card": {
-    "rolesCount": "{{count}} roles"
+    "rolesCount": "{{count}} roles",
+    "moreRoles": "+{{count}} more"
   },
   "buildMyOwn": {
     "label": "Build my own team",
@@ -46,6 +47,9 @@
     "leaderRequired": "Please pick a leader",
     "rosterTitle": "Roster",
     "rosterSubtitle": "Backends chosen per role",
+    "advancedToggle": "Advanced",
+    "matchReasonLabel": "matched",
+    "matchReasonDefault": "recommended",
     "leaderRoleLabel": "Leader",
     "teammateRoleLabel": "Teammate",
     "slotNameLabel": "Display name",
@@ -74,7 +78,16 @@
     "pickerTitle": "Add a teammate",
     "pickerSearch": "Search specialists",
     "pickerEmpty": "No specialists found.",
-    "pickerCancel": "Cancel"
+    "pickerCancel": "Cancel",
+    "templateGoalLabel": "What should the team do first?",
+    "templateGoalPlaceholder": "e.g. Draft the launch plan and assign an owner to each workstream.",
+    "startStandingCta": "Start standing company",
+    "standingCadenceNote": "Runs {{cadence}} — change or stop it later.",
+    "standingCadenceGeneric": "Runs on a recurring schedule — change or stop it later.",
+    "discardTitle": "Discard this team?",
+    "discardContent": "You've edited this roster. Leaving now discards your changes.",
+    "discardOk": "Discard",
+    "discardCancel": "Keep editing"
   },
   "rightRail": {
     "teammates": "Teammates",
@@ -137,5 +150,6 @@
     "name": "Name (A-Z)",
     "roles": "Most roles",
     "schedule": "Schedule"
-  }
+  },
+  "moreActions": "More actions"
 }

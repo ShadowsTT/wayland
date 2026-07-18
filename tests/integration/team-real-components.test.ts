@@ -125,6 +125,12 @@ function createInMemoryRepo(): ITeamRepository {
       const msg = messages.get(messageId);
       if (msg) messages.set(messageId, { ...msg, read: true });
     },
+    async markReadByIds(ids: string[]) {
+      for (const id of ids) {
+        const msg = messages.get(id);
+        if (msg) messages.set(id, { ...msg, read: true });
+      }
+    },
     async getMailboxHistory(teamId: string, toAgentId: string, limit?: number) {
       const all = [...messages.values()]
         .filter((m) => m.teamId === teamId && m.toAgentId === toAgentId)

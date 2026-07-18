@@ -24,6 +24,11 @@
   background: var(--color-fill-1);
 }
 
+.card:focus-visible {
+  outline: 2px solid rgb(var(--primary-6));
+  outline-offset: 2px;
+}
+
 .icon {
   width: 32px;
   height: 32px;

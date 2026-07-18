@@ -10,9 +10,35 @@ import type { IConversationService } from '../../../src/process/services/IConver
 import type { ITeamRepository } from '../../../src/process/team/repository/ITeamRepository';
 import type { TTeam, TeamAgent } from '../../../src/common/types/teamTypes';
 
-const { mockConfigGet, mockReadFile } = vi.hoisted(() => ({
+const { mockConfigGet, mockReadFile, startMcpServerSpy, teamSessionInstances } = vi.hoisted(() => ({
   mockConfigGet: vi.fn(),
   mockReadFile: vi.fn(),
+  startMcpServerSpy: vi.fn(),
+  teamSessionInstances: [] as unknown[],
+}));
+
+// #2 (CRITICAL): stub TeamSession so getOrStartSession does not spin up a real
+// TCP MCP server. The stub records every construction + startMcpServer call so
+// the concurrency test can assert exactly ONE session/MCP server is built when
+// two callers race. Existing tests never call getOrStartSession, so they are
+// unaffected by this mock.
+vi.mock('../../../src/process/team/TeamSession', () => ({
+  TeamSession: class {
+    constructor() {
+      teamSessionInstances.push(this);
+    }
+    async startMcpServer() {
+      startMcpServerSpy();
+      return { name: 'stub', command: 'node', args: [], env: [] };
+    }
+    getStdioConfig() {
+      return { name: 'stub', command: 'node', args: [], env: [] };
+    }
+    getAgents() {
+      return [];
+    }
+    async dispose() {}
+  },
 }));
 
 vi.mock('../../../src/process/utils/initStorage', () => ({
@@ -46,6 +72,7 @@ function makeRepo(overrides: Partial<ITeamRepository> = {}): ITeamRepository {
     readUnread: vi.fn(),
     readUnreadAndMark: vi.fn(),
     markRead: vi.fn(),
+    markReadByIds: vi.fn(),
     getMailboxHistory: vi.fn(),
     createTask: vi.fn(),
     findTaskById: vi.fn(),
@@ -346,6 +373,51 @@ describe('TeamSessionService', () => {
     );
   });
 
+  // #9: launching the same standing launcher twice must NOT stack a second set
+  // of ritual crons. The backend guard skips the ritual install when a persisted
+  // team already sources from the same launcher.
+  it('#9: a second standing launch does not double-install rituals', async () => {
+    mockConfigGet.mockResolvedValue(undefined);
+
+    const installRituals = vi.fn().mockResolvedValue(undefined);
+    const uninstallRituals = vi.fn().mockResolvedValue(undefined);
+    const ritualScheduler = { installRituals, uninstallRituals };
+
+    const repo = makeRepo({
+      // First launch: no sibling team yet. Second launch: a persisted team with
+      // the same sourceLauncherId already exists.
+      findAll: vi
+        .fn()
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([{ id: 'team-existing', sourceLauncherId: 'launcher-x' }]),
+    });
+    const conversationService = makeConversationService({
+      createConversation: vi.fn().mockResolvedValue({ id: 'conv-1', extra: {} }),
+      getConversation: vi.fn().mockResolvedValue({ id: 'conv-1', extra: {} }),
+    });
+    const service = newService(repo, makeWorkerTaskManager() as any, conversationService, ritualScheduler as any);
+
+    await service.createTeam({
+      userId: 'user-1',
+      name: 'Standing A',
+      workspace: '/ws',
+      workspaceMode: 'shared',
+      agents: [makeAgent()],
+      sourceLauncherId: 'launcher-x',
+    });
+    await service.createTeam({
+      userId: 'user-1',
+      name: 'Standing B',
+      workspace: '/ws',
+      workspaceMode: 'shared',
+      agents: [makeAgent()],
+      sourceLauncherId: 'launcher-x',
+    });
+
+    // Installed once (first launch), skipped on the duplicate second launch.
+    expect(installRituals).toHaveBeenCalledTimes(1);
+  });
+
   it('preserves preset assistant identity and only inherits session mode when adding teammates', async () => {
     mockConfigGet.mockImplementation(async (key: string) => {
       if (key === 'gemini.defaultModel') {
@@ -506,6 +578,48 @@ describe('TeamSessionService', () => {
         updatedAt: expect.any(Number),
       })
     );
+  });
+
+  it('#2: concurrent getOrStartSession calls share ONE session and start the MCP server once', async () => {
+    mockConfigGet.mockResolvedValue(undefined);
+
+    const team: TTeam = {
+      id: 'team-race',
+      userId: 'user-1',
+      name: 'Race Team',
+      workspace: '/workspace',
+      workspaceMode: 'shared',
+      leaderAgentId: 'slot-lead',
+      agents: [makeAgent({ slotId: 'slot-lead', conversationId: 'conv-lead', role: 'leader', status: 'idle' })],
+      createdAt: 1,
+      updatedAt: 1,
+    };
+    const repo = makeRepo({
+      findById: vi.fn().mockResolvedValue(team),
+      // getOrStartSession fires a best-effort sessionCount bump: `void repo.update(...).catch(...)`,
+      // so update MUST return a promise.
+      update: vi.fn().mockResolvedValue(team),
+    });
+    const conversationService = makeConversationService({
+      updateConversation: vi.fn().mockResolvedValue(undefined),
+    });
+    const workerTaskManager = { getOrBuildTask: vi.fn().mockResolvedValue(undefined) };
+    const service = newService(repo, workerTaskManager as any, conversationService);
+
+    // Two callers race before either has populated the sessions map.
+    const [a, b] = await Promise.all([service.getOrStartSession('team-race'), service.getOrStartSession('team-race')]);
+
+    // Both resolve to the SAME session instance, only one was constructed, and
+    // the MCP server was started exactly once (no duplicate TCP server / listeners).
+    expect(a).toBe(b);
+    expect(teamSessionInstances).toHaveLength(1);
+    expect(startMcpServerSpy).toHaveBeenCalledOnce();
+
+    // A subsequent call reuses the cached session without rebuilding.
+    const c = await service.getOrStartSession('team-race');
+    expect(c).toBe(a);
+    expect(teamSessionInstances).toHaveLength(1);
+    expect(startMcpServerSpy).toHaveBeenCalledOnce();
   });
 
   it('reconciles stale "active" agents to "pending" on boot (#665)', async () => {

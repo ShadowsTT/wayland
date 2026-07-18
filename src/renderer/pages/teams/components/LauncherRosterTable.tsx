@@ -8,15 +8,18 @@
  * LauncherRosterTable - editable roster table for the team launcher.
  *
  * Renders one row per RosterEntry (leader first, then teammates). Each row
- * shows specialist identity, slot-name input, per-row backend pill, and a
- * remove button. The footer hosts "+ Add teammate" which opens the picker
- * (parent-controlled visibility).
+ * shows specialist identity, a match-reason chip (only for Suggest-produced
+ * rosters), and - behind an "Advanced" toggle - the slot-name input + per-row
+ * backend pill. When collapsed (default) the recommended backend shows as a
+ * quiet non-interactive label. The footer hosts "+ Add teammate" which opens
+ * the picker (parent-controlled visibility).
  *
- * Pure presentational - state is owned by TeamLauncherPage.
+ * Roster data is owned by TeamLauncherPage; the Advanced expand/collapse is
+ * local view state only.
  */
 
-import React from 'react';
-import { Button, Input } from '@arco-design/web-react';
+import React, { useState } from 'react';
+import { Button, Input, Switch } from '@arco-design/web-react';
 import { Crown, Plus, Trash2 } from 'lucide-react';
 import classNames from 'classnames';
 import { useTranslation } from 'react-i18next';
@@ -31,6 +34,12 @@ export type RosterEntry = {
   specialistId: string;
   backend: string;
   slotName: string;
+  /**
+   * Set only on entries produced by Suggest. Distinct goal tokens that matched
+   * this specialist (e.g. `['funnel', 'launch']`), or `[]` for a default pick.
+   * `undefined` means the entry was added/hydrated manually - no match chip.
+   */
+  matchedTerms?: string[];
 };
 
 export type RosterRowMeta = {
@@ -79,6 +88,9 @@ type RowProps = {
   specialist: AssistantListItem | undefined;
   backendOptions: string[];
   localeKey: string;
+  /** When false (default), the slot-name input + backend pill are collapsed
+   * behind the Advanced toggle and the backend shows as a quiet label. */
+  showControls: boolean;
   onChangeBackend: (backend: string) => void;
   onChangeSlotName: (slotName: string) => void;
   onRemove: () => void;
@@ -91,6 +103,7 @@ const RosterRow: React.FC<RowProps> = ({
   specialist,
   backendOptions,
   localeKey,
+  showControls,
   onChangeBackend,
   onChangeSlotName,
   onRemove,
@@ -99,6 +112,7 @@ const RosterRow: React.FC<RowProps> = ({
   const name = resolveSpecialistName(specialist, localeKey, entry.specialistId);
   const desc = resolveSpecialistDesc(specialist, localeKey);
   const testIdSuffix = isLeader ? 'leader' : `teammate-${index}`;
+  const matchedTerms = entry.matchedTerms;
 
   const palette = resolveSpecialistPalette(specialist, entry.specialistId);
   return (
@@ -131,23 +145,38 @@ const RosterRow: React.FC<RowProps> = ({
           )}
         </div>
         {desc && <div className={styles.description}>{desc}</div>}
+        {matchedTerms !== undefined && (
+          <div className={styles.matchChip} data-testid={`launcher-match-${testIdSuffix}`}>
+            {matchedTerms.length > 0
+              ? `${t('teams.launcher.matchReasonLabel', { defaultValue: 'matched' })}: ${matchedTerms.join(', ')}`
+              : t('teams.launcher.matchReasonDefault', { defaultValue: 'recommended' })}
+          </div>
+        )}
       </div>
       <div className={styles.controls}>
-        <Input
-          className={styles.slotInput}
-          size='small'
-          value={entry.slotName}
-          onChange={onChangeSlotName}
-          placeholder={t('teams.launcher.slotNamePlaceholder', { defaultValue: 'Slot name (optional)' })}
-          data-testid={`launcher-slotname-${testIdSuffix}`}
-          aria-label={t('teams.launcher.slotNameLabel', { defaultValue: 'Display name' })}
-        />
-        <BackendPill
-          value={entry.backend}
-          options={backendOptions}
-          onChange={onChangeBackend}
-          testId={`launcher-backend-${testIdSuffix}`}
-        />
+        {showControls ? (
+          <>
+            <Input
+              className={styles.slotInput}
+              size='small'
+              value={entry.slotName}
+              onChange={onChangeSlotName}
+              placeholder={t('teams.launcher.slotNamePlaceholder', { defaultValue: 'Slot name (optional)' })}
+              data-testid={`launcher-slotname-${testIdSuffix}`}
+              aria-label={t('teams.launcher.slotNameLabel', { defaultValue: 'Display name' })}
+            />
+            <BackendPill
+              value={entry.backend}
+              options={backendOptions}
+              onChange={onChangeBackend}
+              testId={`launcher-backend-${testIdSuffix}`}
+            />
+          </>
+        ) : (
+          <span className={styles.backendLabel} data-testid={`launcher-backend-label-${testIdSuffix}`}>
+            {entry.backend}
+          </span>
+        )}
         <Button
           type='text'
           size='mini'
@@ -178,14 +207,27 @@ const LauncherRosterTable: React.FC<LauncherRosterTableProps> = ({
   onPickLeader,
 }) => {
   const { t } = useTranslation();
+  // Local view state only: collapse per-row backend + slot-name controls by
+  // default so a 5-row roster reads as 5 picks, not 10 decisions. recommend()
+  // already chose a sensible backend; it shows as a quiet label when collapsed.
+  const [advanced, setAdvanced] = useState(false);
 
   return (
     <div className={styles.card} data-testid='launcher-roster-card'>
       <div className={styles.cardHeader}>
         <span className={styles.cardTitle}>{t('teams.launcher.rosterTitle', { defaultValue: 'Roster' })}</span>
-        <span className={styles.cardSubtitle}>
-          {t('teams.launcher.rosterSubtitle', { defaultValue: 'Backends chosen per role' })}
-        </span>
+        <label className={styles.advancedToggle}>
+          <span className={styles.cardSubtitle}>
+            {t('teams.launcher.advancedToggle', { defaultValue: 'Advanced' })}
+          </span>
+          <Switch
+            size='small'
+            checked={advanced}
+            onChange={setAdvanced}
+            data-testid='launcher-advanced-toggle'
+            aria-label={t('teams.launcher.advancedToggle', { defaultValue: 'Advanced' })}
+          />
+        </label>
       </div>
 
       {leader ? (
@@ -196,6 +238,7 @@ const LauncherRosterTable: React.FC<LauncherRosterTableProps> = ({
           specialist={specialistsById.get(leader.specialistId)}
           backendOptions={backendOptions}
           localeKey={localeKey}
+          showControls={advanced}
           onChangeBackend={onChangeLeaderBackend}
           onChangeSlotName={onChangeLeaderSlotName}
           onRemove={onRemoveLeader}
@@ -210,13 +253,14 @@ const LauncherRosterTable: React.FC<LauncherRosterTableProps> = ({
 
       {teammates.map((entry, index) => (
         <RosterRow
-          key={`${entry.specialistId}-${index}`}
+          key={entry.specialistId}
           entry={entry}
           index={index}
           isLeader={false}
           specialist={specialistsById.get(entry.specialistId)}
           backendOptions={backendOptions}
           localeKey={localeKey}
+          showControls={advanced}
           onChangeBackend={(backend) => onChangeTeammateBackend(index, backend)}
           onChangeSlotName={(slotName) => onChangeTeammateSlotName(index, slotName)}
           onRemove={() => onRemoveTeammate(index)}

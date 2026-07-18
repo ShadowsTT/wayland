@@ -132,11 +132,60 @@ export const useAcpMessage = (conversation_id: string): UseAcpMessageReturn => {
     };
   }, []);
 
-  // Clean up throttle timer
+  // Throttle context-usage updates. `acp_context_usage` can fire per streamed
+  // chunk and, in team mode, once per column - unthrottled that was N setState
+  // storms per second. Mirror the thought throttle (trailing-edge flush) at a
+  // coarser cadence since token counts are ambient, not interactive (P4).
+  const contextUsageThrottleRef = useRef<{
+    lastUpdate: number;
+    pending: { used: number; size: number } | null;
+    timer: ReturnType<typeof setTimeout> | null;
+  }>({ lastUpdate: 0, pending: null, timer: null });
+
+  const throttledSetContextUsage = useMemo(() => {
+    const THROTTLE_MS = 300;
+    const flush = (data: { used: number; size: number }) => {
+      setTokenUsage({ totalTokens: data.used });
+      if (data.size > 0) setContextLimit(data.size);
+    };
+    return (data: { used: number; size: number }) => {
+      const now = Date.now();
+      const ref = contextUsageThrottleRef.current;
+      if (now - ref.lastUpdate >= THROTTLE_MS) {
+        ref.lastUpdate = now;
+        ref.pending = null;
+        if (ref.timer) {
+          clearTimeout(ref.timer);
+          ref.timer = null;
+        }
+        flush(data);
+      } else {
+        ref.pending = data;
+        if (!ref.timer) {
+          ref.timer = setTimeout(
+            () => {
+              ref.lastUpdate = Date.now();
+              ref.timer = null;
+              if (ref.pending) {
+                flush(ref.pending);
+                ref.pending = null;
+              }
+            },
+            THROTTLE_MS - (now - ref.lastUpdate)
+          );
+        }
+      }
+    };
+  }, []);
+
+  // Clean up throttle timers
   useEffect(() => {
     return () => {
       if (thoughtThrottleRef.current.timer) {
         clearTimeout(thoughtThrottleRef.current.timer);
+      }
+      if (contextUsageThrottleRef.current.timer) {
+        clearTimeout(contextUsageThrottleRef.current.timer);
       }
     };
   }, []);
@@ -298,10 +347,7 @@ export const useAcpMessage = (conversation_id: string): UseAcpMessageReturn => {
         case 'acp_context_usage': {
           const usageData = message.data as { used: number; size: number };
           if (usageData && typeof usageData.used === 'number') {
-            setTokenUsage({ totalTokens: usageData.used });
-            if (usageData.size > 0) {
-              setContextLimit(usageData.size);
-            }
+            throttledSetContextUsage({ used: usageData.used, size: usageData.size });
           }
           break;
         }
@@ -364,6 +410,7 @@ export const useAcpMessage = (conversation_id: string): UseAcpMessageReturn => {
       conversation_id,
       addOrUpdateMessage,
       throttledSetThought,
+      throttledSetContextUsage,
       setThought,
       setRunning,
       setAiProcessing,
@@ -384,6 +431,14 @@ export const useAcpMessage = (conversation_id: string): UseAcpMessageReturn => {
 
     setThought({ subject: '', description: '' });
     setAcpStatus(null);
+    // Drop any pending throttled usage flush so it can't restore stale token
+    // counts onto the freshly-reset conversation.
+    if (contextUsageThrottleRef.current.timer) {
+      clearTimeout(contextUsageThrottleRef.current.timer);
+      contextUsageThrottleRef.current.timer = null;
+    }
+    contextUsageThrottleRef.current.pending = null;
+    contextUsageThrottleRef.current.lastUpdate = 0;
     setTokenUsage(null);
     setContextLimit(0);
     const modelHydrationGeneration = ++modelSelectionHydrationGenerationRef.current;

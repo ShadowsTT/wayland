@@ -25,7 +25,7 @@
  */
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Button, Input, Message } from '@arco-design/web-react';
+import { Button, Input, Message, Modal } from '@arco-design/web-react';
 import { ArrowLeft, Users } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -284,12 +284,18 @@ const TeamLauncherPage: React.FC = () => {
       setState((prev) => ({
         ...prev,
         leader: result.leader
-          ? { specialistId: result.leader.specialistId, backend: result.leader.backend, slotName: '' }
+          ? {
+              specialistId: result.leader.specialistId,
+              backend: result.leader.backend,
+              slotName: '',
+              matchedTerms: result.leader.matchedTerms,
+            }
           : prev.leader,
         teammates: result.teammates.map((e) => ({
           specialistId: e.specialistId,
           backend: e.backend,
           slotName: '',
+          matchedTerms: e.matchedTerms,
         })),
       }));
 
@@ -309,7 +315,23 @@ const TeamLauncherPage: React.FC = () => {
   };
 
   const handleBack = () => {
-    void Promise.resolve(navigate('/teams')).catch(console.error);
+    const leave = (): void => {
+      void Promise.resolve(navigate('/teams')).catch(console.error);
+    };
+    // Confirm-on-discard when the user has hand-built/edited the roster (F8).
+    if (userTouchedRef.current) {
+      Modal.confirm({
+        title: t('teams.launcher.discardTitle', { defaultValue: 'Discard this team?' }),
+        content: t('teams.launcher.discardContent', {
+          defaultValue: "You've edited this roster. Leaving now discards your changes.",
+        }),
+        okText: t('teams.launcher.discardOk', { defaultValue: 'Discard' }),
+        cancelText: t('teams.launcher.discardCancel', { defaultValue: 'Keep editing' }),
+        onOk: leave,
+      });
+    } else {
+      leave();
+    }
   };
 
   const handleLaunch = async () => {
@@ -431,12 +453,33 @@ const TeamLauncherPage: React.FC = () => {
   const showHeaderImage = headerResolved ? isImageAvatar(headerResolved) : false;
   const headerPalette = resolveTeamPalette(launcher, teamId);
 
+  // Launch validation (F3): a team needs a name and a leader before it can be
+  // launched. Surface the reason inline + disable the CTA instead of only
+  // toasting after the click.
+  const trimmedName = state.name.trim();
+  const launchDisabledReason = !trimmedName
+    ? t('teams.launcher.nameRequired', { defaultValue: 'Please enter a team name' })
+    : !state.leader
+      ? t('teams.launcher.leaderRequired', { defaultValue: 'Please pick a leader' })
+      : '';
+  const canLaunch = launchDisabledReason.length === 0;
+  const isStandingLauncher = Boolean(launcher?._standing);
+
   if (!isBuildMyOwn && !launcher && specialists.length === 0) {
-    // Bundles haven't loaded yet - render a neutral skeleton.
+    // Bundles haven't loaded yet - render a lightweight skeleton (header bar +
+    // roster-row placeholders) instead of a blank column (#7).
     return (
       <div className={styles.page} data-testid='team-launcher-page'>
         <div className={styles.scroll}>
-          <div className={styles.container} />
+          <div className={styles.container} data-testid='launcher-skeleton' aria-hidden='true'>
+            <div className={styles.skeletonHeader} />
+            <div className={styles.skeletonBar} />
+            <div className={styles.skeletonCard}>
+              <div className={styles.skeletonRow} />
+              <div className={styles.skeletonRow} />
+              <div className={styles.skeletonRow} />
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -511,11 +554,15 @@ const TeamLauncherPage: React.FC = () => {
           <div className={styles.nameCard}>
             <label className={styles.nameLabel} htmlFor='launcher-name-input'>
               {t('teams.launcher.nameLabel', { defaultValue: 'Team name' })}
+              <span className={styles.req} aria-hidden='true'>
+                {' *'}
+              </span>
             </label>
             <Input
               id='launcher-name-input'
               value={state.name}
               onChange={handleNameChange}
+              required
               placeholder={t('teams.launcher.namePlaceholder', {
                 defaultValue: 'e.g. Launch Sprint, Renewal Push, Q1 Brand Refresh',
               })}
@@ -539,24 +586,37 @@ const TeamLauncherPage: React.FC = () => {
             onPickLeader={handleOpenPickLeader}
           />
 
-          {isBuildMyOwn && (
-            <div className={styles.goalCard} data-testid='launcher-goal-card'>
-              <label className={styles.goalLabel} htmlFor='launcher-goal-input'>
-                {t('teams.launcher.goalLabel', {
-                  defaultValue: "Describe what you're doing - I'll suggest a roster",
-                })}
-              </label>
-              <Input.TextArea
-                id='launcher-goal-input'
-                autoSize={{ minRows: 3, maxRows: 6 }}
-                value={state.goalText}
-                onChange={handleGoalChange}
-                placeholder={t('teams.launcher.goalPlaceholder', {
-                  defaultValue:
-                    "e.g. We're launching a paid book funnel and need a small team to ship it in two weeks.",
-                })}
-                data-testid='launcher-goal-input'
-              />
+          {/* Goal/kickoff brief. Always rendered - for a template launch this is
+              the brief that gets posted to the leader on launch (handleLaunch
+              sends state.goalText); gating it behind isBuildMyOwn is what made
+              template launches land on a dead, empty team (F1). The Suggest
+              (roster-from-goal) action stays build-my-own only. */}
+          <div className={styles.goalCard} data-testid='launcher-goal-card'>
+            <label className={styles.goalLabel} htmlFor='launcher-goal-input'>
+              {isBuildMyOwn
+                ? t('teams.launcher.goalLabel', {
+                    defaultValue: "Describe what you're doing - I'll suggest a roster",
+                  })
+                : t('teams.launcher.templateGoalLabel', { defaultValue: 'What should the team do first?' })}
+            </label>
+            <Input.TextArea
+              id='launcher-goal-input'
+              autoSize={{ minRows: 3, maxRows: 6 }}
+              value={state.goalText}
+              onChange={handleGoalChange}
+              placeholder={
+                isBuildMyOwn
+                  ? t('teams.launcher.goalPlaceholder', {
+                      defaultValue:
+                        "e.g. We're launching a paid book funnel and need a small team to ship it in two weeks.",
+                    })
+                  : t('teams.launcher.templateGoalPlaceholder', {
+                      defaultValue: 'e.g. Draft the launch plan and assign an owner to each workstream.',
+                    })
+              }
+              data-testid='launcher-goal-input'
+            />
+            {isBuildMyOwn && (
               <div className={styles.goalActions}>
                 <Button
                   type='outline'
@@ -569,6 +629,19 @@ const TeamLauncherPage: React.FC = () => {
                   {t('teams.launcher.suggestCta', { defaultValue: 'Suggest' })}
                 </Button>
               </div>
+            )}
+          </div>
+
+          {isStandingLauncher && (
+            <div className={styles.standingNote} data-testid='launcher-standing-note'>
+              {launcher?._rituals?.[0]?.cadence
+                ? t('teams.launcher.standingCadenceNote', {
+                    cadence: launcher._rituals[0].cadence,
+                    defaultValue: 'Runs {{cadence}} — change or stop it later.',
+                  })
+                : t('teams.launcher.standingCadenceGeneric', {
+                    defaultValue: 'Runs on a recurring schedule — change or stop it later.',
+                  })}
             </div>
           )}
 
@@ -576,7 +649,7 @@ const TeamLauncherPage: React.FC = () => {
             <Button
               type='primary'
               loading={launching}
-              disabled={launching}
+              disabled={launching || !canLaunch}
               onClick={handleLaunch}
               data-testid='launcher-launch-cta'
             >
@@ -584,11 +657,18 @@ const TeamLauncherPage: React.FC = () => {
                 ? t('teams.launcher.launchingCta', { defaultValue: 'Launching…' })
                 : isBuildMyOwn
                   ? t('teams.launcher.createTeamCta', { defaultValue: 'Create team' })
-                  : t('teams.launcher.launchCta', { defaultValue: 'Launch team' })}
+                  : isStandingLauncher
+                    ? t('teams.launcher.startStandingCta', { defaultValue: 'Start standing company' })
+                    : t('teams.launcher.launchCta', { defaultValue: 'Launch team' })}
             </Button>
             <Button onClick={handleBack} data-testid='launcher-cancel-cta'>
               {t('teams.launcher.cancelCta', { defaultValue: 'Cancel' })}
             </Button>
+            {!canLaunch && !launching && (
+              <span className={styles.launchHint} data-testid='launcher-launch-hint'>
+                {launchDisabledReason}
+              </span>
+            )}
           </div>
         </div>
       </div>

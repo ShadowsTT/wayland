@@ -20,6 +20,10 @@ export const useAssistantList = () => {
   const { i18n } = useTranslation();
   const [assistants, setAssistants] = useState<AssistantListItem[]>([]);
   const [activeAssistantId, setActiveAssistantId] = useState<string | null>(null);
+  // True until the first load resolves so consumers can render a skeleton
+  // instead of flashing an empty state before vendored/extension assistants
+  // arrive (#2 - the /teams "No teams available yet" flash on cold start).
+  const [isLoading, setIsLoading] = useState(true);
   const localeKey = resolveLocaleKey(i18n.language);
 
   // Load extension-contributed assistants for Settings > Assistants list
@@ -64,6 +68,8 @@ export const useAssistantList = () => {
       });
     } catch (error) {
       console.error('Failed to load assistant presets:', error);
+    } finally {
+      setIsLoading(false);
     }
   }, [normalizedExtAssistants, sortAssistants]);
 
@@ -82,6 +88,7 @@ export const useAssistantList = () => {
     isExtensionAssistant,
     loadAssistants,
     localeKey,
+    isLoading,
   };
 };
 

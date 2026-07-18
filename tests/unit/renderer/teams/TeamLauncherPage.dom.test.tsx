@@ -249,10 +249,15 @@ describe('TeamLauncherPage', () => {
       expect(screen.queryByTestId('launcher-standing-badge')).not.toBeNull();
     });
 
-    it('does not show the goal text-box on pre-configured', async () => {
+    it('shows the goal/kickoff text-box on pre-configured (without the Suggest button)', async () => {
+      // F1: template launches always render the kickoff brief - it is posted to
+      // the leader on launch. Only the roster-from-goal Suggest action stays
+      // build-my-own only.
       renderPreconfigured('marketing-agency');
       await waitFor(() => screen.getByTestId('launcher-roster-card'));
-      expect(screen.queryByTestId('launcher-goal-card')).toBeNull();
+      expect(screen.queryByTestId('launcher-goal-card')).not.toBeNull();
+      expect(screen.queryByTestId('launcher-goal-input')).not.toBeNull();
+      expect(screen.queryByTestId('launcher-suggest-btn')).toBeNull();
     });
   });
 

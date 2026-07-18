@@ -4,41 +4,20 @@ import type {
   ITeamAgentRemovedEvent,
   ITeamAgentRenamedEvent,
   ITeamAgentSpawnedEvent,
-  ITeamAgentStatusEvent,
   ITeamListChangedEvent,
   TeamAgent,
-  TeammateStatus,
   TTeam,
 } from '@/common/types/teamTypes';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect } from 'react';
 import useSWR from 'swr';
-
-type AgentStatusInfo = {
-  slotId: string;
-  status: TeammateStatus;
-  lastMessage?: string;
-};
 
 export function useTeamSession(team: TTeam) {
   const { mutate: mutateTeam } = useSWR(team.id ? `team/${team.id}` : null, () =>
     ipcBridge.team.get.invoke({ id: team.id })
   );
 
-  const [statusMap, setStatusMap] = useState<Map<string, AgentStatusInfo>>(() => {
-    return new Map(team.agents.map((a) => [a.slotId, { slotId: a.slotId, status: a.status }]));
-  });
-
   useEffect(() => {
     void ipcBridge.team.ensureSession.invoke({ teamId: team.id });
-
-    const unsubStatus = ipcBridge.team.agentStatusChanged.on((event: ITeamAgentStatusEvent) => {
-      if (event.teamId !== team.id) return;
-      setStatusMap((prev) => {
-        const next = new Map(prev);
-        next.set(event.slotId, { slotId: event.slotId, status: event.status, lastMessage: event.lastMessage });
-        return next;
-      });
-    });
 
     const unsubSpawned = ipcBridge.team.agentSpawned.on((event: ITeamAgentSpawnedEvent) => {
       if (event.teamId !== team.id) return;
@@ -65,7 +44,6 @@ export function useTeamSession(team: TTeam) {
     });
 
     return () => {
-      unsubStatus();
       unsubSpawned();
       unsubRemoved();
       unsubRenamed();
@@ -104,5 +82,5 @@ export function useTeamSession(team: TTeam) {
     [team.id, mutateTeam]
   );
 
-  return { statusMap, sendMessage, addAgent, renameAgent, removeAgent, mutateTeam };
+  return { sendMessage, addAgent, renameAgent, removeAgent, mutateTeam };
 }
