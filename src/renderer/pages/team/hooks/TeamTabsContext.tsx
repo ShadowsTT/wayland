@@ -1,21 +1,14 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import type { TeamAgent, TeammateStatus } from '@/common/types/teamTypes';
+import type { TeamAgent } from '@/common/types/teamTypes';
 import {
   readStoredSiderOrder,
   sortSiderItemsByStoredOrder,
   writeStoredSiderOrder,
 } from '@renderer/components/layout/Sider/siderOrder';
 
-type AgentStatusInfo = {
-  slotId: string;
-  status: TeammateStatus;
-  lastMessage?: string;
-};
-
 export type TeamTabsContextValue = {
   agents: TeamAgent[];
   activeSlotId: string;
-  statusMap: Map<string, AgentStatusInfo>;
   teamId: string;
   switchTab: (slotId: string) => void;
   renameAgent?: (slotId: string, newName: string) => Promise<void>;
@@ -44,12 +37,11 @@ const sortTeamAgents = (agents: TeamAgent[], teamId: string, fallbackOrder?: str
 export const TeamTabsProvider: React.FC<{
   children: React.ReactNode;
   agents: TeamAgent[];
-  statusMap: Map<string, AgentStatusInfo>;
   defaultActiveSlotId: string;
   teamId: string;
   renameAgent?: (slotId: string, newName: string) => Promise<void>;
   removeAgent?: (slotId: string) => void;
-}> = ({ children, agents: externalAgents, statusMap, defaultActiveSlotId, teamId, renameAgent, removeAgent }) => {
+}> = ({ children, agents: externalAgents, defaultActiveSlotId, teamId, renameAgent, removeAgent }) => {
   const storageKey = `team-active-slot-${teamId}`;
   const savedSlotId = localStorage.getItem(storageKey);
   const initialSlotId =
@@ -114,8 +106,8 @@ export const TeamTabsProvider: React.FC<{
   }, []);
 
   const contextValue = useMemo(
-    () => ({ agents, activeSlotId, statusMap, teamId, switchTab, renameAgent, removeAgent, reorderAgents }),
-    [agents, activeSlotId, statusMap, teamId, switchTab, renameAgent, removeAgent, reorderAgents]
+    () => ({ agents, activeSlotId, teamId, switchTab, renameAgent, removeAgent, reorderAgents }),
+    [agents, activeSlotId, teamId, switchTab, renameAgent, removeAgent, reorderAgents]
   );
 
   return <TeamTabsContext.Provider value={contextValue}>{children}</TeamTabsContext.Provider>;

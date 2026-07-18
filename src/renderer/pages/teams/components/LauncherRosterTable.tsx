@@ -210,7 +210,7 @@ const LauncherRosterTable: React.FC<LauncherRosterTableProps> = ({
 
       {teammates.map((entry, index) => (
         <RosterRow
-          key={`${entry.specialistId}-${index}`}
+          key={entry.specialistId}
           entry={entry}
           index={index}
           isLeader={false}

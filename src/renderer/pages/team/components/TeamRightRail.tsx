@@ -28,10 +28,10 @@ import { getBackendLabel } from '@renderer/utils/model/backendLabel';
 import AddTeammatePicker from '@/renderer/pages/teams/components/AddTeammatePicker';
 import AssistantIconTile from '@/renderer/pages/guid/components/AssistantIconTile';
 import { resolveSpecialistPalette } from '@/renderer/pages/teams/components/teamPalette';
+import { useTeamStatusMap } from '../hooks/TeamStatusContext';
 
 type Props = {
   agents: TeamAgent[];
-  statusMap: Map<string, { status: TeammateStatus }>;
   launcher: AssistantListItem | null;
   workspacePath?: string;
   teamId: string;
@@ -168,8 +168,8 @@ const TeammateRow: React.FC<{
       style={
         isLeader
           ? {
-              background: 'rgba(245,158,11,0.05)',
-              borderLeft: '2px solid rgba(245,158,11,0.45)',
+              background: 'rgb(var(--primary-6) / 0.05)',
+              borderLeft: '2px solid rgb(var(--primary-6) / 0.45)',
             }
           : undefined
       }
@@ -190,7 +190,7 @@ const TeammateRow: React.FC<{
           <div className='flex items-center gap-4px min-w-0'>
             <div className='text-12.5px font-medium text-[color:var(--color-text-1)] truncate'>{agent.agentName}</div>
             {isLeader && (
-              <Crown size={11} aria-hidden='true' className='shrink-0 text-[rgb(245,158,11)] drop-shadow-sm' />
+              <Crown size={11} aria-hidden='true' className='shrink-0 text-[rgb(var(--primary-6))] drop-shadow-sm' />
             )}
           </div>
           <div className='text-10px text-[color:var(--color-text-4)] truncate'>
@@ -222,8 +222,9 @@ const TeammateRow: React.FC<{
   );
 };
 
-const TeamRightRail: React.FC<Props> = ({ agents, statusMap, launcher, workspacePath, teamId, onTeammateAdded }) => {
+const TeamRightRail: React.FC<Props> = ({ agents, launcher, workspacePath, teamId, onTeammateAdded }) => {
   const { t } = useTranslation();
+  const statusMap = useTeamStatusMap();
   const rituals = launcher?._rituals ?? [];
   const hasWorkspace = Boolean(workspacePath && workspacePath.length > 0);
   const [pickerVisible, setPickerVisible] = useState(false);
@@ -265,7 +266,7 @@ const TeamRightRail: React.FC<Props> = ({ agents, statusMap, launcher, workspace
       <aside
         data-testid='team-right-rail'
         data-collapsed='true'
-        className='w-36px shrink-0 h-full flex flex-col items-center justify-start gap-12px py-12px border-l border-solid border-[color:var(--border-base)] bg-[color:var(--color-bg-2)] cursor-pointer hover:bg-[color:var(--color-fill-2)] transition-colors'
+        className='w-36px shrink-0 h-full flex flex-col items-center justify-start gap-12px py-12px border-l border-solid border-[color:var(--border-base)] bg-[color:var(--color-bg-2)] cursor-pointer hover:bg-[color:var(--color-fill-2)] overflow-hidden transition-[width,background-color] duration-200 ease-out'
         onClick={toggleCollapsed}
         aria-label={expandLabel}
         title={expandLabel}
@@ -313,7 +314,7 @@ const TeamRightRail: React.FC<Props> = ({ agents, statusMap, launcher, workspace
     <aside
       data-testid='team-right-rail'
       data-collapsed='false'
-      className='w-260px shrink-0 h-full flex flex-col overflow-y-auto border-l border-solid border-[color:var(--border-base)] bg-[color:var(--color-bg-2)] p-16px gap-16px'
+      className='w-260px shrink-0 h-full flex flex-col overflow-y-auto border-l border-solid border-[color:var(--border-base)] bg-[color:var(--color-bg-2)] p-16px gap-16px transition-[width] duration-200 ease-out'
     >
       <section data-testid='team-right-rail-teammates'>
         <div className='flex items-center justify-between mb-8px'>

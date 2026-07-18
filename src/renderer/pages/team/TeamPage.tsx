@@ -1,5 +1,5 @@
 import { ChevronLeft, ChevronRight, Crown, Maximize2, Minimize2, X } from 'lucide-react';
-import { Message, Modal, Spin } from '@arco-design/web-react';
+import { Message, Modal } from '@arco-design/web-react';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSWRConfig } from 'swr';
@@ -25,10 +25,12 @@ import TeamChatView from './components/TeamChatView';
 import TeamAgentIdentity from './components/TeamAgentIdentity';
 import TeamRightRail from './components/TeamRightRail';
 import TeamActivityTab from './components/TeamActivityTab';
+import TeamChatSkeleton from './components/TeamChatSkeleton';
 import TeamHeaderBadges from './components/TeamHeaderBadges';
 import PromoteToStandingModal from './components/PromoteToStandingModal';
 import AgentBackendPill from './components/AgentBackendPill';
 import { TeamTabsProvider, useTeamTabs } from './hooks/TeamTabsContext';
+import { TeamStatusProvider, useTeamStatusRef } from './hooks/TeamStatusContext';
 import { TeamPermissionProvider } from './hooks/TeamPermissionContext';
 import { useTeamSession } from './hooks/useTeamSession';
 import { useTeamSourceLauncher } from './hooks/useTeamSourceLauncher';
@@ -63,17 +65,35 @@ const WCoreHeaderModelSelector: React.FC<{ conversationId: string; initialModel?
   return <WCoreModelSelector selection={modelSelection} conversationId={conversationId} />;
 };
 
-/** Fetches conversation for a single agent and renders TeamChatView */
-const AgentChatSlot: React.FC<{
+type AgentChatSlotProps = {
   agent: TeamAgent;
   teamId: string;
   isLeader: boolean;
   isFullscreen?: boolean;
-  onToggleFullscreen?: () => void;
-  onRemove?: () => void;
+  /** slotId-parameterized so the parent can pass ONE stable callback per handler
+   *  (keeps this memo'd slot from re-rendering when sibling status flips - P1). */
+  onToggleFullscreen?: (slotId: string) => void;
+  onRemove?: (slotId: string) => void;
   /** Pre-resolved palette for the agent's tile (computed by parent so we don't re-walk the assistant list per slot). */
   palette?: PaletteKey;
-}> = ({ agent, teamId, isLeader, isFullscreen = false, onToggleFullscreen, onRemove, palette }) => {
+};
+
+/**
+ * Fetches conversation for a single agent and renders TeamChatView.
+ *
+ * Memoized (P1): with all N columns mounted side-by-side, a status flip on one
+ * agent used to re-render every column. React.memo + slotId-parameterized
+ * callbacks keep each slot inert unless its own props actually change.
+ */
+const AgentChatSlot = React.memo(function AgentChatSlot({
+  agent,
+  teamId,
+  isLeader,
+  isFullscreen = false,
+  onToggleFullscreen,
+  onRemove,
+  palette,
+}: AgentChatSlotProps) {
   const { t } = useTranslation();
   // useTeamConversation (not a bare useSWR) so the shared record revalidates
   // when the process persists an update - the header model selector and the
@@ -170,14 +190,14 @@ const AgentChatSlot: React.FC<{
           {!isLeader && onRemove && (
             <div
               className='shrink-0 cursor-pointer hover:bg-[var(--color-fill-3)] p-4px rd-4px text-[color:var(--color-text-3)] hover:text-[color:var(--color-danger-6)] transition-colors'
-              onClick={onRemove}
+              onClick={() => onRemove(agent.slotId)}
             >
               <X size={16} />
             </div>
           )}
           <div
             className='shrink-0 cursor-pointer hover:bg-[var(--color-fill-3)] p-4px rd-4px text-[color:var(--color-text-3)] hover:text-[color:var(--color-text-1)] transition-colors'
-            onClick={() => onToggleFullscreen?.()}
+            onClick={() => onToggleFullscreen?.(agent.slotId)}
           >
             {isFullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
           </div>
@@ -190,7 +210,7 @@ const AgentChatSlot: React.FC<{
             className='flex items-center justify-center gap-6px shrink-0 px-12px py-4px text-9.5px font-semibold uppercase tracking-wider border-b border-solid border-[color:var(--border-base)]'
             style={{
               background: 'color-mix(in srgb, var(--color-primary-6) 8%, var(--color-bg-1))',
-              color: 'rgb(245,158,11)',
+              color: 'var(--color-primary-6)',
               letterSpacing: '0.06em',
             }}
             aria-label={t('teams.teamLeader', { defaultValue: 'Team Leader' })}
@@ -207,19 +227,21 @@ const AgentChatSlot: React.FC<{
             agentName={agent.agentName}
           />
         ) : (
-          <div className='flex flex-1 items-center justify-center'>
-            <Spin loading />
-          </div>
+          <TeamChatSkeleton />
         )}
       </div>
     </div>
   );
-};
+});
 
 /** Inner component that reads active tab from context and renders the chat layout */
 const TeamPageContent: React.FC<TeamPageContentProps> = ({ team, onRenameTeam }) => {
   const { t } = useTranslation();
-  const { agents, activeSlotId, statusMap, switchTab } = useTeamTabs();
+  const { agents, activeSlotId, switchTab } = useTeamTabs();
+  // Status is read from a stable ref (not subscribed) so a status flip does not
+  // re-render this component or the chat grid - only TeamTabs + TeamRightRail,
+  // which subscribe via useTeamStatusMap, re-render (P1).
+  const statusRef = useTeamStatusRef();
   // Narrow viewports (mobile + small windows) can't fit the side-by-side agent
   // columns (each has a 400px floor), so they horizontally overflow/cram. On
   // narrow, show one agent pane full-width and let the top tabs switch agents.
@@ -274,7 +296,7 @@ const TeamPageContent: React.FC<TeamPageContentProps> = ({ team, onRenameTeam })
 
   const handleRemoveAgent = useCallback(
     (slotId: string) => {
-      const status = statusMap.get(slotId)?.status;
+      const status = statusRef.current.get(slotId)?.status;
       if (status === 'active') {
         Modal.confirm({
           title: t('team.removeAgent.confirmTitle'),
@@ -287,8 +309,14 @@ const TeamPageContent: React.FC<TeamPageContentProps> = ({ team, onRenameTeam })
         void doRemoveAgent(slotId);
       }
     },
-    [statusMap, doRemoveAgent, t]
+    [statusRef, doRemoveAgent, t]
   );
+
+  // One stable fullscreen toggle shared by every slot (grid, narrow, fullscreen).
+  // Passing a slotId-keyed callback per slot would defeat AgentChatSlot's memo.
+  const handleToggleFullscreen = useCallback((slotId: string) => {
+    setFullscreenSlotId((prev) => (prev === slotId ? null : slotId));
+  }, []);
 
   // W3a - right-rail + Add teammate. The picker hands the chosen specialist
   // up to this handler; we build the agent payload using the specialist's
@@ -391,23 +419,11 @@ const TeamPageContent: React.FC<TeamPageContentProps> = ({ team, onRenameTeam })
       setViewMode('chat');
       switchTab(slotId);
       if (fullscreenSlotId) setFullscreenSlotId(slotId);
+      // Scroll the picked column into view - the only tab-switch feedback. The
+      // previous opacity 1→0→1 flash blanked the whole pane for ~150ms on every
+      // click (and on mount); dropped entirely (#1).
       requestAnimationFrame(() => {
-        const el = agentRefs.current[slotId];
-        if (el) {
-          el.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' });
-          // Flash: opacity 1→0→1
-          setTimeout(() => {
-            el.style.transition = 'opacity 150ms ease-out';
-            el.style.opacity = '0';
-            setTimeout(() => {
-              el.style.transition = 'opacity 150ms ease-in';
-              el.style.opacity = '1';
-              setTimeout(() => {
-                el.style.transition = '';
-              }, 200);
-            }, 150);
-          }, 200);
-        }
+        agentRefs.current[slotId]?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' });
       });
     },
     [switchTab, fullscreenSlotId]
@@ -425,25 +441,12 @@ const TeamPageContent: React.FC<TeamPageContentProps> = ({ team, onRenameTeam })
     if (agents[target]) handleTabClick(agents[target].slotId);
   }, [agents, activeSlotId, handleTabClick]);
 
-  // Every time the page mounts, scroll + flash the active tab
+  // On mount, scroll the active column into view. No opacity flash here - the
+  // pane must never blank on entry (#1).
   useEffect(() => {
     if (activeSlotId && agents.length > 0) {
       const timer = setTimeout(() => {
-        const el = agentRefs.current[activeSlotId];
-        if (el) {
-          el.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' });
-          setTimeout(() => {
-            el.style.transition = 'opacity 150ms ease-out';
-            el.style.opacity = '0';
-            setTimeout(() => {
-              el.style.transition = 'opacity 150ms ease-in';
-              el.style.opacity = '1';
-              setTimeout(() => {
-                el.style.transition = '';
-              }, 200);
-            }, 150);
-          }, 200);
-        }
+        agentRefs.current[activeSlotId]?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' });
       }, 100);
       return () => clearTimeout(timer);
     }
@@ -583,8 +586,8 @@ const TeamPageContent: React.FC<TeamPageContentProps> = ({ team, onRenameTeam })
                       teamId={team.id}
                       isLeader={isLeaderSlot}
                       isFullscreen
-                      onToggleFullscreen={() => setFullscreenSlotId(null)}
-                      onRemove={() => handleRemoveAgent(agent.slotId)}
+                      onToggleFullscreen={handleToggleFullscreen}
+                      onRemove={handleRemoveAgent}
                       palette={paletteBySlotId.get(agent.slotId)}
                     />
                   </div>
@@ -603,8 +606,8 @@ const TeamPageContent: React.FC<TeamPageContentProps> = ({ team, onRenameTeam })
                       agent={agent}
                       teamId={team.id}
                       isLeader={isLeaderSlot}
-                      onToggleFullscreen={() => setFullscreenSlotId(agent.slotId)}
-                      onRemove={() => handleRemoveAgent(agent.slotId)}
+                      onToggleFullscreen={handleToggleFullscreen}
+                      onRemove={handleRemoveAgent}
                       palette={paletteBySlotId.get(agent.slotId)}
                     />
                   </div>
@@ -619,10 +622,10 @@ const TeamPageContent: React.FC<TeamPageContentProps> = ({ team, onRenameTeam })
                     onClick={scrollToPrev}
                   >
                     <div
-                      className='w-32px h-32px rd-full flex items-center justify-center'
-                      style={{ background: 'rgba(0,0,0,0.5)', lineHeight: 0 }}
+                      className='w-32px h-32px rd-full flex items-center justify-center border border-solid border-[color:var(--border-base)] shadow-sm'
+                      style={{ background: 'var(--color-bg-5)', color: 'var(--color-text-1)', lineHeight: 0 }}
                     >
-                      <ChevronLeft size={24} color='#fff' />
+                      <ChevronLeft size={24} />
                     </div>
                   </div>
                 )}
@@ -656,8 +659,8 @@ const TeamPageContent: React.FC<TeamPageContentProps> = ({ team, onRenameTeam })
                           agent={agent}
                           teamId={team.id}
                           isLeader={isLeaderSlot}
-                          onToggleFullscreen={() => setFullscreenSlotId(agent.slotId)}
-                          onRemove={() => handleRemoveAgent(agent.slotId)}
+                          onToggleFullscreen={handleToggleFullscreen}
+                          onRemove={handleRemoveAgent}
                           palette={paletteBySlotId.get(agent.slotId)}
                         />
                       </div>
@@ -671,10 +674,10 @@ const TeamPageContent: React.FC<TeamPageContentProps> = ({ team, onRenameTeam })
                     onClick={scrollToNext}
                   >
                     <div
-                      className='w-32px h-32px rd-full flex items-center justify-center'
-                      style={{ background: 'rgba(0,0,0,0.5)', lineHeight: 0 }}
+                      className='w-32px h-32px rd-full flex items-center justify-center border border-solid border-[color:var(--border-base)] shadow-sm'
+                      style={{ background: 'var(--color-bg-5)', color: 'var(--color-text-1)', lineHeight: 0 }}
                     >
-                      <ChevronRight size={24} color='#fff' />
+                      <ChevronRight size={24} />
                     </div>
                   </div>
                 )}
@@ -683,7 +686,6 @@ const TeamPageContent: React.FC<TeamPageContentProps> = ({ team, onRenameTeam })
           </div>
           <TeamRightRail
             agents={agents}
-            statusMap={statusMap}
             launcher={launcher}
             workspacePath={effectiveWorkspace}
             teamId={team.id}
@@ -702,11 +704,18 @@ const TeamPageContent: React.FC<TeamPageContentProps> = ({ team, onRenameTeam })
   );
 };
 
-const TeamPage: React.FC<Props> = ({ team }) => {
+/**
+ * Session wiring + tab provider. Rendered as a stable `children` element of
+ * TeamStatusProvider so status flips (state inside that provider) never
+ * re-render this component or its subtree - it reads status via a stable ref
+ * for the remove-confirm decision only (P1).
+ */
+const TeamPageInner: React.FC<Props> = ({ team }) => {
   const { t } = useTranslation();
-  const { statusMap, renameAgent, removeAgent, mutateTeam } = useTeamSession(team);
+  const { renameAgent, removeAgent, mutateTeam } = useTeamSession(team);
   const { user } = useAuth();
   const { mutate: globalMutate } = useSWRConfig();
+  const statusRef = useTeamStatusRef();
   const defaultSlotId = team.agents[0]?.slotId ?? '';
 
   const handleRemoveAgentWithConfirm = useCallback(
@@ -719,7 +728,7 @@ const TeamPage: React.FC<Props> = ({ team }) => {
           Message.error(String(error));
         }
       };
-      const status = statusMap.get(slotId)?.status;
+      const status = statusRef.current.get(slotId)?.status;
       if (status === 'active') {
         Modal.confirm({
           title: t('team.removeAgent.confirmTitle'),
@@ -732,7 +741,7 @@ const TeamPage: React.FC<Props> = ({ team }) => {
         void doRemove();
       }
     },
-    [statusMap, removeAgent, t]
+    [statusRef, removeAgent, t]
   );
 
   const handleRenameTeam = useCallback(
@@ -753,7 +762,6 @@ const TeamPage: React.FC<Props> = ({ team }) => {
   return (
     <TeamTabsProvider
       agents={team.agents}
-      statusMap={statusMap}
       defaultActiveSlotId={defaultSlotId}
       teamId={team.id}
       renameAgent={renameAgent}
@@ -763,5 +771,11 @@ const TeamPage: React.FC<Props> = ({ team }) => {
     </TeamTabsProvider>
   );
 };
+
+const TeamPage: React.FC<Props> = ({ team }) => (
+  <TeamStatusProvider teamId={team.id} agents={team.agents}>
+    <TeamPageInner team={team} />
+  </TeamStatusProvider>
+);
 
 export default TeamPage;

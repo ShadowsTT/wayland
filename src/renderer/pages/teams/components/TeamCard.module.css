@@ -34,6 +34,11 @@
   transform: scale(0.99);
 }
 
+.card:focus-visible {
+  outline: 2px solid rgb(var(--primary-6));
+  outline-offset: 2px;
+}
+
 .cardHeader {
   display: flex;
   align-items: center;
@@ -114,6 +119,17 @@
   font-size: 11.5px;
   color: var(--color-text-4);
   line-height: 16px;
+}
+
+/* Roster preview: the top role names so the user sees WHO is on a template
+   before committing (F4). Single-line, ellipsized. */
+.roles {
+  font-size: 11.5px;
+  color: var(--color-text-3);
+  line-height: 16px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* Standing Companies - same tier idiom as Featured workflows. Solid

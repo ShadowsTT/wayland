@@ -6,6 +6,7 @@ import type { PaletteKey } from '@/renderer/pages/guid/components/AssistantIconT
 import AgentStatusBadge from './AgentStatusBadge';
 import TeamAgentIdentity from './TeamAgentIdentity';
 import { useTeamTabs } from '../hooks/TeamTabsContext';
+import { useTeamStatusMap } from '../hooks/TeamStatusContext';
 
 const DRAG_OVER_CLASS = 'border-l-2 border-[color:var(--color-primary-6)]';
 
@@ -92,8 +93,6 @@ const TeamTabView: React.FC<TeamTabViewProps> = ({
     [agentName]
   );
 
-  const isRunning = status === 'active';
-
   return (
     <div
       draggable={!isLeader}
@@ -102,7 +101,6 @@ const TeamTabView: React.FC<TeamTabViewProps> = ({
           ? 'bg-[color:var(--color-primary-1)] text-[color:var(--color-text-1)] border-t-2 border-t-solid border-t-[color:var(--color-primary-6)]'
           : 'bg-2 text-[color:var(--color-text-2)] hover:text-[color:var(--color-text-1)] hover:bg-[color:var(--color-fill-2)] border-b border-[color:var(--border-base)]'
       } ${isDragOver ? DRAG_OVER_CLASS : ''}`}
-      style={isRunning ? { animation: 'team-tab-breathe 2s ease-in-out infinite' } : undefined}
       onClick={() => !editing && onSwitch(slotId)}
       onDoubleClick={onRename ? startEditing : undefined}
       onDragStart={(e) => {
@@ -203,7 +201,8 @@ const TeamTabs: React.FC<TeamTabsProps> = ({
   onActivityClick,
 }) => {
   const { t } = useTranslation();
-  const { agents, activeSlotId, statusMap, switchTab, renameAgent, removeAgent, reorderAgents } = useTeamTabs();
+  const { agents, activeSlotId, switchTab, renameAgent, removeAgent, reorderAgents } = useTeamTabs();
+  const statusMap = useTeamStatusMap();
   const tabsContainerRef = useRef<HTMLDivElement>(null);
   const [showLeftFade, setShowLeftFade] = useState(false);
   const [showRightFade, setShowRightFade] = useState(false);

@@ -26,6 +26,9 @@ type Props = {
 
 const POLL_INTERVAL_MS = 2000;
 const EVENTS_LIMIT = 100;
+// Cap retained events so a long-lived team's timeline can't grow unbounded and
+// re-render an ever-larger non-virtualized <ol> on every 15s tick (P3).
+const EVENTS_RETAIN_CAP = 200;
 
 const EVENT_ICON: Record<TeamEventType, React.ReactNode> = {
   mailbox: <Inbox size={14} />,
@@ -124,6 +127,10 @@ const TeamActivityTab: React.FC<Props> = ({ teamId, pollIntervalMs = POLL_INTERV
   const { t } = useTranslation();
   const [events, setEvents] = useState<TeamEvent[]>([]);
   const [now, setNow] = useState<number>(() => Date.now());
+  // Distinguishes "not polled yet" from "polled, genuinely empty" so we show a
+  // skeleton instead of flashing "No team activity yet" before the first 2s
+  // poll resolves (#10).
+  const [hasPolled, setHasPolled] = useState(false);
   const seenIdsRef = useRef<Set<string>>(new Set());
   const lastPollRef = useRef<number>(0);
 
@@ -149,12 +156,16 @@ const TeamActivityTab: React.FC<Props> = ({ teamId, pollIntervalMs = POLL_INTERV
       const maxCreatedAt = fresh.reduce((m, e) => (e.createdAt > m ? e.createdAt : m), lastPollRef.current);
       lastPollRef.current = maxCreatedAt;
 
-      // Prepend fresh events (already newest-first within `fresh`).
-      setEvents((prev) => [...fresh, ...prev]);
+      // Prepend fresh events (already newest-first within `fresh`), capped.
+      setEvents((prev) => [...fresh, ...prev].slice(0, EVENTS_RETAIN_CAP));
     } catch (error) {
       // Polling errors are swallowed - a single failed poll shouldn't take
       // the activity tab offline. The next tick retries.
       console.warn('[TeamActivityTab] poll failed', error);
+    } finally {
+      // Mark polled once the first attempt settles (even when empty/failed) so
+      // the empty state can render deliberately rather than as a load flash.
+      setHasPolled(true);
     }
   }, [teamId]);
 
@@ -165,6 +176,7 @@ const TeamActivityTab: React.FC<Props> = ({ teamId, pollIntervalMs = POLL_INTERV
     seenIdsRef.current = new Set();
     lastPollRef.current = 0;
     setEvents([]);
+    setHasPolled(false);
     void poll();
     const id = setInterval(poll, pollIntervalMs);
     return () => clearInterval(id);
@@ -176,6 +188,33 @@ const TeamActivityTab: React.FC<Props> = ({ teamId, pollIntervalMs = POLL_INTERV
     const id = setInterval(() => setNow(Date.now()), 15_000);
     return () => clearInterval(id);
   }, []);
+
+  if (!hasPolled) {
+    // Pre-first-poll: reserve the timeline with static row placeholders so the
+    // empty state never flashes before we actually know it's empty (#10).
+    return (
+      <div
+        data-testid='team-activity-tab'
+        data-loading='true'
+        className='flex-1 overflow-hidden px-20px py-16px bg-[color:var(--color-bg-1)]'
+      >
+        <div className='flex flex-col gap-12px m-0 max-w-720px mx-auto' aria-hidden='true'>
+          {[0, 1, 2].map((i) => (
+            <div
+              key={i}
+              className='flex items-start gap-12px p-12px rd-8px bg-[color:var(--color-bg-2)] border border-solid border-[color:var(--border-base)]'
+            >
+              <span className='shrink-0 w-28px h-28px rd-full' style={{ background: 'var(--color-fill-2)' }} />
+              <div className='flex-1 flex flex-col gap-6px'>
+                <span className='h-10px w-96px rd-4px' style={{ background: 'var(--color-fill-2)' }} />
+                <span className='h-12px w-full rd-4px' style={{ background: 'var(--color-fill-2)' }} />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   if (events.length === 0) {
     return (
