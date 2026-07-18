@@ -284,12 +284,18 @@ const TeamLauncherPage: React.FC = () => {
       setState((prev) => ({
         ...prev,
         leader: result.leader
-          ? { specialistId: result.leader.specialistId, backend: result.leader.backend, slotName: '' }
+          ? {
+              specialistId: result.leader.specialistId,
+              backend: result.leader.backend,
+              slotName: '',
+              matchedTerms: result.leader.matchedTerms,
+            }
           : prev.leader,
         teammates: result.teammates.map((e) => ({
           specialistId: e.specialistId,
           backend: e.backend,
           slotName: '',
+          matchedTerms: e.matchedTerms,
         })),
       }));
 
