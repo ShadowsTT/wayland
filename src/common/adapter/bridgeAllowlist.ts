@@ -147,6 +147,11 @@ const REMOTE_DENIED_PREFIXES: readonly string[] = [
   // later. byConversation/series in particular disclose per-conversation usage
   // and a fine-grained activity timeline. Local-renderer-only surface.
   'cost.',
+  // Subscription usage (Claude + Codex 5h/weekly windows). Quota utilization is
+  // account-sensitive; there is no remote usage view, so deny the ENTIRE
+  // subscriptionUsage.* namespace to paired-device WebSocket callers - mirrors
+  // the cost.* posture above. Local-renderer-only surface.
+  'subscriptionUsage.',
   // #645 Terminal mode. terminal.open spawns a real PTY running the chat's agent
   // CLI on a TTY; terminal.input writes keystrokes into it. A paired-device WS
   // token proves a remote browser, NOT the local trusted user, so the ENTIRE

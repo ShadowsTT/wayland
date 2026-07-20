@@ -2927,6 +2927,23 @@ export const cost = {
   budgetGateBlocked: buildEmitter<import('@process/services/cost/types').BudgetGateBlocked>('cost.budgetGateBlocked'),
 };
 
+// Subscription usage tracking (Claude Code + Codex CLI 5-hour + weekly rolling
+// windows). Read fresh from local sources (Claude OAuth usage endpoint + Codex
+// session rollouts) by the main-process UsagePoller - distinct from the
+// telemetry `usage.*` namespace above (Launchpad interaction events).
+//
+// This data is ACCOUNT-SENSITIVE (quota utilization), so - like cost.* - the
+// whole `subscriptionUsage.` namespace is denied to remote (paired-device
+// WebSocket) callers by the prefix in bridgeAllowlist.ts.
+export const subscriptionUsage = {
+  /** Current 5h + weekly usage for both providers. `force` bypasses the cache. */
+  snapshot: buildProvider<import('@process/services/subscriptionUsage/types').UsageSnapshot, { force?: boolean }>(
+    'subscriptionUsage.snapshot'
+  ),
+  /** Push a fresh snapshot to the renderer after each poll (main -> renderer). */
+  changed: buildEmitter<import('@process/services/subscriptionUsage/types').UsageSnapshot>('subscriptionUsage.changed'),
+};
+
 // ==================== Memory Archive (v0.6.4) ====================
 // Direct filesystem access to .ijfw/memory/*.md files - does NOT go through
 // the MCP server. The MCP server stays as the write/orchestrate layer.
