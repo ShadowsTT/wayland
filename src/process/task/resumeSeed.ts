@@ -25,7 +25,13 @@
 import type { IMessageToolGroup, TMessage } from '@/common/chat/chatLib';
 
 const DEFAULT_MAX_CHARS = 8000;
-const DEFAULT_MAX_MESSAGES = 60;
+/**
+ * Number of trailing messages the transcript is built from. Exported so resume
+ * callers can bound their DB read to exactly this many rows instead of fetching
+ * the whole conversation and discarding all but the tail (perf: avoids a large
+ * synchronous main-thread read on resume).
+ */
+export const RESUME_SEED_MAX_MESSAGES = 60;
 /** Per-entry cap so one giant message can't eat the whole char budget tail. */
 const DEFAULT_PER_ENTRY_CHARS = 1000;
 /** Bound the recursion + fan-out when harvesting file paths from tool args. */
@@ -138,7 +144,7 @@ export function buildResumeSeedTranscript(
   opts: { maxChars?: number; maxMessages?: number; perEntryChars?: number } = {}
 ): string {
   const maxChars = opts.maxChars ?? DEFAULT_MAX_CHARS;
-  const maxMessages = opts.maxMessages ?? DEFAULT_MAX_MESSAGES;
+  const maxMessages = opts.maxMessages ?? RESUME_SEED_MAX_MESSAGES;
   const perEntryChars = opts.perEntryChars ?? DEFAULT_PER_ENTRY_CHARS;
   const recent = messages.slice(-maxMessages);
   const lines: string[] = [];
