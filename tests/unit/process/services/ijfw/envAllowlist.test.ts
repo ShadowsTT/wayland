@@ -62,6 +62,45 @@ describe('ijfw/envAllowlist', () => {
     expect(env.IJFW_INTERNAL_TOKEN).toBeUndefined();
   });
 
+  it('forwards SystemRoot (Windows Node CSPRNG init) — the memory-runtime crash fix', () => {
+    // Without SystemRoot a spawned Node child aborts at startup on Windows, so it
+    // MUST survive the allowlist despite its mixed casing.
+    process.env.SystemRoot = 'C:\\Windows';
+    const env = buildChildEnv();
+    expect(env.SystemRoot).toBe('C:\\Windows');
+  });
+
+  it('matches the allowlist case-insensitively and preserves original key casing', () => {
+    // Windows exposes `Path`/`SYSTEMROOT`, not `PATH`/`SystemRoot`; both must pass.
+    process.env.Path = 'C:\\tools';
+    process.env.SYSTEMROOT = 'C:\\WINDOWS';
+    const env = buildChildEnv();
+    expect(env.Path).toBe('C:\\tools');
+    expect(env.SYSTEMROOT).toBe('C:\\WINDOWS');
+  });
+
+  it('forwards the Windows runtime vars a spawned Node/npx child needs', () => {
+    process.env.SystemDrive = 'C:';
+    process.env.windir = 'C:\\Windows';
+    process.env.USERPROFILE = 'C:\\Users\\me';
+    process.env.APPDATA = 'C:\\Users\\me\\AppData\\Roaming';
+    process.env.LOCALAPPDATA = 'C:\\Users\\me\\AppData\\Local';
+    const env = buildChildEnv();
+    expect(env.SystemDrive).toBe('C:');
+    expect(env.windir).toBe('C:\\Windows');
+    expect(env.USERPROFILE).toBe('C:\\Users\\me');
+    expect(env.APPDATA).toBe('C:\\Users\\me\\AppData\\Roaming');
+    expect(env.LOCALAPPDATA).toBe('C:\\Users\\me\\AppData\\Local');
+  });
+
+  it('still drops secrets even with case-insensitive matching', () => {
+    process.env.SECRET_TOKEN = 'leak-me';
+    process.env.systemroot_evil = 'nope';
+    const env = buildChildEnv();
+    expect(env.SECRET_TOKEN).toBeUndefined();
+    expect(env.systemroot_evil).toBeUndefined();
+  });
+
   it('accepts extra keys that match the extra-key regex', () => {
     const env = buildChildEnv({ MY_VAR: 'value', X1: 'one' });
     expect(env.MY_VAR).toBe('value');
