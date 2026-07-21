@@ -246,3 +246,6 @@ installer/payload/
 src/process/channels/signal-cli-runtime/bin/
 
 .local/
+
+# AgentBridge local tooling state
+.agentbridge/
