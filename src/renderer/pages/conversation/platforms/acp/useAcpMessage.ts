@@ -5,6 +5,7 @@
  */
 
 import { ipcBridge } from '@/common';
+import { subscribeAcpResponseStream } from './acpStreamRouter';
 import { transformMessage } from '@/common/chat/chatLib';
 import type { IResponseMessage } from '@/common/adapter/ipcBridge';
 import type { TokenUsageData } from '@/common/config/storage';
@@ -422,8 +423,12 @@ export const useAcpMessage = (conversation_id: string): UseAcpMessageReturn => {
   );
 
   useEffect(() => {
-    return ipcBridge.acpConversation.responseStream.on(handleResponseMessage);
-  }, [handleResponseMessage]);
+    // Route through the per-conversation ACP stream router so this handler is
+    // only invoked for its own conversation's messages (avoids O(N²) wake-ups
+    // across N team agents). The conversation_id guard inside
+    // handleResponseMessage is now redundant but kept as a defensive no-op.
+    return subscribeAcpResponseStream(conversation_id, handleResponseMessage);
+  }, [conversation_id, handleResponseMessage]);
 
   // Reset state when conversation changes and restore actual running status
   useEffect(() => {

@@ -7,6 +7,7 @@
 import { ChevronDown } from 'lucide-react';
 import { ipcBridge } from '@/common';
 import type { IResponseMessage } from '@/common/adapter/ipcBridge';
+import { subscribeAcpResponseStream } from '@renderer/pages/conversation/platforms/acp/acpStreamRouter';
 import type { AcpSessionConfigOption } from '@/common/types/acpTypes';
 import { Button, Dropdown, Menu } from '@arco-design/web-react';
 import React, { type ReactNode, useCallback, useEffect, useState } from 'react';
@@ -81,7 +82,9 @@ const AcpConfigSelector: React.FC<{
           .catch((err) => console.warn('[AcpConfigSelector.getConfigOptions.onUpdate]', err));
       }
     };
-    return ipcBridge.acpConversation.responseStream.on(handler);
+    // Per-conversation routing: only this conversation's stream messages reach
+    // the handler, instead of every agent's tokens waking every config selector.
+    return subscribeAcpResponseStream(conversationId, handler);
   }, [conversationId, backend]);
 
   // Sync when initialConfigOptions prop changes (e.g. agent switch on Guid page)
