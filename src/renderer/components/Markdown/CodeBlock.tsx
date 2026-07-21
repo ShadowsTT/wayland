@@ -15,7 +15,7 @@ import { sanitizeMath } from '@/renderer/utils/sanitize';
 import { Message } from '@arco-design/web-react';
 import React, { lazy, Suspense, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useThemeContext } from '@renderer/hooks/context/ThemeContext';
+import { useResolvedThemeSafe } from '@renderer/hooks/context/ThemeContext';
 import { formatCode, getDiffLineStyle } from './markdownUtils';
 
 // Lazy-load MermaidBlock so the mermaid library (~89 MB of source: d3 / dagre /
@@ -61,7 +61,7 @@ function CodeBlock(props: CodeBlockProps) {
   const [, setRenderTick] = useState(0);
   // Shared theme (perf: one app-level observer instead of a MutationObserver per
   // code block on document.documentElement — dozens in a long transcript).
-  const { theme: currentTheme } = useThemeContext();
+  const currentTheme = useResolvedThemeSafe();
 
   const {
     children,
