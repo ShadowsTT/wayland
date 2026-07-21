@@ -64,15 +64,18 @@ const TOOL_PROVIDER_IDS: ReadonlySet<string> = new Set(['deepgram', 'assemblyai'
  * Providers whose connection is verified by an OAuth/session or cloud-credential
  * flow rather than an API key, and which have no standard `/v1/models` HTTP
  * probe: the ChatGPT subscription (OAuth bearer rejected by `api.openai.com`),
+ * the Claude subscription (OAuth bearer rejected by `api.anthropic.com`; its
+ * inference runs through the Claude Code ACP agent, not a direct desktop probe),
  * the cloud providers (Bedrock/Vertex/Azure), and google-auth providers. The
  * connectivity check must NOT run the API-key probe against these — doing so
  * sends a non-API-key credential to the wrong endpoint and false-reports
- * `unauthorized` after a perfectly good reconnect (#272). A stored credential is
- * the strongest available signal, mirroring the live `testModelRegistryConnection`
- * IPC path.
+ * `unauthorized` (or, for the Claude subscription, `unknown`) after a perfectly
+ * good reconnect (#272). A stored credential is the strongest available signal,
+ * mirroring the live `testModelRegistryConnection` IPC path.
  */
 const NON_PROBEABLE_PROVIDER_IDS: ReadonlySet<string> = new Set([
   'chatgpt-subscription',
+  'claude-subscription',
   'aws-bedrock',
   'vertex',
   'azure',

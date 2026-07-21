@@ -20,6 +20,7 @@ import { resolveWCoreBinary } from './binaryResolver';
 import {
   buildEngineSpawnEnv,
   buildSpawnConfig,
+  CLAUDE_SUBSCRIPTION_ENGINE_ENABLED,
   engineInheritsShellKey,
   isOpenAIFamilyModelId,
   MissingApiKeyError,
@@ -28,6 +29,7 @@ import {
 } from './envBuilder';
 import { ProfileIsolationError, resolveActiveConfigDir } from './profilePaths';
 import { readCodexAuthFile } from '@process/onboarding/codexAuthFile';
+import { readClaudeCredentialsFile } from '@process/onboarding/claudeCredentialsFile';
 import { getToolKeyStore } from './toolKeyStore';
 import { hydrateModelForSpawn, resolveModelSecretsForSpawn } from '@process/providers/ipc/modelRegistryIpc';
 import { DEFAULT_ACCOUNT_ID } from '@/common/config/account';
@@ -335,6 +337,21 @@ export class WCoreAgent {
       }
     }
 
+    // Claude subscription (staged, mirrors the ChatGPT read above): true when the
+    // OAuth credential is present in `~/.claude/.credentials.json` — the store the
+    // engine's `anthropic-claude` provider would read. Gated by
+    // CLAUDE_SUBSCRIPTION_ENGINE_ENABLED so that while the feature is off no extra
+    // file read happens and behavior is unchanged. Best-effort + never fatal, same
+    // fail-safe posture as the ChatGPT read.
+    let claudeSubscriptionEngineAvailable = false;
+    if (CLAUDE_SUBSCRIPTION_ENGINE_ENABLED && !this.options.rawEngineMode) {
+      try {
+        claudeSubscriptionEngineAvailable = (await readClaudeCredentialsFile()) !== null;
+      } catch {
+        claudeSubscriptionEngineAvailable = false;
+      }
+    }
+
     // #866 follow-up (reliable-surface preference): an OpenAI-family model rebound
     // off the Anthropic surface (envBuilder's guard) is served RELIABLY only on the
     // API-key `openai` surface (api.openai.com serves every gpt-5.6-*); the keyless
@@ -381,6 +398,7 @@ export class WCoreAgent {
         resume: this.options.resume,
         rawEngine: this.options.rawEngineMode,
         chatGptSubscriptionAvailable,
+        claudeSubscriptionEngineAvailable,
         openAiApiKey,
       }
     );
