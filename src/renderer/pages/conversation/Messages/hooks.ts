@@ -442,11 +442,12 @@ export const useClearErrorTips = () => {
   const update = useUpdateMessageList();
 
   return useCallback(() => {
-    // useAddOrUpdateMessage batches stream events into a setTimeout-driven flush,
-    // so error/content messages from the just-finished turn may still be queued
-    // when `finish` fires. Defer the clear by one macrotask so it runs after that
-    // flush has committed the turn's messages; otherwise it would filter a list
-    // that does not yet contain the error tip, which the flush then re-adds.
+    // useAddOrUpdateMessage batches stream events into a timer-driven flush
+    // (STREAM_FLUSH_INTERVAL_MS), so error/content messages from the just-finished
+    // turn may still be queued when `finish` fires. Defer the clear past that flush
+    // window so it runs AFTER the flush has committed the turn's messages;
+    // otherwise it would filter a list that does not yet contain the error tip,
+    // which the flush then re-adds (leaving a stale banner).
     setTimeout(() => {
       update((list) => {
         const next = list.filter((message) => !(message.type === 'tips' && message.content?.type === 'error'));
@@ -454,7 +455,7 @@ export const useClearErrorTips = () => {
         // re-render (the common case: turns finish without an error tip).
         return next.length === list.length ? list : next;
       });
-    });
+    }, STREAM_FLUSH_INTERVAL_MS + 16);
   }, [update]);
 };
 

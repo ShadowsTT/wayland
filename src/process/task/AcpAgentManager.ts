@@ -1470,7 +1470,9 @@ ${collectedResponses.join('\n')}`;
     // Only fan out to the channel bus when a channel is actually listening.
     // Otherwise every per-token delta needlessly allocates a spread copy and
     // walks the global emitter for conversations bound to no external channel.
-    if (channelEventBus.hasAgentMessageListener()) {
+    // Optional-call so a partial channelEventBus (older builds / test mocks that
+    // predate this method) falls back to emitting rather than throwing.
+    if (channelEventBus.hasAgentMessageListener?.() ?? true) {
       channelEventBus.emitAgentMessage(this.conversation_id, {
         ...processedMessage,
         conversation_id: this.conversation_id,
