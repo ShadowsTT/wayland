@@ -7,6 +7,7 @@
 import type { TProviderWithModel } from '@/common/config/storage';
 import { isLocalBaseUrl, isOpenAIHost } from '@/common/utils/urlValidation';
 import { CHATGPT_SUBSCRIPTION_PROVIDER_ID } from '@process/providers/catalog/chatgptSubscriptionModels';
+import { CLAUDE_SUBSCRIPTION_PROVIDER_ID } from '@process/providers/catalog/claudeSubscriptionModels';
 import { loadBaselineProviderCatalog } from '@process/providers/catalog/providerCatalogStore';
 import { PROVIDER_ENV_VARS } from '@process/providers/detection/KeyDiscovery';
 import type { ProviderId } from '@process/providers/types';
@@ -21,7 +22,14 @@ import { getEnhancedEnv } from '@process/utils/shellEnv';
  * generic openai+base-url path) to get the token refresh + the grok-4.3
  * stop-param fix.
  */
-type NativeWCoreProvider = 'anthropic' | 'openai' | 'bedrock' | 'vertex' | 'xai' | 'openai-chatgpt';
+type NativeWCoreProvider =
+  | 'anthropic'
+  | 'openai'
+  | 'bedrock'
+  | 'vertex'
+  | 'xai'
+  | 'openai-chatgpt'
+  | 'anthropic-claude';
 
 /**
  * The engine `--provider` value for a ChatGPT subscription connected via OAuth
@@ -34,6 +42,36 @@ type NativeWCoreProvider = 'anthropic' | 'openai' | 'bedrock' | 'vertex' | 'xai'
  * NO `--base-url` and NO key env var are emitted (see {@link buildSpawnConfig}).
  */
 const CHATGPT_SUBSCRIPTION_ENGINE_PROVIDER = 'openai-chatgpt';
+
+/**
+ * The engine `--provider` value for a Claude Pro/Max subscription connected via
+ * OAuth — the Anthropic analog of {@link CHATGPT_SUBSCRIPTION_ENGINE_PROVIDER}.
+ * When the engine supports it, inference is driven against Anthropic's native
+ * Messages API (`api.anthropic.com/v1/messages`) using the OAuth *bearer* token
+ * plus the `anthropic-beta: oauth-2025-04-20` header (NOT `x-api-key`), reading
+ * the token from `~/.claude/.credentials.json` (the store Claude Code uses, which
+ * the desktop already writes via `writeClaudeCredentialsFile`). So — exactly like
+ * ChatGPT — the desktop emits NEITHER a `--base-url` NOR a key env var; the engine
+ * owns the host (see {@link buildSpawnConfig}).
+ *
+ * STAGED / INERT: gated by {@link CLAUDE_SUBSCRIPTION_ENGINE_ENABLED}. The bundled
+ * wayland-core (≤0.12.24) has NO Anthropic OAuth path — only `x-api-key` — so this
+ * routing stays OFF and Claude-subscription inference continues through the Claude
+ * Code ACP agent. See docs/architecture/wcore-claude-subscription.md for the exact
+ * engine contract that must ship before this is enabled.
+ */
+const CLAUDE_SUBSCRIPTION_ENGINE_PROVIDER = 'anthropic-claude';
+
+/**
+ * Single flip-switch that activates the staged Claude-subscription→wcore routing.
+ * FALSE until a wayland-core release implements the `anthropic-claude` provider
+ * (bearer + `oauth-2025-04-20` beta header + token refresh reading
+ * `~/.claude/.credentials.json`). Flip to true once the bundled engine supports
+ * it; if a minimum engine version is wanted, gate this on the engine version at
+ * the caller ({@link file://src/process/agent/wcore/index.ts}) instead. While
+ * false the desktop performs no extra I/O and behavior is byte-for-byte unchanged.
+ */
+export const CLAUDE_SUBSCRIPTION_ENGINE_ENABLED = false;
 
 /**
  * A wcore `--provider` value. Either a {@link NativeWCoreProvider} literal or a
@@ -184,6 +222,17 @@ function isChatGptSubscription(model: TProviderWithModel): boolean {
 }
 
 /**
+ * True if the model is a Claude Pro/Max subscription connected via OAuth. Detected
+ * by the registry bridge tag `v2:claude-subscription` (the legacy `platform`
+ * collapses to `openai-compatible`, so the tag is the only surviving carrier of
+ * the provider id — mirrors {@link isChatGptSubscription}).
+ */
+function isClaudeSubscription(model: TProviderWithModel): boolean {
+  const tag = (model as unknown as Record<string, unknown>).__waylandModelRegistryBridge;
+  return tag === `v2:${CLAUDE_SUBSCRIPTION_PROVIDER_ID}`;
+}
+
+/**
  * True when `modelId` is unmistakably an OpenAI-family model id — the GPT line
  * (`gpt-*`, which includes the brand-new catalog-only `gpt-5.6-sol` /
  * `gpt-5.6-luna` / `gpt-5.6-terra`), the o-series reasoning models
@@ -216,6 +265,14 @@ export function isOpenAIFamilyModelId(modelId: string | undefined): boolean {
 type OpenAiFamilyAuthSignals = {
   chatGptSubscriptionAvailable: boolean;
   openAiApiKeyAvailable: boolean;
+  /**
+   * True when the Claude-subscription→wcore routing is BOTH engine-enabled
+   * ({@link CLAUDE_SUBSCRIPTION_ENGINE_ENABLED}) AND the OAuth credential is present
+   * in `~/.claude/.credentials.json`. Consumed ONLY by the `isClaudeSubscription`
+   * arm below; every other routing arm ignores it. Defaults to false (the current
+   * behavior — Claude subscription is not driven through wcore).
+   */
+  claudeSubscriptionEngineReady: boolean;
 };
 
 /**
@@ -234,6 +291,18 @@ function mapProvider(model: TProviderWithModel, auth: OpenAiFamilyAuthSignals): 
   // the ChatGPT backend + reads the token from ~/.codex/auth.json, instead of
   // collapsing to `--provider openai` against api.openai.com (#243).
   if (isChatGptSubscription(model)) return CHATGPT_SUBSCRIPTION_ENGINE_PROVIDER;
+
+  // Claude subscription (OAuth) — the Anthropic analog of the ChatGPT arm. Route
+  // to the engine's native slug so it drives api.anthropic.com with the OAuth
+  // bearer + `anthropic-beta: oauth-2025-04-20` header and reads the token from
+  // ~/.claude/.credentials.json, instead of collapsing to the API-key `anthropic`
+  // surface (which rejects a subscription token as an x-api-key). STAGED: only
+  // fires when the engine advertises support AND the credential file is present
+  // (auth.claudeSubscriptionEngineReady); otherwise it falls through so
+  // Claude-subscription inference stays on the Claude Code ACP agent.
+  if (auth.claudeSubscriptionEngineReady && isClaudeSubscription(model)) {
+    return CLAUDE_SUBSCRIPTION_ENGINE_PROVIDER;
+  }
 
   // Catalog provider (one of the ~100): pass the catalog id through verbatim so
   // the engine resolves base_url/api_path/env_var from its own providers.toml.
@@ -482,6 +551,15 @@ export function buildSpawnConfig(
      * recoverable missing-key. Every other routing arm ignores it.
      */
     openAiApiKey?: string;
+    /**
+     * True when a Claude Pro/Max subscription's OAuth credential is available for
+     * keyless inference through the engine's staged `anthropic-claude` provider
+     * (the caller resolved it from `~/.claude/.credentials.json`, gated by
+     * {@link CLAUDE_SUBSCRIPTION_ENGINE_ENABLED}). Consumed ONLY by the
+     * `isClaudeSubscription` routing arm. Defaults to false (Claude subscription is
+     * not driven through wcore — inference stays on the Claude Code ACP agent).
+     */
+    claudeSubscriptionEngineAvailable?: boolean;
   }
 ): {
   args: string[];
@@ -536,6 +614,7 @@ export function buildSpawnConfig(
   const provider = mapProvider(model, {
     chatGptSubscriptionAvailable: options.chatGptSubscriptionAvailable ?? false,
     openAiApiKeyAvailable: !!openAiApiKey,
+    claudeSubscriptionEngineReady: options.claudeSubscriptionEngineAvailable ?? false,
   });
   const env: Record<string, string> = {};
   const args: string[] = ['--json-stream', '--provider', provider, '--model', model.useModel];
@@ -608,6 +687,18 @@ export function buildSpawnConfig(
   if (provider === CHATGPT_SUBSCRIPTION_ENGINE_PROVIDER) {
     const projectConfig = buildProjectConfig(model, provider);
     // OAuth backend (token from ~/.codex/auth.json) - no `model.apiKey` needed.
+    return { args, env, projectConfig, resolvedMaxTokens, missingRequiredApiKey: false };
+  }
+
+  // Claude subscription (staged, #243 analog): the engine owns the Anthropic host
+  // and reads the OAuth token from ~/.claude/.credentials.json, so pass NEITHER a
+  // --base-url NOR a key env var - just the native `--provider anthropic-claude`.
+  // Setting ANTHROPIC_API_KEY here would present the OAuth bearer as an x-api-key
+  // (the rejected path). Only reachable when CLAUDE_SUBSCRIPTION_ENGINE_ENABLED and
+  // the credential file is present (see mapProvider's isClaudeSubscription arm).
+  if (provider === CLAUDE_SUBSCRIPTION_ENGINE_PROVIDER) {
+    const projectConfig = buildProjectConfig(model, provider);
+    // OAuth backend (token from ~/.claude/.credentials.json) - no `model.apiKey` needed.
     return { args, env, projectConfig, resolvedMaxTokens, missingRequiredApiKey: false };
   }
 
