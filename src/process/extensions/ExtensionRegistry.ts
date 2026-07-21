@@ -43,7 +43,7 @@ function getGrantedPermissionNamesForExtension(ext: LoadedExtension): string[] {
   return analyzePermissions((ext.manifest as any).permissions)
     .filter((permission) => permission.granted)
     .map((permission) => permission.name)
-    .sort();
+    .toSorted();
 }
 
 export function migrateLegacyEnabledExtensionPermissionReview(

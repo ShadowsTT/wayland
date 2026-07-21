@@ -62,5 +62,5 @@ export function compareModelsNewestFirst(a: OrderableModel, b: OrderableModel): 
 
 /** Convenience: return a new newest-first-sorted array (does not mutate input). */
 export function sortModelsNewestFirst<T extends OrderableModel>(models: readonly T[]): T[] {
-  return models.slice().sort(compareModelsNewestFirst);
+  return models.slice().toSorted(compareModelsNewestFirst);
 }
