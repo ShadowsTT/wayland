@@ -19,6 +19,7 @@ import {
   Rocket,
   ScrollText,
   Server,
+  ServerCog,
   SlashSquare,
   Sparkles,
   Stethoscope,
@@ -50,6 +51,7 @@ export const BUILTIN_TAB_IDS = [
   // INTEGRATIONS
   'webui',
   'channels',
+  'fleet',
   'mcp-library',
   'extensions',
   'migrate',
@@ -206,6 +208,12 @@ const SettingsSider: React.FC<{ collapsed?: boolean; tooltipEnabled?: boolean }>
         label: t('settings.sider.channels', { defaultValue: 'Channels' }),
         icon: <Radio />,
         path: 'channels',
+      },
+      fleet: {
+        id: 'fleet',
+        label: t('settings.sider.fleet', { defaultValue: 'Fleet' }),
+        icon: <ServerCog />,
+        path: 'fleet',
       },
       'mcp-library': {
         id: 'mcp-library',
