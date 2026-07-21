@@ -6,6 +6,7 @@
 
 import { ipcBridge } from '@/common';
 import type { IResponseMessage } from '@/common/adapter/ipcBridge';
+import { subscribeAcpResponseStream } from '@renderer/pages/conversation/platforms/acp/acpStreamRouter';
 import { ConfigStorage } from '@/common/config/storage';
 import type { IProvider } from '@/common/config/storage';
 import { FLUX_MODEL_DISPLAY, FLUX_MODEL_IDS, isFluxModelId, type FluxModelId } from '@/common/config/flux';
@@ -331,7 +332,9 @@ const AcpModelSelector: React.FC<{
         }
       }
     };
-    return ipcBridge.acpConversation.responseStream.on(handler);
+    // Per-conversation routing: only this conversation's stream messages reach
+    // the handler, instead of every agent's tokens waking every selector.
+    return subscribeAcpResponseStream(conversationId, handler);
   }, [backend, conversationId, updateModelInfo]);
 
   const handleSelectModel = useCallback(
