@@ -20,6 +20,7 @@
  */
 
 import { readFileSync } from 'node:fs';
+import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 
 const SNAPSHOT_FILE_NAME = 'modelsdev-snapshot.json';
@@ -136,6 +137,28 @@ function buildIndex(snapshot: Snapshot): { exact: Map<string, SnapshotCost>; nor
 
 export class ModelPricing implements IModelPricing {
   private index: { exact: Map<string, SnapshotCost>; normalized: Map<string, SnapshotCost> } | null = null;
+  private prewarming: Promise<void> | null = null;
+
+  /**
+   * Kick off an asynchronous read + index of the ~3.2 MB snapshot so the first
+   * (synchronous) `priceTokens` call usually finds the index already built,
+   * avoiding a blocking `readFileSync` on the main-process event loop. Started
+   * off the critical path when the singleton is created; idempotent and safe to
+   * call repeatedly. Falls through silently on error — `getIndex()`'s sync path
+   * remains the backstop.
+   */
+  prewarm(): Promise<void> {
+    if (this.index) return Promise.resolve();
+    if (this.prewarming) return this.prewarming;
+    this.prewarming = readFile(snapshotFilePath(), 'utf8')
+      .then((body) => {
+        if (!this.index) this.index = buildIndex(JSON.parse(body) as Snapshot);
+      })
+      .catch(() => {
+        // Leave index null; getIndex()'s synchronous fallback handles it.
+      });
+    return this.prewarming;
+  }
 
   /**
    * Lazily read and index the bundled snapshot exactly once. A missing or
@@ -179,6 +202,11 @@ export class ModelPricing implements IModelPricing {
 /** Lazy main-process singleton. The recorder imports this. */
 let singleton: ModelPricing | null = null;
 export function getModelPricing(): ModelPricing {
-  if (!singleton) singleton = new ModelPricing();
+  if (!singleton) {
+    singleton = new ModelPricing();
+    // Race an async read ahead of the first pricing lookup so the hot path
+    // rarely hits the synchronous fallback.
+    void singleton.prewarm();
+  }
   return singleton;
 }

@@ -292,6 +292,22 @@ class AcpAgentManager extends BaseAgentManager<AcpAgentManagerData, AcpPermissio
   private acpAvailableSlashWaiters: Array<(commands: SlashCommandItem[]) => void> = [];
   private readonly streamDbFlushIntervalMs = 120;
   private readonly bufferedStreamTextMessages = new Map<string, BufferedStreamTextMessage>();
+  /**
+   * IPC-emit coalescing (perf: multi-agent sluggishness). Mirrors the DB buffer
+   * above, but for the renderer `responseStream`. Consecutive `content` string
+   * deltas for one streaming message (keyed by msg_id) are concatenated and
+   * emitted on a short timer, collapsing hundreds of per-token IPC
+   * serializations/sec (JSON.stringify + webContents.send per window) into a few.
+   * The renderer appends content deltas (Messages/hooks.ts text branch), so a
+   * merged delta is equivalent to the individual chunks. Ordering with
+   * non-content events is preserved by draining this buffer before any
+   * non-content emit and at every turn/teardown boundary.
+   */
+  private readonly streamEmitFlushIntervalMs = 50;
+  private readonly bufferedStreamEmitMessages = new Map<
+    string,
+    { message: IResponseMessage; timer: ReturnType<typeof setTimeout> }
+  >();
   private nextTrackedTurnId: number = 0;
   private activeTrackedTurnId: number | null = null;
   private activeTrackedTurnHasRuntimeActivity: boolean = false;
@@ -369,10 +385,49 @@ class AcpAgentManager extends BaseAgentManager<AcpAgentManagerData, AcpPermissio
   }
 
   private flushBufferedStreamTextMessages(): void {
+    // Drain the IPC-emit buffer alongside the DB buffer so no coalesced content
+    // is stranded at a turn/teardown boundary (every DB-flush site is also a
+    // safe point to push pending content to the renderer).
+    this.flushBufferedStreamEmits();
     if (this.bufferedStreamTextMessages.size === 0) return;
     const keys = Array.from(this.bufferedStreamTextMessages.keys());
     for (const key of keys) {
       this.flushBufferedStreamTextMessage(key);
+    }
+  }
+
+  /**
+   * Buffer a `content` stream delta for coalesced IPC emit. Consecutive deltas
+   * for the same streaming message (msg_id) concatenate; the merged frame flushes
+   * on {@link streamEmitFlushIntervalMs}. See {@link bufferedStreamEmitMessages}.
+   */
+  private queueBufferedStreamEmit(message: IResponseMessage): void {
+    const key = message.msg_id;
+    const existing = this.bufferedStreamEmitMessages.get(key);
+    if (existing) {
+      existing.message = {
+        ...existing.message,
+        data: String(existing.message.data ?? '') + String(message.data ?? ''),
+      };
+      return;
+    }
+    const timer = setTimeout(() => this.flushBufferedStreamEmit(key), this.streamEmitFlushIntervalMs);
+    this.bufferedStreamEmitMessages.set(key, { message: { ...message }, timer });
+  }
+
+  private flushBufferedStreamEmit(key: string): void {
+    const buffered = this.bufferedStreamEmitMessages.get(key);
+    if (!buffered) return;
+    clearTimeout(buffered.timer);
+    this.bufferedStreamEmitMessages.delete(key);
+    ipcBridge.acpConversation.responseStream.emit(buffered.message);
+  }
+
+  private flushBufferedStreamEmits(): void {
+    if (this.bufferedStreamEmitMessages.size === 0) return;
+    const keys = Array.from(this.bufferedStreamEmitMessages.keys());
+    for (const key of keys) {
+      this.flushBufferedStreamEmit(key);
     }
   }
 
@@ -1385,7 +1440,15 @@ ${collectedResponses.join('\n')}`;
     }
 
     const emitStart = Date.now();
-    ipcBridge.acpConversation.responseStream.emit(processedMessage);
+    // Coalesce per-token content emits to cut IPC serialization on the main
+    // thread (see bufferedStreamEmitMessages). Non-content events flush any
+    // pending content first so the renderer sees content, then the event, in order.
+    if (processedMessage.type === 'content' && typeof processedMessage.data === 'string') {
+      this.queueBufferedStreamEmit(processedMessage);
+    } else {
+      this.flushBufferedStreamEmits();
+      ipcBridge.acpConversation.responseStream.emit(processedMessage);
+    }
     // Forward to team bus:
     //  - `finish`/`error`: terminal lifecycle events TeammateManager uses for wake watchdog
     //  - `acp_context_usage`: per-turn token accounting that W1e's TeammateManager
@@ -1404,10 +1467,15 @@ ${collectedResponses.join('\n')}`;
     }
     const emitDuration = Date.now() - emitStart;
 
-    channelEventBus.emitAgentMessage(this.conversation_id, {
-      ...processedMessage,
-      conversation_id: this.conversation_id,
-    });
+    // Only fan out to the channel bus when a channel is actually listening.
+    // Otherwise every per-token delta needlessly allocates a spread copy and
+    // walks the global emitter for conversations bound to no external channel.
+    if (channelEventBus.hasAgentMessageListener()) {
+      channelEventBus.emitAgentMessage(this.conversation_id, {
+        ...processedMessage,
+        conversation_id: this.conversation_id,
+      });
+    }
 
     const totalDuration = Date.now() - pipelineStart;
     if (totalDuration > 10) {
