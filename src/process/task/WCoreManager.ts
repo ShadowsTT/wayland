@@ -697,10 +697,17 @@ export class WCoreManager extends BaseAgentManager<WCoreManagerData, string> {
         conversation_id: this.conversation_id,
       });
     }
-    channelEventBus.emitAgentMessage(this.conversation_id, {
-      ...message,
-      conversation_id: this.conversation_id,
-    });
+    // Only fan out to the channel bus when a channel is actually listening,
+    // avoiding a per-delta spread allocation + emitter walk when no channel is
+    // bound to the conversation. Mirrors AcpAgentManager.
+    // Optional-call so a partial channelEventBus (older builds / test mocks that
+    // predate this method) falls back to emitting rather than throwing.
+    if (channelEventBus.hasAgentMessageListener?.() ?? true) {
+      channelEventBus.emitAgentMessage(this.conversation_id, {
+        ...message,
+        conversation_id: this.conversation_id,
+      });
+    }
   }
 
   private emitThinkingMessage(content: string, status: 'thinking' | 'done' = 'thinking', subject?: string): void {

@@ -71,4 +71,21 @@ export const useThemeContext = () => {
   return context;
 };
 
+/**
+ * Non-throwing resolved-theme read. Returns the provider's theme when present,
+ * otherwise falls back to the DOM `data-theme` attribute (the pre-context
+ * behaviour). Use this in components that can be rendered in isolation without
+ * the app's ThemeProvider — e.g. CodeBlock, which unit tests mount directly.
+ * `useThemeContext()` throws outside a provider and would break those tests.
+ */
+export const useResolvedThemeSafe = (): Theme => {
+  const context = useContext(ThemeContext);
+  if (context) return context.theme;
+  if (typeof document !== 'undefined') {
+    const attr = document.documentElement.getAttribute('data-theme');
+    if (attr === 'dark' || attr === 'light') return attr;
+  }
+  return 'light';
+};
+
 export type { ResolvedTheme, Theme, ThemePreference };

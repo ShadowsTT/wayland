@@ -161,8 +161,11 @@ describe('terminalBridge open happy path (#645)', () => {
     );
     expect(m.reg.registerPty).toHaveBeenCalledWith('t1', pty);
 
-    // PTY output streams to the renderer, keyed by terminalId.
+    // PTY output streams to the renderer, keyed by terminalId. Output is
+    // coalesced on a short (~16 ms) timer to avoid a bridge emit per raw chunk,
+    // so wait for the flush before asserting.
     pty._cbs.data?.('hello');
+    await new Promise((resolve) => setTimeout(resolve, 30));
     expect(m.outputEmit).toHaveBeenCalledWith({ terminalId: 't1', data: 'hello' });
 
     // On exit the PTY is deregistered and an exit event fires.

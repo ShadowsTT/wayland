@@ -297,7 +297,14 @@ const AcpModelSelector: React.FC<{
 
     window.addEventListener('focus', refresh);
     document.addEventListener('visibilitychange', handleVisibilityChange);
-    const intervalId = window.setInterval(refresh, 1500);
+    // Fallback poll only — the primary path is the acp_model_info push on
+    // responseStream (handler below), plus the focus/visibility refreshes above.
+    // Perf: with N team agents this interval was N IPC round-trips every 1.5s,
+    // running even in the background. A long interval that skips when hidden keeps
+    // the fallback without the per-agent background load.
+    const intervalId = window.setInterval(() => {
+      if (document.visibilityState === 'visible') refresh();
+    }, 15000);
 
     return () => {
       window.removeEventListener('focus', refresh);

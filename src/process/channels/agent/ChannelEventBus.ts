@@ -57,6 +57,16 @@ class ChannelEventBus extends EventEmitter {
   }
 
   /**
+   * True when at least one agent-message listener is registered. Callers on the
+   * per-token stream hot path use this to skip building/emitting the event when
+   * no channel is bound to the conversation (perf: avoids a spread allocation +
+   * emitter walk per streamed delta).
+   */
+  hasAgentMessageListener(): boolean {
+    return this.listenerCount(ChannelEvents.AGENT_MESSAGE) > 0;
+  }
+
+  /**
    * Listen for agent message events
    */
   onAgentMessage(handler: (event: IAgentMessageEvent) => void): () => void {

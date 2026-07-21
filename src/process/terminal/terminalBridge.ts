@@ -32,6 +32,43 @@ import { forgetPty, getPty, hasPty, killPty, livePtyCount, registerPty } from '.
 /** Bound concurrent PTYs to keep resource use sane (spec §5). */
 const MAX_TERMINALS = 8;
 
+/**
+ * PTY output coalescing (perf: multi-agent sluggishness). node-pty fires onData
+ * per OS read; a TUI redraw or build log emits thousands of tiny fragments, each
+ * otherwise becoming a full bridge emit (JSON.stringify + webContents.send +
+ * WS broadcast) on the main thread. We concatenate fragments per terminal and
+ * flush on a short timer (matching xterm.js's write cadence) or once the buffer
+ * crosses a byte threshold, collapsing the bursts into one emit.
+ */
+const OUTPUT_FLUSH_INTERVAL_MS = 16;
+const OUTPUT_FLUSH_MAX_BYTES = 64 * 1024;
+const outputBuffers = new Map<string, { data: string; timer: ReturnType<typeof setTimeout> | null }>();
+
+function flushTerminalOutput(terminalId: string): void {
+  const buffered = outputBuffers.get(terminalId);
+  if (!buffered) return;
+  if (buffered.timer) clearTimeout(buffered.timer);
+  outputBuffers.delete(terminalId);
+  if (buffered.data.length > 0) {
+    ipcBridge.terminal.output.emit({ terminalId, data: buffered.data });
+  }
+}
+
+function bufferTerminalOutput(terminalId: string, data: string): void {
+  const buffered = outputBuffers.get(terminalId);
+  if (buffered) {
+    buffered.data += data;
+    // Flush immediately if a burst exceeds the byte cap so large outputs (e.g. a
+    // `cat` of a big file) don't balloon a single frame or add latency.
+    if (buffered.data.length >= OUTPUT_FLUSH_MAX_BYTES) {
+      flushTerminalOutput(terminalId);
+    }
+    return;
+  }
+  const timer = setTimeout(() => flushTerminalOutput(terminalId), OUTPUT_FLUSH_INTERVAL_MS);
+  outputBuffers.set(terminalId, { data, timer });
+}
+
 const conversationRepo = new SqliteConversationRepository();
 
 export function initTerminalBridge(): void {
@@ -111,9 +148,11 @@ export function initTerminalBridge(): void {
     }
 
     registerPty(terminalId, pty);
-    pty.onData((data) => ipcBridge.terminal.output.emit({ terminalId, data }));
+    pty.onData((data) => bufferTerminalOutput(terminalId, data));
     pty.onExit(({ exitCode }) => {
       forgetPty(terminalId);
+      // Flush any buffered output before the exit so trailing bytes aren't lost.
+      flushTerminalOutput(terminalId);
       ipcBridge.terminal.exit.emit({ terminalId, exitCode });
     });
 
@@ -138,6 +177,7 @@ export function initTerminalBridge(): void {
   });
 
   ipcBridge.terminal.close.provider(async ({ terminalId }) => {
+    flushTerminalOutput(terminalId);
     killPty(terminalId);
   });
 }

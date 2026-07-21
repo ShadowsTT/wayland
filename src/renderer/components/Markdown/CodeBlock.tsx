@@ -13,10 +13,16 @@ import katex from 'katex';
 import { copyText } from '@/renderer/utils/ui/clipboard';
 import { sanitizeMath } from '@/renderer/utils/sanitize';
 import { Message } from '@arco-design/web-react';
-import React, { useState } from 'react';
+import React, { lazy, Suspense, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import MermaidBlock from './MermaidBlock';
+import { useResolvedThemeSafe } from '@renderer/hooks/context/ThemeContext';
 import { formatCode, getDiffLineStyle } from './markdownUtils';
+
+// Lazy-load MermaidBlock so the mermaid library (~89 MB of source: d3 / dagre /
+// cytoscape) only enters the bundle when a ```mermaid fence is actually rendered.
+// Statically importing it pulled mermaid into the first-route chunk on every
+// launch even when no diagram was ever shown (startup perf).
+const MermaidBlock = lazy(() => import('./MermaidBlock'));
 
 const PREVIEW_LINES = 3;
 const EXPANDED_STATES_MAX_SIZE = 200;
@@ -53,24 +59,9 @@ function CodeBlock(props: CodeBlockProps) {
   const { t } = useTranslation();
   // Dummy counter to force re-render when expanded state changes in the Map
   const [, setRenderTick] = useState(0);
-  const [currentTheme, setCurrentTheme] = useState<'light' | 'dark'>(() => {
-    return (document.documentElement.getAttribute('data-theme') as 'light' | 'dark') || 'light';
-  });
-
-  React.useEffect(() => {
-    const updateTheme = () => {
-      const theme = (document.documentElement.getAttribute('data-theme') as 'light' | 'dark') || 'light';
-      setCurrentTheme(theme);
-    };
-
-    const observer = new MutationObserver(updateTheme);
-    observer.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ['data-theme'],
-    });
-
-    return () => observer.disconnect();
-  }, []);
+  // Shared theme (perf: one app-level observer instead of a MutationObserver per
+  // code block on document.documentElement — dozens in a long transcript).
+  const currentTheme = useResolvedThemeSafe();
 
   const {
     children,
@@ -104,7 +95,11 @@ function CodeBlock(props: CodeBlockProps) {
   }
 
   if (language === 'mermaid') {
-    return <MermaidBlock code={formatCode(children)} style={props.codeStyle} />;
+    return (
+      <Suspense fallback={<pre style={props.codeStyle}>{formatCode(children)}</pre>}>
+        <MermaidBlock code={formatCode(children)} style={props.codeStyle} />
+      </Suspense>
+    );
   }
 
   if (!String(children).includes('\n')) {
@@ -146,6 +141,38 @@ function CodeBlock(props: CodeBlockProps) {
     maxWidth: '100%',
   };
 
+  // Memoize the highlighted output. Syntax highlighting re-tokenizes the whole
+  // block (O(code length)) on every render; ReactMarkdown passes a fresh `node`
+  // each parse, so without this a re-render with unchanged code would re-tokenize
+  // needlessly. Keyed on the actual inputs (content + language + theme) so it
+  // only recomputes when they change — the single largest per-token CPU sink
+  // during multi-agent streaming.
+  const highlighted = useMemo(
+    () => (
+      <SyntaxHighlighter
+        children={displayContent}
+        language={language}
+        style={codeTheme}
+        PreTag='div'
+        wrapLines={isDiff}
+        lineProps={
+          isDiff
+            ? (lineNumber: number) => ({
+                style: {
+                  display: 'block',
+                  ...getDiffLineStyle(diffLines[lineNumber - 1] || '', currentTheme === 'dark'),
+                },
+              })
+            : undefined
+        }
+        customStyle={syntaxHighlighterStyle}
+        codeTagProps={{ style: { color: 'var(--text-primary)' } }}
+      />
+    ),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [displayContent, language, codeTheme, isDiff, currentTheme]
+  );
+
   return (
     <div style={{ width: '100%', minWidth: 0, maxWidth: '100%', ...props.codeStyle }}>
       <div
@@ -185,7 +212,7 @@ function CodeBlock(props: CodeBlockProps) {
               style={{ cursor: 'pointer' }}
               color='var(--text-secondary)'
               onClick={() => {
-                void copyText(formatCode(children))
+                void copyText(formattedContent)
                   .then(() => {
                     Message.success(t('common.copySuccess'));
                   })
@@ -212,25 +239,7 @@ function CodeBlock(props: CodeBlockProps) {
         </div>
 
         {/* Code content - always visible (preview or full) */}
-        <SyntaxHighlighter
-          children={displayContent}
-          language={language}
-          style={codeTheme}
-          PreTag='div'
-          wrapLines={isDiff}
-          lineProps={
-            isDiff
-              ? (lineNumber: number) => ({
-                  style: {
-                    display: 'block',
-                    ...getDiffLineStyle(diffLines[lineNumber - 1] || '', currentTheme === 'dark'),
-                  },
-                })
-              : undefined
-          }
-          customStyle={syntaxHighlighterStyle}
-          codeTagProps={{ style: { color: 'var(--text-primary)' } }}
-        />
+        {highlighted}
 
         {/* Footer: "View More" / collapse */}
         {canCollapse && (
@@ -268,4 +277,21 @@ function CodeBlock(props: CodeBlockProps) {
   );
 }
 
-export default CodeBlock;
+/**
+ * Custom comparator: ReactMarkdown recreates the `node` AST object (and other
+ * transient props) on every parse, which would defeat a default shallow memo and
+ * re-render every code block on each streaming tick. Compare only the props that
+ * actually affect output; `codeStyle`/`hiddenCodeCopyButton` are stable
+ * references (memoized by the parent's `components`). This lets already-complete
+ * code blocks skip re-rendering while a later block streams.
+ */
+function areCodeBlockPropsEqual(prev: CodeBlockProps, next: CodeBlockProps): boolean {
+  return (
+    prev.children === next.children &&
+    prev.className === next.className &&
+    prev.hiddenCodeCopyButton === next.hiddenCodeCopyButton &&
+    prev.codeStyle === next.codeStyle
+  );
+}
+
+export default React.memo(CodeBlock, areCodeBlockPropsEqual);

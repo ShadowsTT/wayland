@@ -146,8 +146,11 @@ describe('message queue (ConversationManageWithDB)', () => {
 
   it('flush handles errors gracefully', async () => {
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-    mockDb.getConversationMessages.mockImplementationOnce(() => {
-      throw new Error('DB read error');
+    // An insert-only batch skips the getConversationMessages read (it's only
+    // needed to merge 'accumulate' chunks), so drive the flush error from the
+    // write path instead to exercise the same try/catch.
+    mockDb.insertMessage.mockImplementationOnce(() => {
+      throw new Error('DB write error');
     });
 
     const msg = {
@@ -171,15 +174,15 @@ describe('message queue (ConversationManageWithDB)', () => {
     const msg1 = { id: 'm1', msg_id: 'm1', type: 'text', position: 'left', conversation_id: 'conv-rerun' } as any;
     const msg2 = { id: 'm2', msg_id: 'm2', type: 'text', position: 'left', conversation_id: 'conv-rerun' } as any;
 
-    // Make getConversationMessages add a second message during first flush
+    // Inject a second message mid-flush via the write path (an insert-only batch
+    // skips the getConversationMessages read, so hook insertMessage instead).
     let firstCall = true;
-    mockDb.getConversationMessages.mockImplementation(() => {
-      if (firstCall) {
+    mockDb.insertMessage.mockImplementation((m: any) => {
+      if (firstCall && m?.id === 'm1') {
         firstCall = false;
         // Simulate adding another message while flush is in progress
         addMessage('conv-rerun', msg2);
       }
-      return { data: [] };
     });
 
     addMessage('conv-rerun', msg1);

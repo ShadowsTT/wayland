@@ -327,6 +327,15 @@ function composeMessageWithIndex(message: TMessage, list: TMessage[], index: Mes
   return newList;
 }
 
+/**
+ * Coalescing window for streamed message updates (perf: multi-agent sluggishness).
+ * Streaming pushes many chunks/sec; committing React state per chunk re-runs the
+ * O(n) derived passes in MessageList and re-parses/re-highlights the streaming
+ * bubble each time. Buffering into one commit per ~50 ms window (≈20 fps) keeps
+ * text visibly live while dividing those per-chunk costs — across every agent.
+ */
+const STREAM_FLUSH_INTERVAL_MS = 50;
+
 export const useAddOrUpdateMessage = () => {
   const update = useUpdateMessageList();
   const pendingRef = useRef<Array<{ message: TMessage; add: boolean }>>([]);
@@ -371,7 +380,9 @@ export const useAddOrUpdateMessage = () => {
       return newList;
     });
 
-    rafRef.current = setTimeout(flush);
+    // No unconditional trailing reschedule: chunks that arrive after this commit
+    // re-arm the timer through the dispatch path below. This avoids the old
+    // ~0 ms self-perpetuating flush loop that ran even when idle.
   }, []);
 
   useEffect(() => {
@@ -386,7 +397,7 @@ export const useAddOrUpdateMessage = () => {
     (message: TMessage, add = false) => {
       pendingRef.current.push({ message, add });
       if (rafRef.current === null) {
-        rafRef.current = setTimeout(flush);
+        rafRef.current = setTimeout(flush, STREAM_FLUSH_INTERVAL_MS);
       }
     },
     [flush]
@@ -431,11 +442,12 @@ export const useClearErrorTips = () => {
   const update = useUpdateMessageList();
 
   return useCallback(() => {
-    // useAddOrUpdateMessage batches stream events into a setTimeout-driven flush,
-    // so error/content messages from the just-finished turn may still be queued
-    // when `finish` fires. Defer the clear by one macrotask so it runs after that
-    // flush has committed the turn's messages; otherwise it would filter a list
-    // that does not yet contain the error tip, which the flush then re-adds.
+    // useAddOrUpdateMessage batches stream events into a timer-driven flush
+    // (STREAM_FLUSH_INTERVAL_MS), so error/content messages from the just-finished
+    // turn may still be queued when `finish` fires. Defer the clear past that flush
+    // window so it runs AFTER the flush has committed the turn's messages;
+    // otherwise it would filter a list that does not yet contain the error tip,
+    // which the flush then re-adds (leaving a stale banner).
     setTimeout(() => {
       update((list) => {
         const next = list.filter((message) => !(message.type === 'tips' && message.content?.type === 'error'));
@@ -443,7 +455,7 @@ export const useClearErrorTips = () => {
         // re-render (the common case: turns finish without an error tip).
         return next.length === list.length ? list : next;
       });
-    });
+    }, STREAM_FLUSH_INTERVAL_MS + 16);
   }, [update]);
 };
 

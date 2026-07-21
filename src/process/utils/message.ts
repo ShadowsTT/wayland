@@ -64,12 +64,19 @@ class ConversationManageWithDB {
     try {
       const db = await this.dbPromise;
       const stack = this.stack.splice(0);
-      const messages = db.getConversationMessages(this.conversation_id, 0, 50, 'DESC');
-      let messageList = messages.data.toReversed();
+      // Only `accumulate` entries need prior-message context (composeMessage
+      // merges a streamed chunk into its existing message by id). A pure-insert
+      // batch — tool calls, user turns — never reads `messageList`, so skip the
+      // synchronous 50-row SQLite read entirely on those flushes (perf: the read
+      // otherwise runs on the main thread on every insert flush).
+      const needsContext = stack.some(([type]) => type === 'accumulate');
+      let messageList = needsContext
+        ? db.getConversationMessages(this.conversation_id, 0, 50, 'DESC').data.toReversed()
+        : [];
       for (const [type, msg] of stack) {
         if (type === 'insert') {
           db.insertMessage(msg);
-          messageList.push(msg);
+          if (needsContext) messageList.push(msg);
         } else {
           messageList = composeMessage(msg, messageList, (opType, message) => {
             if (opType === 'insert') db.insertMessage(message);
