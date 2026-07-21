@@ -66,6 +66,7 @@ import { initExtensionsBridge } from './extensionsBridge';
 import { initWeixinLoginBridge } from './weixinLoginBridge';
 import { initWorkspaceSnapshotBridge } from './workspaceSnapshotBridge';
 import { initRemoteAgentBridge } from './remoteAgentBridge';
+import { initFleetBridge } from './fleetBridge';
 import { initHubBridge } from './hubBridge';
 import { initTeamBridge } from './teamBridge';
 import { initMissionControlBridge } from './missionControlBridge';
@@ -155,6 +156,7 @@ export function initAllBridges(deps: BridgeDependencies): void {
   initWeixinLoginBridge();
   initWorkspaceSnapshotBridge();
   initRemoteAgentBridge();
+  initFleetBridge();
   initHubBridge();
   initTeamBridge(deps.teamSessionService);
   initMissionControlBridge(deps.teamSessionService);
@@ -230,6 +232,7 @@ export {
   initConstitutionBridge,
   initOnboardingBridge,
   initRemoteAgentBridge,
+  initFleetBridge,
   initHubBridge,
   initTeamBridge,
   initWindowControlsBridge,

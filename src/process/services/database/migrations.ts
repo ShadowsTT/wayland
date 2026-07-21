@@ -2366,6 +2366,41 @@ const migration_v53: IMigration = {
 };
 
 /**
+ * Migration v53 -> v54: Add fleet_hosts table for remote-server fleet management.
+ * Stores SSH host inventory (host/port/user + optional encrypted key/password),
+ * mirroring the remote_agents shape. Secrets are encrypted at rest by the
+ * accessor layer (encryptString), not stored plaintext.
+ */
+const migration_v54: IMigration = {
+  version: 54,
+  name: 'Add fleet_hosts table for remote server fleet management',
+  up: (db) => {
+    db.exec(`CREATE TABLE IF NOT EXISTS fleet_hosts (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        host TEXT NOT NULL,
+        port INTEGER NOT NULL DEFAULT 22,
+        username TEXT NOT NULL,
+        auth_type TEXT NOT NULL DEFAULT 'agent',
+        private_key TEXT,
+        password TEXT,
+        tags TEXT,
+        description TEXT,
+        status TEXT DEFAULT 'unknown',
+        last_seen_at INTEGER,
+        created_at INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL
+      )`);
+    db.exec('CREATE INDEX IF NOT EXISTS idx_fleet_hosts_status ON fleet_hosts(status)');
+    console.log('[Migration v54] Added fleet_hosts');
+  },
+  down: (db) => {
+    db.exec('DROP TABLE IF EXISTS fleet_hosts');
+    console.log('[Migration v54] Rolled back: Removed fleet_hosts');
+  },
+};
+
+/**
  * All migrations in order
  */
 // prettier-ignore
@@ -2379,7 +2414,7 @@ export const ALL_MIGRATIONS: IMigration[] = [
   migration_v37, migration_v38, migration_v39, migration_v40, migration_v41, migration_v42,
   migration_v43, migration_v44, migration_v45, migration_v46, migration_v47,
   migration_v48, migration_v49, migration_v50, migration_v51, migration_v52,
-  migration_v53,
+  migration_v53, migration_v54,
 ];
 
 /**
