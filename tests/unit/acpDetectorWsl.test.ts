@@ -102,16 +102,23 @@ function whereResolvesFor(winPath: Set<string>, wslFound: string[] = []) {
   };
 }
 
-describe('AcpDetector WSL fallback (#258)', () => {
+// retry: this suite mutates the shared `process.platform` global and relies on
+// vi.resetModules() + a re-imported detector; under a loaded CI shard (many
+// files sharing the worker, no vitest auto mock-reset) that occasionally flakes
+// even though it is deterministic in isolation. Retry a couple of times so a
+// transient cross-file interaction doesn't red the whole run.
+describe('AcpDetector WSL fallback (#258)', { retry: 3 }, () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    Object.defineProperty(process, 'platform', { value: 'win32' });
+    // configurable so a prior file's platform stub can never lock this one out,
+    // and so afterEach can always restore it.
+    Object.defineProperty(process, 'platform', { value: 'win32', configurable: true });
     // Default: a WSL distro is present so the (a)/(b) probe paths run.
     execSyncMock.mockImplementation(wslPresence(true));
   });
 
   afterEach(() => {
-    Object.defineProperty(process, 'platform', { value: originalPlatform });
+    Object.defineProperty(process, 'platform', { value: originalPlatform, configurable: true });
   });
 
   it('(a) reports a CLI found on the Windows PATH', async () => {

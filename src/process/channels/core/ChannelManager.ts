@@ -11,31 +11,10 @@ import { getChannelDefaultModel } from '../actions/SystemActions';
 import { ActionExecutor } from '../gateway/ActionExecutor';
 import { PluginManager, registerPlugin } from '../gateway/PluginManager';
 import { PairingService } from '../pairing/PairingService';
-import { DingTalkPlugin } from '../plugins/dingtalk/DingTalkPlugin';
-import { LarkPlugin } from '../plugins/lark/LarkPlugin';
-import { TelegramPlugin } from '../plugins/telegram/TelegramPlugin';
-import { WeixinPlugin } from '../plugins/weixin/WeixinPlugin';
-import { WecomPlugin } from '../plugins/wecom/WecomPlugin';
-import { DiscordPlugin } from '../plugins/tier1/discord/DiscordPlugin';
-import { SlackPlugin } from '../plugins/tier1/slack/SlackPlugin';
-import { SmsTwilioPlugin } from '../plugins/tier1/sms/SmsTwilioPlugin';
-import { WhatsAppPlugin } from '../plugins/tier1/whatsapp/WhatsAppPlugin';
-import { EmailAgentMailPlugin } from '../plugins/tier1/email-agentmail/EmailAgentMailPlugin';
-import { EmailImapPlugin } from '../plugins/tier1/email-imap/EmailImapPlugin';
-import { MatrixPlugin } from '../plugins/tier2/matrix/MatrixPlugin';
-import { LinePlugin } from '../plugins/tier2/line/LinePlugin';
-import { WebhookPlugin } from '../plugins/tier1/webhook/WebhookPlugin';
-import { IrcPlugin } from '../plugins/tier3/irc/IrcPlugin';
-import { MattermostPlugin } from '../plugins/tier3/mattermost/MattermostPlugin';
-import { GoogleChatPlugin } from '../plugins/tier3/google-chat/GoogleChatPlugin';
-import { NextcloudTalkPlugin } from '../plugins/tier3/nextcloud-talk/NextcloudTalkPlugin';
-import { SynologyChatPlugin } from '../plugins/tier3/synology-chat/SynologyChatPlugin';
-import { NostrPlugin } from '../plugins/tier3/nostr/NostrPlugin';
-import { TwitchPlugin } from '../plugins/tier3/twitch/TwitchPlugin';
-import { BluebubblesPlugin } from '../plugins/tier3/bluebubbles/BluebubblesPlugin';
-import { ImessagePlugin } from '../plugins/tier2/imessage/ImessagePlugin';
-import { SignalPlugin } from '../plugins/tier1/signal/SignalPlugin';
-import { MsTeamsPlugin } from '../plugins/tier2/ms-teams/MsTeamsPlugin';
+// Built-in plugins are registered lazily (channelPluginLoaders): their heavy
+// SDKs load only when a plugin actually starts, not at boot. testPlugin's static
+// imports live in channelTestConnections and are pulled in only on demand.
+import { registerBuiltinChannelPlugins } from './channelPluginLoaders';
 import { resolveChannelConvType } from '../types';
 import type { ChannelPlatform, IChannelPluginConfig, PluginType } from '../types';
 import { getTokenStore, registerWebhookDispatcher } from '../webhook';
@@ -69,37 +48,12 @@ export class ChannelManager {
   private actionExecutor: ActionExecutor | null = null;
 
   private constructor() {
-    // Private constructor for singleton pattern
-    // Register built-in plugins
-    registerPlugin('telegram', TelegramPlugin);
-    registerPlugin('lark', LarkPlugin);
-    registerPlugin('dingtalk', DingTalkPlugin);
-    registerPlugin('weixin', WeixinPlugin);
-    registerPlugin('wecom', WecomPlugin);
-    registerPlugin('discord', DiscordPlugin);
-    registerPlugin('slack', SlackPlugin);
-    registerPlugin('sms-twilio', SmsTwilioPlugin);
-    registerPlugin('whatsapp', WhatsAppPlugin);
-    registerPlugin('email-agentmail', EmailAgentMailPlugin);
-    registerPlugin('email-imap', EmailImapPlugin);
-    registerPlugin('matrix', MatrixPlugin);
-    registerPlugin('line', LinePlugin);
-    // OpenClaw fork wave 1 (W2.x) - 2026-05-18
-    registerPlugin('webhook', WebhookPlugin);
-    registerPlugin('irc', IrcPlugin);
-    // OpenClaw fork wave 2 (W2.y) - 2026-05-18
-    registerPlugin('mattermost', MattermostPlugin);
-    registerPlugin('google-chat', GoogleChatPlugin);
-    registerPlugin('nextcloud-talk', NextcloudTalkPlugin);
-    registerPlugin('synology-chat', SynologyChatPlugin);
-    registerPlugin('nostr', NostrPlugin);
-    // OpenClaw fork wave 3 (W2.z) - 2026-05-18
-    registerPlugin('twitch', TwitchPlugin);
-    registerPlugin('bluebubbles', BluebubblesPlugin);
-    registerPlugin('imessage', ImessagePlugin);
-    // OpenClaw fork wave 4 (W2.w) - 2026-05-18 - heaviest ports
-    registerPlugin('signal', SignalPlugin);
-    registerPlugin('ms-teams', MsTeamsPlugin);
+    // Private constructor for singleton pattern.
+    // Register built-in plugins as LAZY entries: each plugin module (and its
+    // heavy messaging SDK) is imported only when that plugin first starts, not
+    // here at boot. The registry keys are created synchronously so availability
+    // checks still work. See channelPluginLoaders + PluginManager.registerPluginLazy.
+    registerBuiltinChannelPlugins();
   }
 
   /**
@@ -617,199 +571,11 @@ export class ChannelManager {
     extraConfig?: { appId?: string; appSecret?: string }
   ): Promise<{ success: boolean; botUsername?: string; error?: string }> {
     const pluginType = this.getPluginTypeFromId(pluginId);
-
-    if (pluginType === 'telegram') {
-      const result = await TelegramPlugin.testConnection(token);
-      return {
-        success: result.success,
-        botUsername: result.botInfo?.username,
-        error: result.error,
-      };
-    }
-
-    if (pluginType === 'lark') {
-      const appId = extraConfig?.appId;
-      const appSecret = extraConfig?.appSecret;
-      if (!appId || !appSecret) {
-        return {
-          success: false,
-          error: 'App ID and App Secret are required for Lark',
-        };
-      }
-      const result = await LarkPlugin.testConnection(appId, appSecret);
-      return {
-        success: result.success,
-        botUsername: result.botInfo?.name,
-        error: result.error,
-      };
-    }
-
-    if (pluginType === 'dingtalk') {
-      const clientId = extraConfig?.appId; // Reuse appId field for clientId
-      const clientSecret = extraConfig?.appSecret; // Reuse appSecret field for clientSecret
-      if (!clientId || !clientSecret) {
-        return {
-          success: false,
-          error: 'Client ID and Client Secret are required for DingTalk',
-        };
-      }
-      // R16 L5/L6: surface the caller-configured displayName so the returned
-      // botUsername reflects what users see in DingTalk, not the hardcoded
-      // "DingTalk Bot" string. `extraConfig` is typed narrowly upstream; the
-      // dingtalk form passes displayName as a sibling field, so widen via
-      // Record for the lookup.
-      const cfg = extraConfig as Record<string, unknown> | undefined;
-      const displayName = typeof cfg?.displayName === 'string' ? cfg.displayName : undefined;
-      const result = await DingTalkPlugin.testConnection(clientId, clientSecret, displayName);
-      return {
-        success: result.success,
-        botUsername: result.botInfo?.name,
-        error: result.error,
-      };
-    }
-
-    // Phase 1 (W1.1) - tier-1 plugins. Each static testConnection takes a
-    // single string `token`; the renderer JSON-encodes structured credentials
-    // (homeserverUrl/accessToken for Matrix, the {backend, accessToken,
-    // phoneNumberId} blob for WhatsApp, etc.) per BasePlugin.testConnection
-    // contract. See WhatsAppPlugin.ts line 505 for the pattern.
-
-    if (pluginType === 'discord') {
-      const result = await DiscordPlugin.testConnection(token);
-      return { success: result.success, botUsername: result.botUsername, error: result.error };
-    }
-
-    if (pluginType === 'slack') {
-      const result = await SlackPlugin.testConnection(token);
-      return { success: result.success, botUsername: result.botUsername, error: result.error };
-    }
-
-    if (pluginType === 'sms-twilio') {
-      const result = await SmsTwilioPlugin.testConnection(token);
-      return { success: result.success, botUsername: result.botUsername, error: result.error };
-    }
-
-    if (pluginType === 'whatsapp') {
-      const result = await WhatsAppPlugin.testConnection(token);
-      return { success: result.success, botUsername: result.botUsername, error: result.error };
-    }
-
-    // Phase 2 (W1.2) - tier-2 plugins.
-
-    if (pluginType === 'email-agentmail') {
-      const result = await EmailAgentMailPlugin.testConnection(token);
-      return {
-        success: result.success,
-        // AgentMail returns inboxAddress on success - surface it as botUsername
-        // so the renderer can both display "connected as <inbox>" AND auto-fill
-        // the inboxAddress field if the user left it blank.
-        botUsername: result.inboxAddress,
-        error: result.error,
-      };
-    }
-
-    if (pluginType === 'email-imap') {
-      // Let the user re-test a saved connection without re-typing the app
-      // password. The form rehydrates every field EXCEPT secrets (#548), so a
-      // blank password on re-test means "keep the stored one" - fall back to it
-      // here instead of testing with an empty string (which always fails).
-      let effectiveToken = token;
-      try {
-        const parsed = JSON.parse(token) as Record<string, unknown>;
-        const needsImapPw = !parsed.imapPassword;
-        const needsSmtpPw = parsed.useSameAuth === false && !parsed.smtpPassword;
-        if (needsImapPw || needsSmtpPw) {
-          const db = await getDatabase();
-          const stored = db.getChannelPlugin('email-imap').data?.credentials as Record<string, unknown> | undefined;
-          if (stored) {
-            if (needsImapPw && typeof stored.imapPassword === 'string') parsed.imapPassword = stored.imapPassword;
-            if (needsSmtpPw && typeof stored.smtpPassword === 'string') parsed.smtpPassword = stored.smtpPassword;
-            effectiveToken = JSON.stringify(parsed);
-          }
-        }
-      } catch {
-        // token was not JSON (shouldn't happen for email-imap) - test as-is.
-      }
-      const result = await EmailImapPlugin.testConnection(effectiveToken);
-      return { success: result.success, botUsername: result.botUsername, error: result.error };
-    }
-
-    if (pluginType === 'matrix') {
-      const result = await MatrixPlugin.testConnection(token);
-      return { success: result.success, botUsername: result.botUsername, error: result.error };
-    }
-
-    if (pluginType === 'line') {
-      const result = await LinePlugin.testConnection(token);
-      return { success: result.success, botUsername: result.botUsername, error: result.error };
-    }
-
-    // OpenClaw fork wave 1 (W2.x) - 2026-05-18
-    if (pluginType === 'webhook') {
-      const result = await WebhookPlugin.testConnection(token);
-      return { success: result.success, botUsername: result.botUsername, error: result.error };
-    }
-
-    if (pluginType === 'irc') {
-      const result = await IrcPlugin.testConnection(token);
-      return { success: result.success, botUsername: result.botUsername, error: result.error };
-    }
-
-    // OpenClaw fork wave 2 (W2.y) - 2026-05-18
-    if (pluginType === 'mattermost') {
-      const result = await MattermostPlugin.testConnection(token);
-      return { success: result.success, botUsername: result.botUsername, error: result.error };
-    }
-
-    if (pluginType === 'google-chat') {
-      const result = await GoogleChatPlugin.testConnection(token);
-      return { success: result.success, botUsername: result.botUsername, error: result.error };
-    }
-
-    if (pluginType === 'nextcloud-talk') {
-      const result = await NextcloudTalkPlugin.testConnection(token);
-      return { success: result.success, botUsername: result.botUsername, error: result.error };
-    }
-
-    if (pluginType === 'synology-chat') {
-      const result = await SynologyChatPlugin.testConnection(token);
-      return { success: result.success, botUsername: result.botUsername, error: result.error };
-    }
-
-    if (pluginType === 'nostr') {
-      const result = await NostrPlugin.testConnection(token);
-      return { success: result.success, botUsername: result.botUsername, error: result.error };
-    }
-
-    // OpenClaw fork wave 3 (W2.z) - 2026-05-18
-    if (pluginType === 'twitch') {
-      const result = await TwitchPlugin.testConnection(token);
-      return { success: result.success, botUsername: result.botUsername, error: result.error };
-    }
-
-    if (pluginType === 'bluebubbles') {
-      const result = await BluebubblesPlugin.testConnection(token);
-      return { success: result.success, botUsername: result.botUsername, error: result.error };
-    }
-
-    if (pluginType === 'imessage') {
-      const result = await ImessagePlugin.testConnection(token);
-      return { success: result.success, botUsername: result.botUsername, error: result.error };
-    }
-
-    // OpenClaw fork wave 4 (W2.w) - 2026-05-18
-    if (pluginType === 'signal') {
-      const result = await SignalPlugin.testConnection(token);
-      return { success: result.success, botUsername: result.botUsername, error: result.error };
-    }
-
-    if (pluginType === 'ms-teams') {
-      const result = await MsTeamsPlugin.testConnection(token);
-      return { success: result.success, botUsername: result.botUsername, error: result.error };
-    }
-
-    // Extension plugins: test connection not supported yet (will be handled by the plugin itself on start)
-    return { success: true, botUsername: undefined, error: undefined };
+    // Delegate to the connection tester. It statically imports every plugin
+    // class (and their SDKs), so it is pulled in via a dynamic import here — the
+    // SDKs load only when a user actually tests a connection, never at boot.
+    const { testChannelPluginConnection } = await import('./channelTestConnections');
+    return testChannelPluginConnection(pluginType, token, extraConfig);
   }
 
   /**
