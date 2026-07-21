@@ -7,6 +7,7 @@ import type { ConnectError, CuratedModel, UsageTag } from '@process/providers/ty
 import { FLUX_MODEL_IDS, FLUX_PROVIDER_ID } from '@/common/config/flux';
 import { useModelRegistry } from '@renderer/hooks/useModelRegistry';
 import FluxRouterMark from '@renderer/components/icons/FluxRouterMark';
+import ProviderLogo from '@renderer/components/model/ProviderLogo';
 import { providerMeta } from './providerCatalog';
 import { allVisibleEnabled, mergeCatalogRows, rowsToFlip } from './components/bulkToggle';
 import XGrokButton from './components/XGrokButton';
@@ -440,13 +441,7 @@ const ManageProvider: React.FC<Props> = ({ provider, onBack, onDisconnected }) =
             <FluxRouterMark size={28} />
           </div>
         ) : (
-          <div
-            className={styles.avatar}
-            style={{ background: meta.bg, color: meta.darkText ? '#1a1a1a' : '#fff' }}
-            aria-hidden
-          >
-            {meta.mono}
-          </div>
+          <ProviderLogo id={meta.id} mono={meta.mono} bg={meta.bg} darkText={meta.darkText} size={48} />
         )}
         <div className={styles.name}>{meta.displayName}</div>
         <span className={badgeClass} role={isError ? 'alert' : undefined}>

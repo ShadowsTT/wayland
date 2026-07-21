@@ -30,6 +30,9 @@ const CATALOG_LOGO_ALIAS: Record<string, string> = {
   // render OpenAI's real brand logo — not a monogram tile that reads like a
   // different vendor. We ship `openai.svg`; alias the subscription id onto it.
   'chatgpt-subscription': 'openai',
+  // Likewise a Claude Pro/Max subscription IS Anthropic — render Claude's real
+  // brand mark. `anthropic.svg` is the Claude sunburst art we ship.
+  'claude-subscription': 'anthropic',
   siliconflow: 'siliconflow',
   'siliconflow-cn': 'siliconflow',
   novita: 'novita',
