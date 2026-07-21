@@ -7,7 +7,7 @@
 import { ipcBridge } from '@/common';
 import type { IMessageToolGroup, TMessage } from '@/common/chat/chatLib';
 import { transformMessage } from '@/common/chat/chatLib';
-import { buildResumeSeedTranscript } from '@process/task/resumeSeed';
+import { buildResumeSeedTranscript, RESUME_SEED_MAX_MESSAGES } from '@process/task/resumeSeed';
 import type { IResponseMessage } from '@/common/adapter/ipcBridge';
 import { channelEventBus } from '@process/channels/agent/ChannelEventBus';
 import { teamEventBus } from '@process/team/teamEventBus';
@@ -436,10 +436,19 @@ export class WCoreManager extends BaseAgentManager<WCoreManagerData, string> {
     if (sessionArgs.resume) {
       try {
         const historyDb = await getDatabase();
-        const history = historyDb.getConversationMessages(this.conversation_id, 0, 10000);
+        // buildResumeSeedTranscript only keeps the last RESUME_SEED_MAX_MESSAGES
+        // messages, so read exactly that tail (DESC then reverse to chronological)
+        // instead of the whole conversation — behaviour-identical, but avoids a
+        // large synchronous main-thread read when resuming a long conversation.
+        const history = historyDb.getConversationMessages(
+          this.conversation_id,
+          0,
+          RESUME_SEED_MAX_MESSAGES,
+          'DESC'
+        );
         // #457: retain tool/file-edit history (not just text) so a rebuilt
         // session keeps the in-progress work instead of restarting from scratch.
-        const text = buildResumeSeedTranscript((history.data ?? []) as TMessage[]);
+        const text = buildResumeSeedTranscript(((history.data ?? []) as TMessage[]).toReversed());
         if (text) await agent.injectConversationHistory(text);
       } catch {
         // Best-effort: resume still proceeds without seeded history.

@@ -113,8 +113,19 @@ export class GeminiAgentManager extends BaseAgentManager<
 
   private async injectHistoryFromDatabase(): Promise<void> {
     try {
-      const result = (await getDatabase()).getConversationMessages(this.conversation_id, 0, 10000);
-      const data = (result.data || []) as TMessage[];
+      // Only the last 20 TEXT messages are used. Read a bounded recent window
+      // (DESC then reverse to chronological) rather than the whole conversation,
+      // to avoid a large synchronous main-thread read on resume. 400 rows
+      // comfortably contains 20 text messages in any realistic conversation
+      // (that would require >20 non-text rows per text message on average).
+      const RESUME_SCAN_ROWS = 400;
+      const result = (await getDatabase()).getConversationMessages(
+        this.conversation_id,
+        0,
+        RESUME_SCAN_ROWS,
+        'DESC'
+      );
+      const data = ((result.data || []) as TMessage[]).toReversed();
       const lines = data
         .filter((m): m is IMessageText => m.type === 'text')
         .slice(-20)
