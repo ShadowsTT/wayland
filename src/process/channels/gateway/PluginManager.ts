@@ -12,17 +12,50 @@ import { hasPluginCredentials } from '../types';
 import type { IChannelPluginConfig, IChannelPluginStatus, IUnifiedIncomingMessage, PluginType } from '../types';
 import { getChannelWelcomeService } from './ChannelWelcomeService';
 
-// Plugin registry - maps plugin types to their constructors
-// Will be populated when plugins are implemented
+// Plugin registry - maps plugin types to their constructors (or to a lazy
+// loader that imports the constructor's module on first use).
 type PluginConstructor = new () => BasePlugin;
-const pluginRegistry: Map<PluginType, PluginConstructor> = new Map();
+/**
+ * Lazily loads a plugin constructor. The plugin module's heavy messaging SDK
+ * (discord.js, matrix-js-sdk, twilio, grammy, imapflow, ...) evaluates only when
+ * this loader runs — i.e. when an enabled plugin actually starts — instead of at
+ * app boot. See channelPluginLoaders.ts.
+ */
+type PluginLoader = () => Promise<PluginConstructor>;
+
+type PluginRegistration =
+  | { kind: 'eager'; constructor: PluginConstructor }
+  | { kind: 'lazy'; loader: PluginLoader; resolved?: PluginConstructor };
+
+const pluginRegistry: Map<PluginType, PluginRegistration> = new Map();
 
 /**
- * Register a plugin type
- * Called during initialization to register available plugins
+ * Register a plugin type with an already-loaded constructor (used by
+ * extension-contributed plugins, whose module is loaded by the ExtensionRegistry).
  */
 export function registerPlugin(type: PluginType, constructor: PluginConstructor): void {
-  pluginRegistry.set(type, constructor);
+  pluginRegistry.set(type, { kind: 'eager', constructor });
+}
+
+/**
+ * Register a built-in plugin whose module (and heavy SDK) is imported lazily the
+ * first time the plugin starts. The registry entry is created synchronously so
+ * type checks (`pluginRegistry.has`) still work at boot; only the constructor
+ * resolution is deferred.
+ */
+export function registerPluginLazy(type: PluginType, loader: PluginLoader): void {
+  pluginRegistry.set(type, { kind: 'lazy', loader });
+}
+
+/** Resolve a registered plugin's constructor, importing it on first use if lazy. */
+async function resolvePluginConstructor(type: PluginType): Promise<PluginConstructor | undefined> {
+  const reg = pluginRegistry.get(type);
+  if (!reg) return undefined;
+  if (reg.kind === 'eager') return reg.constructor;
+  if (reg.resolved) return reg.resolved;
+  const ctor = await reg.loader();
+  reg.resolved = ctor;
+  return ctor;
 }
 
 /**
@@ -134,8 +167,9 @@ export class PluginManager {
       return;
     }
 
-    // Get plugin constructor from registry
-    const Constructor = pluginRegistry.get(type);
+    // Get plugin constructor from registry (imports the module on first use if
+    // the plugin was registered lazily).
+    const Constructor = await resolvePluginConstructor(type);
     if (!Constructor) {
       const errorMsg = `Unknown plugin type: ${type}`;
       this.pluginErrors.set(id, errorMsg);
