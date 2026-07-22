@@ -1160,6 +1160,51 @@ export const fleet = {
   }>('fleet.status-changed'),
 };
 
+// herdr integration. herdr is the terminal workspace manager that hosts the AI
+// agent panes (Claude/Codex) running on this machine. Wayland reads its live
+// snapshot and drives its panes (send prompts, focus, spawn agents, worktrees)
+// over herdr's Unix-socket JSON-RPC — see src/process/services/herdr.
+export const herdr = {
+  /** Whether the herdr server socket is present (feature gate for the UI). */
+  isAvailable: buildProvider<boolean, void>('herdr.is-available'),
+  /** Full monitor view: workspaces + panes + agent status. */
+  getView: buildProvider<import('@process/services/herdr/types').HerdrView, void>('herdr.get-view'),
+  /** Type a prompt into a pane; `submit` presses Enter so the agent runs it. */
+  sendPrompt: buildProvider<
+    import('@process/services/herdr/types').HerdrActionResult,
+    { paneId: string; text: string; submit?: boolean }
+  >('herdr.send-prompt'),
+  sendKeys: buildProvider<
+    import('@process/services/herdr/types').HerdrActionResult,
+    { paneId: string; keys: string[] }
+  >('herdr.send-keys'),
+  focusPane: buildProvider<import('@process/services/herdr/types').HerdrActionResult, { paneId: string }>(
+    'herdr.focus-pane'
+  ),
+  focusWorkspace: buildProvider<
+    import('@process/services/herdr/types').HerdrActionResult,
+    { workspaceId: string }
+  >('herdr.focus-workspace'),
+  renamePane: buildProvider<
+    import('@process/services/herdr/types').HerdrActionResult,
+    { paneId: string; label: string }
+  >('herdr.rename-pane'),
+  startAgent: buildProvider<
+    import('@process/services/herdr/types').HerdrActionResult,
+    { name: string; argv: string[]; cwd?: string; workspaceId?: string; focus?: boolean }
+  >('herdr.start-agent'),
+  createWorktree: buildProvider<
+    import('@process/services/herdr/types').HerdrActionResult,
+    { branch?: string; base?: string; path?: string; label?: string; cwd?: string; workspaceId?: string; focus?: boolean }
+  >('herdr.create-worktree'),
+  readPane: buildProvider<
+    import('@process/services/herdr/types').HerdrReadResult,
+    { paneId: string; lines?: number }
+  >('herdr.read-pane'),
+  /** Pushed (debounced) whenever herdr's workspaces/panes/agent status change. */
+  changed: buildEmitter<import('@process/services/herdr/types').HerdrView>('herdr.changed'),
+};
+
 // Database operations
 export const database = {
   getConversationMessages: buildProvider<

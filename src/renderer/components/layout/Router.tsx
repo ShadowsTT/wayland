@@ -48,6 +48,7 @@ const SystemSettings = React.lazy(() => import('@renderer/pages/settings/SystemS
 const VoiceSettings = React.lazy(() => import('@renderer/pages/settings/VoiceSettings'));
 const WebuiSettings = React.lazy(() => import('@renderer/pages/settings/WebuiSettings'));
 const FleetSettings = React.lazy(() => import('@renderer/pages/settings/FleetSettings'));
+const HerdrSettings = React.lazy(() => import('@renderer/pages/settings/HerdrSettings'));
 const ExtensionsSettings = React.lazy(() => import('@renderer/pages/settings/ExtensionsSettings'));
 const ExtensionSettingsPage = React.lazy(() => import('@renderer/pages/settings/ExtensionSettingsPage'));
 const LoginPage = React.lazy(() => import('@renderer/pages/login'));
@@ -139,6 +140,7 @@ const PanelRoute: React.FC<{ layout: React.ReactElement }> = ({ layout }) => {
             <Route path='/settings/channels' element={withRouteFallback(ChannelsIndex)} />
             <Route path='/settings/channels/:id' element={withRouteFallback(ChannelDetailPage)} />
             <Route path='/settings/fleet' element={withRouteFallback(FleetSettings)} />
+            <Route path='/settings/herdr' element={withRouteFallback(HerdrSettings)} />
             {/* Legacy `/settings/mcp` route - the old McpSettings page was
               removed in P8; redirect to the new MCP Library Browse view so
               bookmarks still land somewhere useful. */}
