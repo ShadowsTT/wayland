@@ -1147,6 +1147,11 @@ export const fleet = {
     import('@process/services/fleet/types').FleetCommandResult,
     { id: string; command: string; timeoutMs?: number }
   >('fleet.run-command'),
+  /** Discover machines on the user's Tailnet (tailscale status) for bulk-add. */
+  scanTailscale: buildProvider<
+    { hosts: import('@process/services/fleet/FleetService').FleetDiscoveredHost[]; error?: string },
+    void
+  >('fleet.scan-tailscale'),
   /** Pushed when a host's reachability changes (from health polling / probes). */
   statusChanged: buildEmitter<{
     id: string;

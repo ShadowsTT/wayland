@@ -4,7 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-export { FleetService, getFleetService } from './FleetService';
+export { FleetService, getFleetService, parseTailscaleStatus } from './FleetService';
+export type { FleetDiscoveredHost } from './FleetService';
 export { FleetMcpServer, getFleetMcpServer } from './FleetMcpServer';
 export { baseSshOptions, buildSshArgs } from './sshArgs';
 export type {

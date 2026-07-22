@@ -148,6 +148,79 @@ export class FleetService {
     const res = await this.testConnection(host);
     return res.ok ? { status: 'online' } : { status: 'offline', error: res.error };
   }
+
+  /**
+   * Discover machines on the user's Tailnet via `tailscale status --json`.
+   * Returns each peer's Tailscale IP + hostname so the UI can bulk-add them.
+   * Never throws: an absent/erroring `tailscale` CLI yields an empty list.
+   */
+  async scanTailscale(): Promise<{ hosts: FleetDiscoveredHost[]; error?: string }> {
+    return new Promise((resolve) => {
+      let child;
+      try {
+        child = spawn('tailscale', ['status', '--json'], { env: { ...getEnhancedEnv() }, stdio: ['ignore', 'pipe', 'pipe'] });
+      } catch {
+        resolve({ hosts: [], error: 'tailscale CLI not found on this machine' });
+        return;
+      }
+      let out = '';
+      let err = '';
+      child.stdout?.on('data', (d: Buffer) => (out += d.toString()));
+      child.stderr?.on('data', (d: Buffer) => (err += d.toString()));
+      child.on('error', (e: NodeJS.ErrnoException) => {
+        resolve({ hosts: [], error: e.code === 'ENOENT' ? 'tailscale CLI not found on this machine' : e.message });
+      });
+      child.on('close', (code) => {
+        if (code !== 0) {
+          resolve({ hosts: [], error: err.trim() || `tailscale exited with code ${code}` });
+          return;
+        }
+        try {
+          resolve({ hosts: parseTailscaleStatus(out) });
+        } catch (e) {
+          resolve({ hosts: [], error: e instanceof Error ? e.message : 'Failed to parse tailscale output' });
+        }
+      });
+    });
+  }
+}
+
+/** A machine discovered on the Tailnet (not yet added; no credentials known). */
+export interface FleetDiscoveredHost {
+  name: string;
+  host: string;
+  os?: string;
+  online: boolean;
+}
+
+/** Pure parser for `tailscale status --json` -> discovered hosts (self + peers). */
+export function parseTailscaleStatus(json: string): FleetDiscoveredHost[] {
+  const status = JSON.parse(json) as {
+    Self?: TailscalePeer;
+    Peer?: Record<string, TailscalePeer>;
+  };
+  const peers: TailscalePeer[] = [
+    ...(status.Self ? [status.Self] : []),
+    ...(status.Peer ? Object.values(status.Peer) : []),
+  ];
+  const seen = new Set<string>();
+  const hosts: FleetDiscoveredHost[] = [];
+  for (const p of peers) {
+    const ip = (p.TailscaleIPs ?? []).find((a) => a.includes('.')) ?? (p.TailscaleIPs ?? [])[0];
+    if (!ip || seen.has(ip)) continue;
+    seen.add(ip);
+    const name = (p.HostName || p.DNSName || ip).replace(/\.$/, '').split('.')[0];
+    hosts.push({ name, host: ip, os: p.OS, online: !!p.Online });
+  }
+  return hosts;
+}
+
+interface TailscalePeer {
+  HostName?: string;
+  DNSName?: string;
+  TailscaleIPs?: string[];
+  OS?: string;
+  Online?: boolean;
 }
 
 let singleton: FleetService | null = null;

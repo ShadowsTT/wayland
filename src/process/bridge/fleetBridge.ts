@@ -137,6 +137,10 @@ export function initFleetBridge(): void {
     return res;
   });
 
+  ipcBridge.fleet.scanTailscale.provider(async () => {
+    return getFleetService().scanTailscale();
+  });
+
   // Start the fleet MCP server (TCP bridge) and register its builtin MCP entry
   // so every agent gets fleet tools. Non-fatal if it fails — the UI still works.
   void getFleetMcpServer()

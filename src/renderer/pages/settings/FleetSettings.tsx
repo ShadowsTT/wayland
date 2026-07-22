@@ -12,8 +12,8 @@
  */
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { Button, Input, InputNumber, Message, Modal, Select, Tag, Typography } from '@arco-design/web-react';
-import { Play, Plus, RefreshCw, ServerCog, Terminal, Trash2 } from 'lucide-react';
+import { Button, Checkbox, Input, InputNumber, Message, Modal, Select, Tag, Typography } from '@arco-design/web-react';
+import { Play, Plus, RefreshCw, ServerCog, Terminal, Trash2, Wifi } from 'lucide-react';
 import { ipcBridge } from '@/common';
 import { useTranslation } from 'react-i18next';
 import type {
@@ -23,6 +23,7 @@ import type {
   FleetHostPublic,
   FleetHostStatus,
 } from '@process/services/fleet/types';
+import type { FleetDiscoveredHost } from '@process/services/fleet/FleetService';
 
 const STATUS_COLOR: Record<FleetHostStatus, string> = {
   online: '#22c55e',
@@ -79,6 +80,16 @@ const FleetSettings: React.FC = () => {
   const [command, setCommand] = useState('');
   const [running, setRunning] = useState(false);
   const [result, setResult] = useState<FleetCommandResult | null>(null);
+
+  // Tailscale scan
+  const [scanOpen, setScanOpen] = useState(false);
+  const [scanning, setScanning] = useState(false);
+  const [discovered, setDiscovered] = useState<FleetDiscoveredHost[]>([]);
+  const [scanError, setScanError] = useState<string | null>(null);
+  const [scanUser, setScanUser] = useState('root');
+  const [scanAuth, setScanAuth] = useState<FleetHostAuthType>('agent');
+  const [scanSelected, setScanSelected] = useState<Record<string, boolean>>({});
+  const [scanAdding, setScanAdding] = useState(false);
 
   const setField = useCallback(<K extends keyof FormState>(key: K, value: FormState[K]) => {
     setForm((f) => ({ ...f, [key]: value }));
@@ -220,6 +231,56 @@ const FleetSettings: React.FC = () => {
     }
   }, [runHost, command]);
 
+  const doScan = useCallback(async () => {
+    setScanOpen(true);
+    setScanning(true);
+    setScanError(null);
+    setDiscovered([]);
+    try {
+      const res = await ipcBridge.fleet.scanTailscale.invoke();
+      setDiscovered(res.hosts ?? []);
+      setScanError(res.error ?? null);
+      // Pre-select devices not already in the inventory.
+      const existing = new Set(hosts.map((h) => h.host));
+      const sel: Record<string, boolean> = {};
+      (res.hosts ?? []).forEach((d) => (sel[d.host] = !existing.has(d.host)));
+      setScanSelected(sel);
+    } finally {
+      setScanning(false);
+    }
+  }, [hosts]);
+
+  const addDiscovered = useCallback(async () => {
+    const toAdd = discovered.filter((d) => scanSelected[d.host]);
+    if (!toAdd.length) {
+      setScanOpen(false);
+      return;
+    }
+    setScanAdding(true);
+    try {
+      let added = 0;
+      for (const d of toAdd) {
+        const res = await ipcBridge.fleet.addHost.invoke({
+          name: d.name,
+          host: d.host,
+          port: 22,
+          username: scanUser.trim() || 'root',
+          authType: scanAuth,
+          tags: ['tailscale'],
+          description: d.os ? `Tailscale · ${d.os}` : 'Tailscale',
+        });
+        if (res.success) added++;
+      }
+      Message.success(t('settings.fleet.bulkAdded', { defaultValue: 'Added {{n}} host(s)', n: added }));
+      setScanOpen(false);
+      await load();
+    } catch (err) {
+      Message.error(err instanceof Error ? err.message : String(err));
+    } finally {
+      setScanAdding(false);
+    }
+  }, [discovered, scanSelected, scanUser, scanAuth, load, t]);
+
   const secretRequired = form.authType === 'key' || form.authType === 'password';
 
   return (
@@ -232,6 +293,9 @@ const FleetSettings: React.FC = () => {
         <div style={{ flex: 1 }} />
         <Button size='small' icon={<RefreshCw size={14} />} onClick={() => void load()}>
           {t('common.refresh', { defaultValue: 'Refresh' })}
+        </Button>
+        <Button size='small' icon={<Wifi size={14} />} onClick={() => void doScan()}>
+          {t('settings.fleet.scanTailscale', { defaultValue: 'Scan Tailscale' })}
         </Button>
         <Button type='primary' size='small' icon={<Plus size={14} />} onClick={openAdd}>
           {t('settings.fleet.addHost', { defaultValue: 'Add host' })}
@@ -389,6 +453,69 @@ const FleetSettings: React.FC = () => {
             {`\n\n[exit ${result.exitCode ?? 'n/a'} · ${result.durationMs}ms]`}
           </pre>
         )}
+      </Modal>
+
+      {/* Tailscale discovery modal */}
+      <Modal
+        title={t('settings.fleet.tailscaleTitle', { defaultValue: 'Scan Tailscale' })}
+        visible={scanOpen}
+        onCancel={() => setScanOpen(false)}
+        onOk={() => void addDiscovered()}
+        okText={t('settings.fleet.addSelected', { defaultValue: 'Add selected' })}
+        confirmLoading={scanAdding}
+        okButtonProps={{ disabled: scanning || !discovered.some((d) => scanSelected[d.host]) }}
+        style={{ width: 560 }}
+      >
+        <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+          <Input
+            style={{ flex: 1 }}
+            addBefore={t('settings.fleet.username', { defaultValue: 'SSH user' })}
+            value={scanUser}
+            onChange={setScanUser}
+          />
+          <Select style={{ width: 190 }} value={scanAuth} onChange={(v) => setScanAuth(v as FleetHostAuthType)}>
+            <Select.Option value='agent'>{t('settings.fleet.authAgent', { defaultValue: 'Agent / default keys' })}</Select.Option>
+            <Select.Option value='key'>{t('settings.fleet.authKey', { defaultValue: 'Private key' })}</Select.Option>
+            <Select.Option value='password'>{t('settings.fleet.authPassword', { defaultValue: 'Password' })}</Select.Option>
+          </Select>
+        </div>
+        {scanning ? (
+          <Typography.Text type='secondary'>{t('settings.fleet.scanning', { defaultValue: 'Scanning Tailnet…' })}</Typography.Text>
+        ) : scanError ? (
+          <Typography.Text type='warning' style={{ fontSize: 13 }}>{scanError}</Typography.Text>
+        ) : discovered.length === 0 ? (
+          <Typography.Text type='secondary'>{t('settings.fleet.noDevices', { defaultValue: 'No Tailnet devices found.' })}</Typography.Text>
+        ) : (
+          <div style={{ maxHeight: 320, overflow: 'auto', display: 'flex', flexDirection: 'column', gap: 4 }}>
+            {discovered.map((d) => (
+              <label
+                key={d.host}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  padding: '6px 8px',
+                  border: '1px solid var(--bg-3)',
+                  borderRadius: 6,
+                  cursor: 'pointer',
+                }}
+              >
+                <Checkbox checked={!!scanSelected[d.host]} onChange={(c) => setScanSelected((s) => ({ ...s, [d.host]: c }))} />
+                <span style={{ width: 8, height: 8, borderRadius: '50%', background: d.online ? '#22c55e' : '#6b7280' }} />
+                <span style={{ fontWeight: 600 }}>{d.name}</span>
+                <Typography.Text type='secondary' style={{ fontSize: 12 }}>
+                  {d.host}
+                  {d.os ? ` · ${d.os}` : ''}
+                </Typography.Text>
+              </label>
+            ))}
+          </div>
+        )}
+        <Typography.Text type='secondary' style={{ fontSize: 12, display: 'block', marginTop: 8 }}>
+          {t('settings.fleet.tailscaleNote', {
+            defaultValue: 'Devices are added with the SSH user + auth above (tag: tailscale). Set keys/passwords per host after.',
+          })}
+        </Typography.Text>
       </Modal>
     </div>
   );
