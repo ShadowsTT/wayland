@@ -1123,6 +1123,43 @@ export const remoteAgent = {
   ),
 };
 
+// Fleet (remote server) management. Hosts returned to the renderer are the
+// sanitized FleetHostPublic (no decrypted secrets); the process side keeps the
+// real FleetHost with encrypted-at-rest key/password.
+export const fleet = {
+  listHosts: buildProvider<import('@process/services/fleet/types').FleetHostPublic[], void>('fleet.list-hosts'),
+  getHost: buildProvider<import('@process/services/fleet/types').FleetHostPublic | null, { id: string }>(
+    'fleet.get-host'
+  ),
+  addHost: buildProvider<
+    { success: boolean; host?: import('@process/services/fleet/types').FleetHostPublic; error?: string },
+    import('@process/services/fleet/types').FleetHostInput
+  >('fleet.add-host'),
+  updateHost: buildProvider<
+    { success: boolean; error?: string },
+    { id: string; updates: Partial<import('@process/services/fleet/types').FleetHostInput> }
+  >('fleet.update-host'),
+  removeHost: buildProvider<{ success: boolean; error?: string }, { id: string }>('fleet.remove-host'),
+  testConnection: buildProvider<{ ok: boolean; error?: string; info?: string }, { id: string }>(
+    'fleet.test-connection'
+  ),
+  runCommand: buildProvider<
+    import('@process/services/fleet/types').FleetCommandResult,
+    { id: string; command: string; timeoutMs?: number }
+  >('fleet.run-command'),
+  /** Discover machines on the user's Tailnet (tailscale status) for bulk-add. */
+  scanTailscale: buildProvider<
+    { hosts: import('@process/services/fleet/FleetService').FleetDiscoveredHost[]; error?: string },
+    void
+  >('fleet.scan-tailscale'),
+  /** Pushed when a host's reachability changes (from health polling / probes). */
+  statusChanged: buildEmitter<{
+    id: string;
+    status: import('@process/services/fleet/types').FleetHostStatus;
+    lastSeenAt?: number;
+  }>('fleet.status-changed'),
+};
+
 // Database operations
 export const database = {
   getConversationMessages: buildProvider<

@@ -37,6 +37,7 @@ import type {
 } from '@process/channels/types';
 import type { ConversationSource, TProviderWithModel } from '@/common/config/storage';
 import type { RemoteAgentConfig, RemoteAgentStatus } from '@process/agent/remote';
+import type { FleetHost, FleetHostStatus } from '@process/services/fleet/types';
 import { rowToChannelUser, rowToChannelSession, rowToPairingRequest } from '@process/channels/types';
 import {
   encryptCredentials,
@@ -1910,6 +1911,165 @@ export class WaylandUIDatabase {
       return { success: true, data: result.changes > 0 };
     } catch (error: any) {
       return { success: false, error: error.message };
+    }
+  }
+
+  // ==================== Fleet Hosts (remote server management) ====================
+
+  /** Map a fleet_hosts row to a FleetHost, decrypting secrets and parsing tags. */
+  private rowToFleetHost(row: {
+    id: string;
+    name: string;
+    host: string;
+    port: number;
+    username: string;
+    auth_type: string;
+    private_key: string | null;
+    password: string | null;
+    tags: string | null;
+    description: string | null;
+    status: string | null;
+    last_seen_at: number | null;
+    created_at: number;
+    updated_at: number;
+  }): FleetHost {
+    let tags: string[] | undefined;
+    if (row.tags) {
+      try {
+        const parsed = JSON.parse(row.tags);
+        if (Array.isArray(parsed)) tags = parsed.filter((t): t is string => typeof t === 'string');
+      } catch {
+        // Malformed tags JSON — treat as none.
+      }
+    }
+    return {
+      id: row.id,
+      name: row.name,
+      host: row.host,
+      port: row.port,
+      username: row.username,
+      authType: row.auth_type as FleetHost['authType'],
+      privateKey: row.private_key ? decryptString(row.private_key) : undefined,
+      password: row.password ? decryptString(row.password) : undefined,
+      tags,
+      description: row.description ?? undefined,
+      status: (row.status as FleetHostStatus) ?? 'unknown',
+      lastSeenAt: row.last_seen_at ?? undefined,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    };
+  }
+
+  getFleetHosts(): FleetHost[] {
+    try {
+      const rows = this.db
+        .prepare('SELECT * FROM fleet_hosts ORDER BY created_at DESC')
+        .all() as Parameters<WaylandUIDatabase['rowToFleetHost']>[0][];
+      return rows.map((row) => this.rowToFleetHost(row));
+    } catch (error) {
+      console.error('[Database] getFleetHosts error:', error);
+      return [];
+    }
+  }
+
+  getFleetHost(id: string): FleetHost | null {
+    try {
+      const row = this.db.prepare('SELECT * FROM fleet_hosts WHERE id = ?').get(id) as
+        | Parameters<WaylandUIDatabase['rowToFleetHost']>[0]
+        | undefined;
+      return row ? this.rowToFleetHost(row) : null;
+    } catch (error) {
+      console.error('[Database] getFleetHost error:', error);
+      return null;
+    }
+  }
+
+  createFleetHost(host: FleetHost): IQueryResult<FleetHost> {
+    try {
+      this.db
+        .prepare(
+          `INSERT INTO fleet_hosts (id, name, host, port, username, auth_type, private_key, password, tags, description, status, last_seen_at, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        )
+        .run(
+          host.id,
+          host.name,
+          host.host,
+          host.port,
+          host.username,
+          host.authType,
+          host.privateKey ? encryptString(host.privateKey) : null,
+          host.password ? encryptString(host.password) : null,
+          host.tags && host.tags.length ? JSON.stringify(host.tags) : null,
+          host.description ?? null,
+          host.status ?? 'unknown',
+          host.lastSeenAt ?? null,
+          host.createdAt,
+          host.updatedAt
+        );
+      return { success: true, data: host };
+    } catch (error: any) {
+      return { success: false, error: error.message };
+    }
+  }
+
+  updateFleetHost(
+    id: string,
+    updates: Partial<{
+      name: string;
+      host: string;
+      port: number;
+      username: string;
+      auth_type: string;
+      private_key: string;
+      password: string;
+      tags: string[];
+      description: string;
+      status: string;
+      last_seen_at: number;
+    }>
+  ): IQueryResult<boolean> {
+    const ENCRYPTED_FIELDS = new Set(['private_key', 'password']);
+    try {
+      const sets: string[] = [];
+      const values: unknown[] = [];
+      for (const [key, value] of Object.entries(updates)) {
+        sets.push(`${key} = ?`);
+        if (key === 'tags') {
+          values.push(Array.isArray(value) && value.length ? JSON.stringify(value) : null);
+        } else if (ENCRYPTED_FIELDS.has(key) && typeof value === 'string') {
+          values.push(encryptString(value));
+        } else {
+          values.push(value ?? null);
+        }
+      }
+      sets.push('updated_at = ?');
+      values.push(Date.now());
+      values.push(id);
+      const result = this.db.prepare(`UPDATE fleet_hosts SET ${sets.join(', ')} WHERE id = ?`).run(...values);
+      return { success: true, data: result.changes > 0 };
+    } catch (error: any) {
+      return { success: false, error: error.message };
+    }
+  }
+
+  deleteFleetHost(id: string): IQueryResult<boolean> {
+    try {
+      const result = this.db.prepare('DELETE FROM fleet_hosts WHERE id = ?').run(id);
+      return { success: true, data: result.changes > 0 };
+    } catch (error: any) {
+      return { success: false, error: error.message };
+    }
+  }
+
+  /** Fast status/heartbeat write used by health polling (no full-row rewrite). */
+  updateFleetHostStatus(id: string, status: FleetHostStatus, lastSeenAt?: number): void {
+    try {
+      this.db
+        .prepare('UPDATE fleet_hosts SET status = ?, last_seen_at = COALESCE(?, last_seen_at), updated_at = ? WHERE id = ?')
+        .run(status, lastSeenAt ?? null, Date.now(), id);
+    } catch (error) {
+      console.error('[Database] updateFleetHostStatus error:', error);
     }
   }
 

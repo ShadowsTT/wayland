@@ -99,6 +99,15 @@ export const BUILTIN_CONCIERGE_DIAG_ID = 'concierge-diag';
 export const BUILTIN_CONCIERGE_DIAG_NAME = 'wayland-concierge-diag';
 export const BUILTIN_CONCIERGE_DIAG_TOOL_NAME = 'wayland_concierge_diag';
 
+// ── Fleet (remote-server management) MCP ─────────────────────────────────────
+// Unlike the other builtins (standalone stdio scripts), the fleet MCP is a
+// stdio<->TCP bridge (fleet-mcp-stdio.js) back to the main-process FleetMcpServer
+// so decrypted SSH secrets never leave the main process. Its transport env
+// carries the live FLEET_MCP_PORT/FLEET_MCP_TOKEN, refreshed on each boot.
+export const BUILTIN_FLEET_ID = 'builtin-fleet';
+export const BUILTIN_FLEET_NAME = 'wayland-fleet';
+export const BUILTIN_FLEET_SCRIPT = 'fleet-mcp-stdio.js';
+
 // ── Bundled Playwright MCP (browser capability, #465) ────────────────────────
 // Unlike the @wayland builtins above (local node scripts), this is the upstream
 // npm package `@playwright/mcp` run through the bundled bun (npx->bun). It is
