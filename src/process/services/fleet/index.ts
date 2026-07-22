@@ -5,6 +5,7 @@
  */
 
 export { FleetService, getFleetService } from './FleetService';
+export { FleetMcpServer, getFleetMcpServer } from './FleetMcpServer';
 export { baseSshOptions, buildSshArgs } from './sshArgs';
 export type {
   FleetCommandResult,

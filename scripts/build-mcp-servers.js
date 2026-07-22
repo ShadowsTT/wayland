@@ -139,6 +139,12 @@ async function main() {
       entryPoints: [path.join(ROOT, 'src/process/team/mcp/guide/teamGuideMcpStdio.ts')],
       outfile: path.join(ROOT, 'out/main/team-guide-mcp-stdio.js'),
     }),
+    esbuild.build({
+      ...SHARED_OPTIONS,
+      // Fleet MCP stdio bridge -> main-process FleetMcpServer over TCP.
+      entryPoints: [path.join(ROOT, 'src/process/services/fleet/fleetMcpStdio.ts')],
+      outfile: path.join(ROOT, 'out/main/fleet-mcp-stdio.js'),
+    }),
     // Bundled @wayland MCP servers - ship with the installer, no npm publish.
     bundleWaylandMcp('imap-mcp', 'builtin-mcp-imap.mjs'),
     bundleWaylandMcp('news-mcp', 'builtin-mcp-news.mjs'),

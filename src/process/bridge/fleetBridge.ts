@@ -8,6 +8,7 @@ import { ipcBridge } from '@/common';
 import { uuid } from '@/common/utils';
 import { getDatabase } from '@process/services/database';
 import { getFleetService } from '@process/services/fleet';
+import { getFleetMcpServer } from '@process/services/fleet/FleetMcpServer';
 import type { FleetHost, FleetHostPublic, FleetHostStatus } from '@process/services/fleet/types';
 
 /** Strip decrypted secrets before a host crosses IPC to the renderer. */
@@ -136,15 +137,22 @@ export function initFleetBridge(): void {
     return res;
   });
 
+  // Start the fleet MCP server (TCP bridge) and register its builtin MCP entry
+  // so every agent gets fleet tools. Non-fatal if it fails — the UI still works.
+  void getFleetMcpServer()
+    .start()
+    .catch((err) => console.error('[fleet] MCP server start failed:', err));
+
   // Kick off a first sweep shortly after boot, then poll on an interval.
   setTimeout(() => void pollAllHosts(), 5_000);
   pollTimer = setInterval(() => void pollAllHosts(), POLL_INTERVAL_MS);
 }
 
-/** Stop the health poller (called on shutdown). */
+/** Stop the health poller + MCP server (called on shutdown). */
 export function stopFleetBridge(): void {
   if (pollTimer) {
     clearInterval(pollTimer);
     pollTimer = null;
   }
+  void getFleetMcpServer().stop().catch(() => {});
 }
