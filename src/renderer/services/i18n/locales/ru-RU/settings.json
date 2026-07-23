@@ -2249,6 +2249,14 @@
         "backupLabel": "Резервная копия в",
         "rollbackLabel": "Чтобы отменить, выполните"
       }
+    },
+    "headroom": {
+      "title": "Прокси Headroom",
+      "routeToggleLabel": "Направлять Claude и внутренние запросы через Headroom",
+      "routeToggleHelp": "Агенты Claude и собственные вызовы Anthropic в Wayland проходят через локальный прокси Headroom для сжатия токенов. Ваш API-ключ передаётся без изменений.",
+      "fluxActiveNote": "Отключено, пока включён Flux Router — они взаимоисключающие.",
+      "endpointLabel": "Адрес прокси",
+      "endpointInvalid": "Введите корректный http(s) URL."
     }
   },
   "commandPalette": {

@@ -346,6 +346,12 @@ export interface IConfigStorageRefer {
   'system.keepAwake'?: boolean;
   // Route all agent requests through Flux Router (consent gate; default false until first connect)
   'system.routeThroughFlux'?: boolean;
+  // Route Anthropic-wire agents (claude) + in-app Anthropic clients through the
+  // local Headroom compression proxy (transparent; keeps native auth). Mutually
+  // exclusive with routeThroughFlux — enabling one disables the other.
+  'system.routeThroughHeadroom'?: boolean;
+  // Endpoint of the local Headroom proxy (default http://127.0.0.1:8787).
+  'system.headroomEndpoint'?: string;
   // Automatically preview newly created Office files in the current workspace
   'system.autoPreviewOfficeFiles'?: boolean;
   // Update-on-quiesce (#651/#632): defer an auto-update restart while any

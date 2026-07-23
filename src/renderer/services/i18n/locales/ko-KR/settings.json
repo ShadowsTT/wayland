@@ -2249,6 +2249,14 @@
         "backupLabel": "백업 위치",
         "rollbackLabel": "되돌리려면 실행"
       }
+    },
+    "headroom": {
+      "title": "Headroom 프록시",
+      "routeToggleLabel": "Claude 및 앱 내 요청을 Headroom으로 라우팅",
+      "routeToggleHelp": "Claude 에이전트와 Wayland 자체 Anthropic 호출이 로컬 Headroom 프록시를 거쳐 토큰을 압축합니다. API 키는 그대로 전달됩니다.",
+      "fluxActiveNote": "Flux Router가 켜져 있는 동안 비활성화 — 둘은 상호 배타적입니다.",
+      "endpointLabel": "프록시 엔드포인트",
+      "endpointInvalid": "유효한 http(s) URL을 입력하세요."
     }
   },
   "commandPalette": {

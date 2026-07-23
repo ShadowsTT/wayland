@@ -2249,6 +2249,14 @@
         "backupLabel": "バックアップ先",
         "rollbackLabel": "元に戻すには実行"
       }
+    },
+    "headroom": {
+      "title": "Headroom プロキシ",
+      "routeToggleLabel": "Claude とアプリ内リクエストを Headroom 経由にする",
+      "routeToggleHelp": "Claude エージェントと Wayland 自身の Anthropic 呼び出しをローカルの Headroom プロキシ経由にしてトークンを圧縮します。API キーはそのまま透過されます。",
+      "fluxActiveNote": "Flux Router が有効な間は無効 —— 両者は排他的です。",
+      "endpointLabel": "プロキシのエンドポイント",
+      "endpointInvalid": "有効な http(s) URL を入力してください。"
     }
   },
   "commandPalette": {

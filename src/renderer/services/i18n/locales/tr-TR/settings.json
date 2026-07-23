@@ -2247,6 +2247,14 @@
         "backupLabel": "Yedeklenen konum",
         "rollbackLabel": "Geri almak için çalıştırın"
       }
+    },
+    "headroom": {
+      "title": "Headroom Proxy",
+      "routeToggleLabel": "Claude ve uygulama içi istekleri Headroom üzerinden yönlendir",
+      "routeToggleHelp": "Claude ajanları ve Wayland’ın kendi Anthropic çağrıları, token sıkıştırmak için yerel Headroom proxy’nizden geçer. API anahtarınız olduğu gibi iletilir.",
+      "fluxActiveNote": "Flux Router açıkken devre dışı — ikisi birbirini dışlar.",
+      "endpointLabel": "Proxy uç noktası",
+      "endpointInvalid": "Geçerli bir http(s) URL girin."
     }
   },
   "commandPalette": {
