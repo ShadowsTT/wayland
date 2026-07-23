@@ -1152,6 +1152,14 @@ export const fleet = {
     { hosts: import('@process/services/fleet/FleetService').FleetDiscoveredHost[]; error?: string },
     void
   >('fleet.scan-tailscale'),
+  /**
+   * Launch an interactive agent (e.g. `claude`) ON a fleet host over SSH,
+   * spawned as a herdr pane so it appears in the Herdr monitor. Ties Fleet
+   * (remote hosts) to herdr (agent panes).
+   */
+  launchAgent: buildProvider<{ ok: boolean; error?: string }, { id: string; agentCommand?: string }>(
+    'fleet.launch-agent'
+  ),
   /** Pushed when a host's reachability changes (from health polling / probes). */
   statusChanged: buildEmitter<{
     id: string;

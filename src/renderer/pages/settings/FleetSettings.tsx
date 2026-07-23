@@ -13,7 +13,7 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import { Button, Checkbox, Input, InputNumber, Message, Modal, Select, Tag, Typography } from '@arco-design/web-react';
-import { Play, Plus, RefreshCw, ServerCog, Terminal, Trash2, Wifi } from 'lucide-react';
+import { Bot, Play, Plus, RefreshCw, ServerCog, Terminal, Trash2, Wifi } from 'lucide-react';
 import { ipcBridge } from '@/common';
 import { useTranslation } from 'react-i18next';
 import type {
@@ -80,6 +80,11 @@ const FleetSettings: React.FC = () => {
   const [command, setCommand] = useState('');
   const [running, setRunning] = useState(false);
   const [result, setResult] = useState<FleetCommandResult | null>(null);
+
+  // Launch-agent-on-host (Fleet ↔ herdr tie-in)
+  const [launchHost, setLaunchHost] = useState<FleetHostPublic | null>(null);
+  const [launchCmd, setLaunchCmd] = useState('claude');
+  const [launching, setLaunching] = useState(false);
 
   // Tailscale scan
   const [scanOpen, setScanOpen] = useState(false);
@@ -231,6 +236,29 @@ const FleetSettings: React.FC = () => {
     }
   }, [runHost, command]);
 
+  const openLaunch = useCallback((h: FleetHostPublic) => {
+    setLaunchHost(h);
+    setLaunchCmd('claude');
+  }, []);
+
+  const doLaunch = useCallback(async () => {
+    if (!launchHost || !launchCmd.trim()) return;
+    setLaunching(true);
+    try {
+      const res = await ipcBridge.fleet.launchAgent.invoke({ id: launchHost.id, agentCommand: launchCmd.trim() });
+      if (res.ok) {
+        Message.success(
+          t('settings.fleet.agentLaunched', { defaultValue: 'Launched {{cmd}} on {{name}} — see it in Herdr', cmd: launchCmd.trim(), name: launchHost.name })
+        );
+        setLaunchHost(null);
+      } else {
+        Message.error(res.error ?? 'launch failed');
+      }
+    } finally {
+      setLaunching(false);
+    }
+  }, [launchHost, launchCmd, t]);
+
   const doScan = useCallback(async () => {
     setScanOpen(true);
     setScanning(true);
@@ -354,6 +382,9 @@ const FleetSettings: React.FC = () => {
               <Button size='mini' icon={<Terminal size={13} />} onClick={() => openRun(h)}>
                 {t('settings.fleet.run', { defaultValue: 'Run' })}
               </Button>
+              <Button size='mini' icon={<Bot size={13} />} onClick={() => openLaunch(h)}>
+                {t('settings.fleet.launchAgent', { defaultValue: 'Agent' })}
+              </Button>
               <Button size='mini' onClick={() => openEdit(h)}>
                 {t('common.edit', { defaultValue: 'Edit' })}
               </Button>
@@ -453,6 +484,40 @@ const FleetSettings: React.FC = () => {
             {`\n\n[exit ${result.exitCode ?? 'n/a'} · ${result.durationMs}ms]`}
           </pre>
         )}
+      </Modal>
+
+      {/* Launch-agent-on-host modal (Fleet ↔ herdr) */}
+      <Modal
+        title={launchHost ? `${t('settings.fleet.launchAgentOn', { defaultValue: 'Launch agent on' })} ${launchHost.name}` : ''}
+        visible={!!launchHost}
+        onCancel={() => setLaunchHost(null)}
+        onOk={() => void doLaunch()}
+        confirmLoading={launching}
+        okText={t('settings.fleet.launch', { defaultValue: 'Launch' })}
+        okButtonProps={{ disabled: !launchCmd.trim() }}
+        autoFocus={false}
+        style={{ width: 480 }}
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <Select value={launchCmd} onChange={setLaunchCmd}>
+            <Select.Option value='claude'>Claude</Select.Option>
+            <Select.Option value='codex'>Codex</Select.Option>
+          </Select>
+          <Input
+            addBefore={t('settings.fleet.command', { defaultValue: 'Command' })}
+            value={launchCmd}
+            onChange={setLaunchCmd}
+            placeholder='claude'
+          />
+          <Typography.Text type='secondary' style={{ fontSize: 12 }}>
+            {t('settings.fleet.launchAgentNote', {
+              defaultValue:
+                'SSHes into {{user}}@{{host}} and runs the command in a herdr pane — monitor and drive it from the Herdr page. The command must be installed on the host; requires herdr running.',
+              user: launchHost?.username,
+              host: launchHost?.host,
+            })}
+          </Typography.Text>
+        </div>
       </Modal>
 
       {/* Tailscale discovery modal */}

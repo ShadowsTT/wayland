@@ -169,6 +169,7 @@ export class HerdrService {
     name: string;
     argv: string[];
     cwd?: string;
+    env?: Record<string, string>;
     workspaceId?: string;
     focus?: boolean;
   }): Promise<HerdrActionResult> {
@@ -176,6 +177,7 @@ export class HerdrService {
       name: params.name,
       argv: params.argv,
       cwd: params.cwd,
+      env: params.env,
       workspace_id: params.workspaceId,
       focus: params.focus ?? true,
     });
