@@ -16,6 +16,8 @@ import { ProcessConfig } from '@process/utils/initStorage';
 import { changeLanguage } from '@process/services/i18n';
 import { getClaudeNativeDefaultModelId } from '@process/services/ccSwitchModelSource';
 import { TERMINAL_ENABLED_KEY } from '@process/terminal/terminalConfig';
+import { isValidHeadroomEndpoint, resolveHeadroomEndpoint } from '@/common/config/headroom';
+import { setInAppAnthropicBaseUrlResolver } from '@/common/api/ClientFactory';
 
 // Keep-awake power blocker state
 let _keepAwakeBlockerId: number | null = null;
@@ -41,6 +43,16 @@ export function onLanguageChanged(listener: LanguageChangeListener): void {
 }
 
 export function initSystemSettingsBridge(): void {
+  // Install the in-app Anthropic base-URL resolver so every in-app Anthropic
+  // client (ClientFactory USE_ANTHROPIC) transparently routes through the local
+  // Headroom proxy when `system.routeThroughHeadroom` is on — no call site has
+  // to thread the endpoint. Reads the in-memory config cache synchronously.
+  setInAppAnthropicBaseUrlResolver(() => {
+    const enabled = ProcessConfig.getSync('system.routeThroughHeadroom') ?? false;
+    if (!enabled) return undefined;
+    return resolveHeadroomEndpoint(ProcessConfig.getSync('system.headroomEndpoint'));
+  });
+
   // Get "close to tray" setting
   ipcBridge.systemSettings.getCloseToTray.provider(async () => {
     const value = await ProcessConfig.get('system.closeToTray');
@@ -103,9 +115,38 @@ export function initSystemSettingsBridge(): void {
     return value ?? false;
   });
 
-  // Set "route through Flux"
+  // Set "route through Flux". Flux and Headroom are mutually exclusive (a single
+  // request cannot go through both a hosted gateway and a local Anthropic proxy),
+  // so enabling Flux turns Headroom off.
   ipcBridge.systemSettings.setRouteThroughFlux.provider(async ({ enabled }) => {
     await ProcessConfig.set('system.routeThroughFlux', enabled);
+    if (enabled) await ProcessConfig.set('system.routeThroughHeadroom', false);
+  });
+
+  // Get "route through Headroom" (local Anthropic compression proxy)
+  ipcBridge.systemSettings.getRouteThroughHeadroom.provider(async () => {
+    const value = await ProcessConfig.get('system.routeThroughHeadroom');
+    return value ?? false;
+  });
+
+  // Set "route through Headroom". Mutually exclusive with Flux (see above):
+  // enabling Headroom turns Flux off.
+  ipcBridge.systemSettings.setRouteThroughHeadroom.provider(async ({ enabled }) => {
+    await ProcessConfig.set('system.routeThroughHeadroom', enabled);
+    if (enabled) await ProcessConfig.set('system.routeThroughFlux', false);
+  });
+
+  // Get the Headroom proxy endpoint (falls back to the default local proxy)
+  ipcBridge.systemSettings.getHeadroomEndpoint.provider(async () => {
+    return resolveHeadroomEndpoint(await ProcessConfig.get('system.headroomEndpoint'));
+  });
+
+  // Set the Headroom proxy endpoint (must be an http(s) URL)
+  ipcBridge.systemSettings.setHeadroomEndpoint.provider(async ({ endpoint }) => {
+    if (!isValidHeadroomEndpoint(endpoint)) {
+      throw new Error(`Invalid Headroom endpoint: ${endpoint}`);
+    }
+    await ProcessConfig.set('system.headroomEndpoint', endpoint.trim());
   });
 
   // Native Claude default model slot for a new Claude Code chat (null if no

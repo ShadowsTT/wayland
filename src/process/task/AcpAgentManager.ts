@@ -92,6 +92,7 @@ import { extractTextFromMessage, processCronInMessage } from './MessageMiddlewar
 import { ConversationTurnCompletionService } from './ConversationTurnCompletionService';
 import { resolveFluxRouting, type FluxRoutingResult, type RoutingDecision } from '@process/task/fluxRouting';
 import { readConnectedFluxKey } from '@process/connectors/fluxKey';
+import { isHeadroomRoutableBackend, resolveHeadroomEndpoint } from '@/common/config/headroom';
 
 interface AcpAgentManagerData {
   workspace?: string;
@@ -931,6 +932,19 @@ ${collectedResponses.join('\n')}`;
       } else {
         delete mergedEnv.ANTHROPIC_MODEL;
         updateSpawnEnvUnsetKey(mergedEnv, 'ANTHROPIC_MODEL', true);
+      }
+    }
+
+    // Headroom routing (mutually exclusive with Flux — see systemSettingsBridge).
+    // Headroom is a local, transparent Anthropic-wire proxy: point native
+    // Anthropic-wire spawns (claude) at it via ANTHROPIC_BASE_URL while leaving
+    // the native auth untouched, so the CLI's requests are compressed + forwarded
+    // upstream under the user's own credentials. Only applies to NATIVE spawns; a
+    // Flux-routed spawn already targets the Flux gateway with its own key.
+    if (decision.routing !== 'flux' && isHeadroomRoutableBackend(data.backend)) {
+      const routeThroughHeadroom = (await ProcessConfig.get('system.routeThroughHeadroom')) ?? false;
+      if (routeThroughHeadroom) {
+        mergedEnv.ANTHROPIC_BASE_URL = resolveHeadroomEndpoint(await ProcessConfig.get('system.headroomEndpoint'));
       }
     }
 
