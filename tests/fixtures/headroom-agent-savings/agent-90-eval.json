@@ -1,0 +1,9 @@
+{
+  "totals": {
+    "cases": 3,
+    "passed": 3,
+    "accuracy_rate": 1.0,
+    "tokens_original": 3000,
+    "tokens_compressed": 240
+  }
+}

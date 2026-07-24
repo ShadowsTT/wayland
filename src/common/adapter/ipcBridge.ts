@@ -1152,12 +1152,65 @@ export const fleet = {
     { hosts: import('@process/services/fleet/FleetService').FleetDiscoveredHost[]; error?: string },
     void
   >('fleet.scan-tailscale'),
+  /**
+   * Launch an interactive agent (e.g. `claude`) ON a fleet host over SSH,
+   * spawned as a herdr pane so it appears in the Herdr monitor. Ties Fleet
+   * (remote hosts) to herdr (agent panes).
+   */
+  launchAgent: buildProvider<{ ok: boolean; error?: string }, { id: string; agentCommand?: string }>(
+    'fleet.launch-agent'
+  ),
   /** Pushed when a host's reachability changes (from health polling / probes). */
   statusChanged: buildEmitter<{
     id: string;
     status: import('@process/services/fleet/types').FleetHostStatus;
     lastSeenAt?: number;
   }>('fleet.status-changed'),
+};
+
+// herdr integration. herdr is the terminal workspace manager that hosts the AI
+// agent panes (Claude/Codex) running on this machine. Wayland reads its live
+// snapshot and drives its panes (send prompts, focus, spawn agents, worktrees)
+// over herdr's Unix-socket JSON-RPC — see src/process/services/herdr.
+export const herdr = {
+  /** Whether the herdr server socket is present (feature gate for the UI). */
+  isAvailable: buildProvider<boolean, void>('herdr.is-available'),
+  /** Full monitor view: workspaces + panes + agent status. */
+  getView: buildProvider<import('@process/services/herdr/types').HerdrView, void>('herdr.get-view'),
+  /** Type a prompt into a pane; `submit` presses Enter so the agent runs it. */
+  sendPrompt: buildProvider<
+    import('@process/services/herdr/types').HerdrActionResult,
+    { paneId: string; text: string; submit?: boolean }
+  >('herdr.send-prompt'),
+  sendKeys: buildProvider<
+    import('@process/services/herdr/types').HerdrActionResult,
+    { paneId: string; keys: string[] }
+  >('herdr.send-keys'),
+  focusPane: buildProvider<import('@process/services/herdr/types').HerdrActionResult, { paneId: string }>(
+    'herdr.focus-pane'
+  ),
+  focusWorkspace: buildProvider<
+    import('@process/services/herdr/types').HerdrActionResult,
+    { workspaceId: string }
+  >('herdr.focus-workspace'),
+  renamePane: buildProvider<
+    import('@process/services/herdr/types').HerdrActionResult,
+    { paneId: string; label: string }
+  >('herdr.rename-pane'),
+  startAgent: buildProvider<
+    import('@process/services/herdr/types').HerdrActionResult,
+    { name: string; argv: string[]; cwd?: string; workspaceId?: string; focus?: boolean }
+  >('herdr.start-agent'),
+  createWorktree: buildProvider<
+    import('@process/services/herdr/types').HerdrActionResult,
+    { branch?: string; base?: string; path?: string; label?: string; cwd?: string; workspaceId?: string; focus?: boolean }
+  >('herdr.create-worktree'),
+  readPane: buildProvider<
+    import('@process/services/herdr/types').HerdrReadResult,
+    { paneId: string; lines?: number }
+  >('herdr.read-pane'),
+  /** Pushed (debounced) whenever herdr's workspaces/panes/agent status change. */
+  changed: buildEmitter<import('@process/services/herdr/types').HerdrView>('herdr.changed'),
 };
 
 // Database operations
@@ -1271,6 +1324,14 @@ export const systemSettings = {
   setKeepAwake: buildProvider<void, { enabled: boolean }>('system-settings:set-keep-awake'),
   getRouteThroughFlux: buildProvider<boolean, void>('system-settings:get-route-through-flux'),
   setRouteThroughFlux: buildProvider<void, { enabled: boolean }>('system-settings:set-route-through-flux'),
+  // Route Anthropic-wire agents + in-app Anthropic clients through the local
+  // Headroom compression proxy. Mutually exclusive with routeThroughFlux (the
+  // setter disables the other). The endpoint getter/setter drive the editable
+  // proxy URL (default http://127.0.0.1:8787).
+  getRouteThroughHeadroom: buildProvider<boolean, void>('system-settings:get-route-through-headroom'),
+  setRouteThroughHeadroom: buildProvider<void, { enabled: boolean }>('system-settings:set-route-through-headroom'),
+  getHeadroomEndpoint: buildProvider<string, void>('system-settings:get-headroom-endpoint'),
+  setHeadroomEndpoint: buildProvider<void, { endpoint: string }>('system-settings:set-headroom-endpoint'),
   // Native Claude default model slot for a new Claude Code chat (null = no native
   // login). Lets a Claude chat default to the subscription instead of flux-auto.
   getClaudeNativeDefaultModelId: buildProvider<string | null, void>(

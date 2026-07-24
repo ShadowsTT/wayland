@@ -21,7 +21,7 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { getEnhancedEnv } from '@process/utils/shellEnv';
-import { buildSshArgs } from './sshArgs';
+import { buildRemoteAgentSshArgs, buildSshArgs } from './sshArgs';
 import type { FleetCommandResult, FleetHost, FleetHostStatus } from './types';
 
 const DEFAULT_TIMEOUT_MS = 30_000;
@@ -128,6 +128,43 @@ export class FleetService {
 
   private fail(hostId: string, started: number, error: string, stdout = '', stderr = ''): FleetCommandResult {
     return { hostId, ok: false, exitCode: null, stdout, stderr, error, durationMs: Date.now() - started };
+  }
+
+  /**
+   * Prepare an SSH launch of an interactive agent (`agentCommand`, e.g. `claude`)
+   * on `host`, to be spawned as a herdr pane so it shows up in the Herdr monitor.
+   * Returns the argv + env for herdr's `agent.start`.
+   *
+   * Auth handling mirrors runCommand, with one difference: the herdr pane is
+   * long-lived, so for `key` auth the decrypted key is written to a 0600 temp
+   * file that must PERSIST for the session (ssh may re-read it on reconnect) —
+   * it is not deleted here. `agent`/default-key auth leaves no secret on disk and
+   * is the recommended option for remote agents.
+   */
+  prepareRemoteAgentLaunch(host: FleetHost, agentCommand: string): { name: string; argv: string[]; env: Record<string, string> } {
+    const command = agentCommand.trim();
+    if (!command) throw new Error('Agent command is required');
+    const label = command.split(/\s+/)[0];
+    const name = `${label}@${host.name}`;
+    const env: Record<string, string> = { ...getEnhancedEnv() } as Record<string, string>;
+
+    let identityFile: string | undefined;
+    let exe: 'ssh' | 'sshpass' = 'ssh';
+
+    if (host.authType === 'key') {
+      if (!host.privateKey) throw new Error('No private key configured for this host');
+      const keyDir = mkdtempSync(join(tmpdir(), 'wl-fleet-agent-'));
+      identityFile = join(keyDir, 'id');
+      writeFileSync(identityFile, host.privateKey.endsWith('\n') ? host.privateKey : `${host.privateKey}\n`, { mode: 0o600 });
+    } else if (host.authType === 'password') {
+      if (!host.password) throw new Error('No password configured for this host');
+      exe = 'sshpass';
+      env.SSHPASS = host.password;
+    }
+
+    const sshArgs = buildRemoteAgentSshArgs(host, command, { identityFile });
+    const argv = exe === 'sshpass' ? ['sshpass', '-e', 'ssh', ...sshArgs] : ['ssh', ...sshArgs];
+    return { name, argv, env };
   }
 
   /** Cheap reachability check (used by testConnection UI + status polling). */

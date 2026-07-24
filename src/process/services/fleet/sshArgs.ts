@@ -58,3 +58,27 @@ export function buildSshArgs(
   args.push(`${host.username}@${host.host}`, command);
   return args;
 }
+
+/**
+ * Build the argv for `ssh` to launch an INTERACTIVE agent (`remoteCommand`, e.g.
+ * `claude`) on `host`. Unlike buildSshArgs (one-shot, captured output), this
+ * forces a remote PTY (`-tt`) so the agent's terminal UI runs interactively
+ * inside the herdr pane that hosts the ssh process. BatchMode stays on for
+ * agent/key auth (fail fast, never hang on a prompt) and is left off for
+ * password auth, where sshpass feeds the prompt.
+ */
+export function buildRemoteAgentSshArgs(
+  host: FleetHost,
+  remoteCommand: string,
+  opts: { identityFile?: string; connectTimeoutSec?: number } = {}
+): string[] {
+  const batchMode = host.authType !== 'password';
+  // -tt: force PTY allocation even though ssh's own stdin is a pipe from herdr.
+  const args = ['-tt', ...baseSshOptions({ connectTimeoutSec: opts.connectTimeoutSec, batchMode })];
+  args.push('-p', String(host.port || 22));
+  if (opts.identityFile) {
+    args.push('-i', opts.identityFile, '-o', 'IdentitiesOnly=yes');
+  }
+  args.push(`${host.username}@${host.host}`, remoteCommand);
+  return args;
+}

@@ -2,6 +2,7 @@ import {
   ArrowRightLeft,
   Bot,
   BookOpen,
+  Boxes,
   Brain,
   Cable,
   Cpu,
@@ -52,6 +53,7 @@ export const BUILTIN_TAB_IDS = [
   'webui',
   'channels',
   'fleet',
+  'herdr',
   'mcp-library',
   'extensions',
   'migrate',
@@ -214,6 +216,12 @@ const SettingsSider: React.FC<{ collapsed?: boolean; tooltipEnabled?: boolean }>
         label: t('settings.sider.fleet', { defaultValue: 'Fleet' }),
         icon: <ServerCog />,
         path: 'fleet',
+      },
+      herdr: {
+        id: 'herdr',
+        label: t('settings.sider.herdr', { defaultValue: 'Herdr' }),
+        icon: <Boxes />,
+        path: 'herdr',
       },
       'mcp-library': {
         id: 'mcp-library',

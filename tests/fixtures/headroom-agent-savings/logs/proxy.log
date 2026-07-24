@@ -1,0 +1,3 @@
+2026-06-10 10:00:00,000 - headroom.proxy - INFO - [hr_smoke_claude] PERF model=claude-sonnet msgs=3 tok_before=1000 tok_after=80 tok_saved=920 cache_read=0 cache_write=0 cache_hit_pct=0 opt_ms=1 transforms=agent90_smoke client=claude
+2026-06-10 10:01:00,000 - headroom.proxy - INFO - [hr_smoke_codex] PERF model=gpt-5 msgs=3 tok_before=1000 tok_after=90 tok_saved=910 cache_read=0 cache_write=0 cache_hit_pct=0 opt_ms=1 transforms=agent90_smoke client=codex
+2026-06-10 10:02:00,000 - headroom.proxy - INFO - [hr_smoke_cursor] PERF model=gpt-5 msgs=3 tok_before=1000 tok_after=70 tok_saved=930 cache_read=0 cache_write=0 cache_hit_pct=0 opt_ms=1 transforms=agent90_smoke client=cursor

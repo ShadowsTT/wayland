@@ -9,6 +9,7 @@ import { uuid } from '@/common/utils';
 import { getDatabase } from '@process/services/database';
 import { getFleetService } from '@process/services/fleet';
 import { getFleetMcpServer } from '@process/services/fleet/FleetMcpServer';
+import { getHerdrService } from '@process/services/herdr';
 import type { FleetHost, FleetHostPublic, FleetHostStatus } from '@process/services/fleet/types';
 
 /** Strip decrypted secrets before a host crosses IPC to the renderer. */
@@ -139,6 +140,24 @@ export function initFleetBridge(): void {
 
   ipcBridge.fleet.scanTailscale.provider(async () => {
     return getFleetService().scanTailscale();
+  });
+
+  // Fleet ↔ herdr tie-in: launch an interactive agent ON a host over SSH,
+  // spawned as a herdr pane so it shows up in the Herdr monitor.
+  ipcBridge.fleet.launchAgent.provider(async ({ id, agentCommand }) => {
+    const herdr = getHerdrService();
+    if (!herdr.isAvailable()) {
+      return { ok: false, error: 'herdr is not running — start herdr to launch remote agents' };
+    }
+    const db = await getDatabase();
+    const host = db.getFleetHost(id);
+    if (!host) return { ok: false, error: 'Host not found' };
+    try {
+      const { name, argv, env } = getFleetService().prepareRemoteAgentLaunch(host, agentCommand?.trim() || 'claude');
+      return await herdr.startAgent({ name, argv, env, focus: true });
+    } catch (err) {
+      return { ok: false, error: err instanceof Error ? err.message : String(err) };
+    }
   });
 
   // Start the fleet MCP server (TCP bridge) and register its builtin MCP entry
