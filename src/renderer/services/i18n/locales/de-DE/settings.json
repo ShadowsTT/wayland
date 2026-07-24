@@ -2274,6 +2274,14 @@
         "backupLabel": "Gesichert unter",
         "rollbackLabel": "Zum Rückgängigmachen ausführen"
       }
+    },
+    "headroom": {
+      "title": "Headroom-Proxy",
+      "routeToggleLabel": "Claude- und In-App-Anfragen über Headroom leiten",
+      "routeToggleHelp": "Claude-Agenten und Waylands eigene Anthropic-Aufrufe laufen über deinen lokalen Headroom-Proxy, um Tokens zu komprimieren. Dein API-Schlüssel wird unverändert durchgereicht.",
+      "fluxActiveNote": "Deaktiviert, solange Flux Router aktiv ist — beide schließen sich gegenseitig aus.",
+      "endpointLabel": "Proxy-Endpunkt",
+      "endpointInvalid": "Gib eine gültige http(s)-URL ein."
     }
   },
   "wcoreConfig": {

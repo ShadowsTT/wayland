@@ -17,6 +17,7 @@ import { resolveExtensionAssetUrl } from '@renderer/utils/platform';
 import SettingsPageShell from '@renderer/pages/settings/components/SettingsPageShell';
 import RemoteAgents from './RemoteAgents';
 import FluxRouterCard from './FluxRouterCard';
+import HeadroomRouterCard from './HeadroomRouterCard';
 import FluxSetupModal from './FluxSetupModal';
 import { resolveAgentScope } from './agentScopes';
 import styles from './AgentsSettings.module.css';
@@ -305,6 +306,10 @@ const AgentsSettings: React.FC = () => {
       {/* ---- Flux Router: live connection status + route-through toggle ---- */}
       <div className={styles.sectionLabel}>{t('settings.agentsPage.flux.title')}</div>
       <FluxRouterCard />
+
+      {/* ---- Headroom Proxy: local Anthropic compression proxy (mutually exclusive with Flux) ---- */}
+      <div className={styles.sectionLabel}>{t('settings.agentsPage.headroom.title')}</div>
+      <HeadroomRouterCard />
 
       {/* ---- Your agents ---- */}
       <div className={styles.sectionLabel}>{t('settings.agentsPage.yourAgents')}</div>

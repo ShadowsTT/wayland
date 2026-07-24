@@ -1324,6 +1324,14 @@ export const systemSettings = {
   setKeepAwake: buildProvider<void, { enabled: boolean }>('system-settings:set-keep-awake'),
   getRouteThroughFlux: buildProvider<boolean, void>('system-settings:get-route-through-flux'),
   setRouteThroughFlux: buildProvider<void, { enabled: boolean }>('system-settings:set-route-through-flux'),
+  // Route Anthropic-wire agents + in-app Anthropic clients through the local
+  // Headroom compression proxy. Mutually exclusive with routeThroughFlux (the
+  // setter disables the other). The endpoint getter/setter drive the editable
+  // proxy URL (default http://127.0.0.1:8787).
+  getRouteThroughHeadroom: buildProvider<boolean, void>('system-settings:get-route-through-headroom'),
+  setRouteThroughHeadroom: buildProvider<void, { enabled: boolean }>('system-settings:set-route-through-headroom'),
+  getHeadroomEndpoint: buildProvider<string, void>('system-settings:get-headroom-endpoint'),
+  setHeadroomEndpoint: buildProvider<void, { endpoint: string }>('system-settings:set-headroom-endpoint'),
   // Native Claude default model slot for a new Claude Code chat (null = no native
   // login). Lets a Claude chat default to the subscription instead of flux-auto.
   getClaudeNativeDefaultModelId: buildProvider<string | null, void>(

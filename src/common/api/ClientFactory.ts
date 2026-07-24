@@ -18,9 +18,31 @@ export interface ClientOptions {
   proxy?: string;
   baseConfig?: OpenAIClientConfig | GeminiClientConfig | AnthropicClientConfig;
   rotatingOptions?: RotatingApiClientOptions;
+  /**
+   * When set, in-app Anthropic (USE_ANTHROPIC) clients POST to this base URL
+   * instead of the provider's own — used to route in-app requests through the
+   * local Headroom compression proxy. Anthropic-only: OpenAI/Gemini clients
+   * ignore it (Headroom is an Anthropic-wire proxy). Native auth is untouched.
+   */
+  headroomEndpoint?: string;
 }
 
 export type RotatingClient = OpenAIRotatingClient | GeminiRotatingClient | AnthropicRotatingClient;
+
+/**
+ * Resolver that yields the base URL in-app Anthropic (USE_ANTHROPIC) clients
+ * should use when a call site passes no explicit `headroomEndpoint`. The main
+ * process installs it from the persisted `system.routeThroughHeadroom` setting
+ * (see systemSettingsBridge), so EVERY in-app Anthropic call routes through the
+ * local Headroom proxy without each call site threading the option. Returns
+ * undefined when Headroom routing is off (clients keep their own base URL).
+ */
+let inAppAnthropicBaseUrlResolver: (() => string | undefined) | undefined;
+
+/** Install (or clear, with `undefined`) the in-app Anthropic base-URL resolver. */
+export function setInAppAnthropicBaseUrlResolver(resolver: (() => string | undefined) | undefined): void {
+  inAppAnthropicBaseUrlResolver = resolver;
+}
 
 /**
  * Normalize base URL for new-api gateway based on target protocol.
@@ -108,9 +130,16 @@ export class ClientFactory {
       }
 
       case AuthType.USE_ANTHROPIC: {
+        // Route through the local Headroom proxy when configured: it is a
+        // transparent Anthropic-wire proxy, so only the base URL changes; the
+        // provider's own key still authenticates upstream. Precedence: an
+        // explicit per-call `headroomEndpoint` wins, else the process-installed
+        // resolver (the global `system.routeThroughHeadroom` setting), else the
+        // provider's own base URL.
+        const anthropicBaseUrl = options.headroomEndpoint ?? inAppAnthropicBaseUrlResolver?.() ?? baseUrl;
         const clientConfig: AnthropicClientConfig = {
           model: provider.useModel,
-          baseURL: baseUrl,
+          baseURL: anthropicBaseUrl,
           timeout: options.timeout,
           ...(options.baseConfig as AnthropicClientConfig),
         };

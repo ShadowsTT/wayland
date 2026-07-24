@@ -2274,6 +2274,14 @@
         "backupLabel": "Sauvegardé vers",
         "rollbackLabel": "Pour annuler, exécute"
       }
+    },
+    "headroom": {
+      "title": "Proxy Headroom",
+      "routeToggleLabel": "Router Claude et les requêtes internes via Headroom",
+      "routeToggleHelp": "Les agents Claude et les appels Anthropic internes de Wayland passent par votre proxy Headroom local pour compresser les tokens. Votre clé API est transmise telle quelle.",
+      "fluxActiveNote": "Désactivé tant que Flux Router est actif — les deux sont mutuellement exclusifs.",
+      "endpointLabel": "Point de terminaison du proxy",
+      "endpointInvalid": "Saisissez une URL http(s) valide."
     }
   },
   "wcoreConfig": {

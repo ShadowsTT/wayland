@@ -2248,6 +2248,14 @@
         "backupLabel": "备份至",
         "rollbackLabel": "若要撤销，请运行"
       }
+    },
+    "headroom": {
+      "title": "Headroom 代理",
+      "routeToggleLabel": "将 Claude 与应用内请求通过 Headroom 转发",
+      "routeToggleHelp": "Claude 智能体和 Wayland 自身的 Anthropic 调用将经过本地 Headroom 代理以压缩 token。你的 API 密钥会原样透传。",
+      "fluxActiveNote": "已启用 Flux Router 时不可用 —— 两者互斥。",
+      "endpointLabel": "代理地址",
+      "endpointInvalid": "请输入有效的 http(s) URL。"
     }
   },
   "commandPalette": {
